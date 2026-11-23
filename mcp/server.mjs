@@ -44,7 +44,9 @@ async function app(action, data = {}) {
     if (response.status === 401) throw new Error("The app refused the API password. Set SCRIPTURAL_PROJECT_TOKEN to the password in Settings > Connection > API.")
     if (response.status === 204) return null
     if (!response.ok) throw new Error(`The app answered ${response.status} to ${action}.`)
-    return response.json()
+    const body = await response.json()
+    // the API answers { action, data }
+    return body?.data ?? null
 }
 
 const tool = (handler) => async (args) => {
