@@ -137,16 +137,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SECRET_CSC_LINK: ${{ secrets.CSC_LINK }}
           SECRET_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          SECRET_APPLE_ID: ${{ secrets.APPLEID }}
-          SECRET_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
-          SECRET_APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
+          SECRET_APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+          SECRET_APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          SECRET_APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         # electron-builder treats an empty CSC_LINK as a file path and aborts
         # ("not a file"), so each signing variable is exported only when its
-        # secret exists. Unsigned builds still produce the dmg.
+        # secret exists. Unsigned builds still produce the dmg. Notarization
+        # uses the App Store Connect API key (scripts/macos/notarize.js).
         run: |
           [ -n "$SECRET_CSC_LINK" ] && export CSC_LINK="$SECRET_CSC_LINK"
           [ -n "$SECRET_CSC_KEY_PASSWORD" ] && export CSC_KEY_PASSWORD="$SECRET_CSC_KEY_PASSWORD"
-          [ -n "$SECRET_APPLE_ID" ] && export APPLE_ID="$SECRET_APPLE_ID"
-          [ -n "$SECRET_APPLE_APP_SPECIFIC_PASSWORD" ] && export APPLE_APP_SPECIFIC_PASSWORD="$SECRET_APPLE_APP_SPECIFIC_PASSWORD"
-          [ -n "$SECRET_APPLE_TEAM_ID" ] && export APPLE_TEAM_ID="$SECRET_APPLE_TEAM_ID"
+          if [ -n "$SECRET_APPLE_API_KEY_CONTENT" ]; then
+            printf '%s' "$SECRET_APPLE_API_KEY_CONTENT" > "$RUNNER_TEMP/AuthKey.p8"
+            export APPLE_API_KEY="$RUNNER_TEMP/AuthKey.p8"
+            export APPLE_API_KEY_ID="$SECRET_APPLE_API_KEY_ID"
+            export APPLE_API_ISSUER="$SECRET_APPLE_API_ISSUER"
+          fi
           npm run release
