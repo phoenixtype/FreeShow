@@ -4,6 +4,7 @@ export interface AiSettings {
     llm?: LlmSettings
 
     scripture?: AiScriptureSettings
+    lyrics?: AiScriptureSettings
 }
 
 interface SttSettings {

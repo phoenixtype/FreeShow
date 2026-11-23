@@ -21,8 +21,6 @@
     }
 </script>
 
-<div class="experimental">EXPERIMENTAL!</div>
-
 <MaterialToggleSwitch label={translateText("actions.enable_specific", null, ["settings.ai"])} checked={isEnabled} on:change={(e) => updateValue("enabled", e.detail)} />
 
 {#if isEnabled}
@@ -33,18 +31,7 @@
     <!-- the model behind the chat and the smarter detection: Scriptural AI, your own key, or free on this computer -->
     <Title label="AI model" icon="ai" />
     <LlmOptions />
-
-    <!-- TODO: auto lyrics & more -->
 {:else}
     <Tip type="info" value="ai.hint" top={20} />
     <Tip type="warning" value="ai.privacy_details" top={10} />
 {/if}
-
-<style>
-    .experimental {
-        color: red;
-        text-align: center;
-        font-weight: bold;
-        margin-bottom: 20px;
-    }
-</style>

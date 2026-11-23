@@ -17,6 +17,7 @@ import { searchByMeaning } from "../scripture/meaningSearch"
 import { isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 import { resolveNavigation } from "../scripture/voiceNavigation"
+import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
 
 export class AiManager {
     private static lastMatch: number = 0
@@ -37,11 +38,24 @@ export class AiManager {
             return
         }
 
-        const stringMatch = (await this.stringDetection(chunk.chunkWithOverlap, isCancelled)) || this.eventDetection(chunk.chunkWithOverlap)
+        const stringMatch = await this.stringDetection(chunk.chunkWithOverlap, isCancelled)
         if (isCancelled()) return
 
         if (stringMatch) {
             this.newMatch(stringMatch)
+            this.lastMatch = Date.now()
+            return
+        }
+
+        // a song from the library being sung (before events and meaning: lyrics quote scripture)
+        if (await this.songDetection(chunk.chunkWithOverlap)) {
+            this.lastMatch = Date.now()
+            return
+        }
+
+        const eventMatch = this.eventDetection(chunk.chunkWithOverlap)
+        if (eventMatch) {
+            this.newMatch(eventMatch)
             this.lastMatch = Date.now()
             return
         }
@@ -75,6 +89,29 @@ export class AiManager {
         if (scriptureVersionMatch) return scriptureVersionMatch
 
         return null
+    }
+
+    private static async songDetection(text: string): Promise<boolean> {
+        const hit = songDetector()?.push(text)
+        if (!hit) return false
+        const recent = text.split(/\s+/).slice(-16).join(" ")
+
+        // already up: on an auto-present setting, keep the screen on the line being sung,
+        // unless someone moved the slides by hand in the last half minute
+        if (hit.id === liveShowId()) {
+            if (this.autoLevel("lyrics") === "ask" || hit.confidence <= 50) return true
+            if (this.lastOutputUpdate && Date.now() - this.lastOutputUpdate < this.MAX_AUTO_PLAY_INTERVAL) return true
+            this.listenToOutput()
+            if (await followSong(hit.id, recent)) this.outputUpdate(hit.name)
+            return true
+        }
+
+        this.newMatch({ type: "lyrics", content: hit.name, confidence: hit.confidence, showId: hit.id, lyricsText: recent })
+        return true
+    }
+
+    private static autoLevel(type: "scripture" | "lyrics"): ConfidenceLevels {
+        return get(ai)[type]?.confidence || "ask"
     }
 
     // famous events and parables said in passing: "when Jesus walked on water"
@@ -193,7 +230,7 @@ export class AiManager {
         if (match.type === "empty" || !match.content) return
         if (match.type === "scripture" && AiManager.liveContent === match.content) return
 
-        if (match.type !== "scripture" && match.type !== "scripture_version") return // WIP only scripture is implemented
+        if (match.type !== "scripture" && match.type !== "scripture_version" && match.type !== "lyrics") return
 
         let suggestionDraft: any = {
             id: uid(5),
@@ -220,7 +257,7 @@ export class AiManager {
             return
         }
 
-        const suggestion = { ...suggestionDraft, action: "present", trigger }
+        const suggestion = { ...suggestionDraft, action: match.type === "lyrics" ? "present_song" : "present", trigger }
         this.addSuggestion(suggestion)
     }
 
@@ -239,7 +276,7 @@ export class AiManager {
         if (match.confidence <= 95 && this.alreadySuggested(match)) return false
 
         if (match.type === "scripture_version") return false
-        if (match.type !== "scripture") return false // WIP currently only auto-plays scripture matches
+        if (match.type !== "scripture" && match.type !== "lyrics") return false
 
         if (match.type === "scripture" && match.scriptureIsNewTranslation) return false
 
@@ -250,7 +287,7 @@ export class AiManager {
         // skip if the output was manually updated recently
         if (this.lastOutputUpdate && now - this.lastOutputUpdate < this.MAX_AUTO_PLAY_INTERVAL) return false
 
-        const confidence = get(ai)[match.type]?.confidence || "ask"
+        const confidence = this.autoLevel(match.type)
         if (confidence === "ask") return false
 
         const autoPlay = match.confidence > this.getConfidenceScore(confidence)
@@ -271,6 +308,9 @@ export class AiManager {
             if (match.scriptureTranslation) setActiveScripture(match.scriptureTranslation)
         } else if (match.type === "scripture") {
             startScripture({ reference: match.content })
+            this.outputUpdate(match.content)
+        } else if (match.type === "lyrics" && match.showId) {
+            presentSong(match.showId, match.lyricsText || "")
             this.outputUpdate(match.content)
         }
     }

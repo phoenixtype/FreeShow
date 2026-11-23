@@ -4,12 +4,9 @@
     import { ai } from "../../../stores"
     import { translateText } from "../../../utils/language"
 
-    $: settings = $ai.scripture || {}
-
-    function updateValue(key: string, value: any) {
+    function updateValue(kind: "scripture" | "lyrics", value: any) {
         ai.update((a) => {
-            if (!a.scripture) a.scripture = {}
-            a.scripture[key] = value
+            a[kind] = { ...(a[kind] || {}), confidence: value }
             return a
         })
     }
@@ -24,4 +21,9 @@
 
 <Title label="tabs.scripture" icon="scripture" />
 
-<MaterialDropdown label="ai.auto_present" options={confidenceOptions} value={settings.confidence || "ask"} on:change={(e) => updateValue("confidence", e.detail)} />
+<MaterialDropdown label="ai.auto_present" options={confidenceOptions} value={$ai.scripture?.confidence || "ask"} on:change={(e) => updateValue("scripture", e.detail)} />
+
+<!-- songs in the library, recognised while they are sung; once one is up it follows the singing -->
+<Title label="category.song" icon="song" />
+
+<MaterialDropdown label="ai.auto_present" options={confidenceOptions} value={$ai.lyrics?.confidence || "ask"} on:change={(e) => updateValue("lyrics", e.detail)} />

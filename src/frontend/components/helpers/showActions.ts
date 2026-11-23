@@ -558,7 +558,7 @@ export function startShowSync(showId: string) {
     startShow(showId)
 }
 
-export async function startShow(showId: string) {
+export async function startShow(showId: string, startIndex = 0) {
     if (!showId) return
 
     await loadShows([showId])
@@ -569,7 +569,7 @@ export async function startShow(showId: string) {
     const slideRef = getLayoutRef(showId)
 
     // get first non-disabled slide
-    let index = 0
+    let index = startIndex
     while (slideRef[index] && slideRef[index]?.data?.disabled) index++
     if (!slideRef[index]) return
 

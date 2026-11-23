@@ -54,6 +54,11 @@
                                 <span class="translation">({getShortBibleName($scriptures[smartAction.scriptureTranslation]?.name)})</span>
                             {/if}
                         </span>
+                    {:else if smartAction?.action === "present_song"}
+                        <Icon id="song" white />
+
+                        <p>In your library, click to present:</p>
+                        <span style="font-weight: bold;">{smartAction.content}</span>
                     {:else if smartAction?.action === "open_scripture"}
                         <Icon id="scripture" white />
 

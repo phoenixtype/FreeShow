@@ -15,6 +15,9 @@ export interface MatchResult {
     scriptureMatchType?: "content"
     scriptureTranslation?: string
     scriptureIsNewTranslation?: boolean
+
+    showId?: string // "lyrics": the song in the library
+    lyricsText?: string // "lyrics": the words just sung, to find the slide
 }
 
 export interface AiSuggestion {
