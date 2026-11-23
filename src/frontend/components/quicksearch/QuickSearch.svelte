@@ -317,7 +317,6 @@
     .category-header {
         font-size: 0.75em;
         font-weight: bold;
-        text-transform: uppercase;
         color: var(--text);
         opacity: 0.4;
         padding: 10px 10px 5px 10px;

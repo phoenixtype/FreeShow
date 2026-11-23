@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte"
-    import { activePopup, activeProject, projects, projectView, quickSearchActive, showRecentlyUsedProjects, shows, special, version } from "../../stores"
+    import { activePopup, activeProject, projects, projectView, quickSearchActive, showRecentlyUsedProjects, special, version } from "../../stores"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
@@ -47,7 +47,7 @@
 </script>
 
 <Center class="context #splash">
-    <h1>FreeShow</h1>
+    <h1>Scriptural</h1>
     <p style="opacity: 0.7;">v{$version}</p>
     {#if $special.splashText}
         <p style="padding-top: 30px">
@@ -60,14 +60,6 @@
                     </Link>
                 {/each}
             </span>
-        </p>
-    {:else if Object.keys($shows).length < 20}
-        <!-- shows up for new users (can be found in "About" menu) -->
-        <p style="padding-top: 30px">
-            <Link url="https://freeshow.app/docs">
-                <T id="main.docs" />
-                <Icon id="launch" white />
-            </Link>
         </p>
     {:else if votd}
         <p class="votd" style="padding-top: 30px" data-title="Verse of the Day [votd.org]">

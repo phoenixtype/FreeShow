@@ -132,7 +132,6 @@
 
         font-size: 0.9em;
         text-align: center;
-        text-transform: uppercase;
 
         padding: 4px 10px;
         min-width: 160px;

@@ -34,7 +34,6 @@
 
         font-size: 0.9em;
         font-family: monospace;
-        text-transform: uppercase;
 
         padding: 2px 6px;
         border-radius: 4px;

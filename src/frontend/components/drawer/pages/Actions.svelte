@@ -241,7 +241,6 @@
     .key {
         color: var(--secondary);
         font-weight: bold;
-        text-transform: uppercase;
     }
 
     .deactivated {

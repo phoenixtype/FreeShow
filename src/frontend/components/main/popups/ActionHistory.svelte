@@ -76,6 +76,5 @@
         font-size: 0.75em;
         opacity: 0.6;
         padding: 1px 5px;
-        text-transform: uppercase;
     }
 </style>

@@ -18,7 +18,6 @@
 
         margin: 18px 0;
         font-size: 0.75em;
-        text-transform: uppercase;
 
         font-weight: bold;
     }

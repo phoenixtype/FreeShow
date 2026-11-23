@@ -12,7 +12,7 @@
 
     initSocket()
 
-    const freeshowLogo = new URL("../../../public/import-logos/freeshow.webp", import.meta.url).href
+    const freeshowLogo = new URL("../../../public/scriptural-logo.png", import.meta.url).href
 
     let inputPassword: string = ""
 
@@ -165,7 +165,7 @@
     <div class="auth-page">
         <div class="panel" style="align-items: center; text-align: center;">
             <div class="brand">
-                <img class="logo" src={freeshowLogo} alt="FreeShow logo" draggable="false" />
+                <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
                 <h1>StageShow</h1>
             </div>
             <p style="opacity: 0.7; font-size: 0.95em;">{translate("remote.loading", $dictionary, "Loading...")}</p>
@@ -176,7 +176,7 @@
         <div class="auth-page">
             <div class="panel">
                 <div class="brand">
-                    <img class="logo" src={freeshowLogo} alt="FreeShow logo" draggable="false" />
+                    <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
                     <h1>StageShow</h1>
                 </div>
 
@@ -200,7 +200,7 @@
         <div class="auth-page">
             <div class="panel" style="align-items: center; text-align: center;">
                 <div class="brand">
-                    <img class="logo" src={freeshowLogo} alt="FreeShow logo" draggable="false" />
+                    <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
                     <h1>StageShow</h1>
                 </div>
                 <p style="opacity: 0.6; padding: 12px 0;">{translate("empty.shows", $dictionary, "No stage layouts found")}</p>
@@ -269,15 +269,15 @@
     }
 
     :root {
-        --primary: #242832;
-        --primary-lighter: #2f3542;
-        --primary-darker: #191923;
-        --primary-darkest: #12121c;
-        --text: #f0f0ff;
-        --textInvert: #131313;
-        --secondary: #f0008c;
-        --secondary-opacity: rgba(240, 0, 140, 0.5);
-        --secondary-text: #f0f0ff;
+        --primary: #121212;
+        --primary-lighter: #202020;
+        --primary-darker: #0d0d0d;
+        --primary-darkest: #080808;
+        --text: #f7f7f7;
+        --textInvert: #171717;
+        --secondary: #f7f7f7;
+        --secondary-opacity: rgb(247 247 247 / 0.35);
+        --secondary-text: #171717;
 
         --hover: rgb(255 255 255 / 0.05);
         --focus: rgb(255 255 255 / 0.1);

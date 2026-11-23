@@ -46,6 +46,5 @@
     .shortcut {
         color: var(--accent);
         font-weight: bold;
-        text-transform: uppercase;
     }
 </style>

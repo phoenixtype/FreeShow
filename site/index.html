@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Scriptural Project: songs and scripture for church meetings</title>
+        <meta name="description" content="Put songs and scripture on screen in church meetings. Scriptural listens to the preacher and brings up each verse as it is read." />
+        <link rel="icon" href="/favicon.ico" />
+        <style>
+            @font-face {
+                font-family: "Inter";
+                src: url("/inter.woff2") format("woff2");
+                font-weight: 100 900;
+                font-display: swap;
+            }
+            :root {
+                --background: #080808;
+                --card: #121212;
+                --border: #262626;
+                --foreground: #f7f7f7;
+                --muted: #bdbdbd;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--background);
+                color: var(--foreground);
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                line-height: 1.55;
+                -webkit-font-smoothing: antialiased;
+            }
+            main {
+                max-width: 640px;
+                margin: 0 auto;
+                padding: 72px 24px 48px;
+            }
+            img {
+                width: 56px;
+                height: 56px;
+                border-radius: 14px;
+            }
+            h1 {
+                font-size: 2.25rem;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+                margin: 28px 0 12px;
+            }
+            p {
+                color: var(--muted);
+                margin: 0 0 16px;
+            }
+            .downloads {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin: 32px 0 12px;
+            }
+            .downloads a {
+                display: inline-block;
+                padding: 10px 18px;
+                border-radius: 10px;
+                background: var(--foreground);
+                color: var(--background);
+                font-weight: 600;
+                text-decoration: none;
+            }
+            .downloads a.secondary {
+                background: transparent;
+                color: var(--foreground);
+                border: 1px solid var(--border);
+            }
+            .note {
+                font-size: 0.875rem;
+            }
+            hr {
+                border: 0;
+                border-top: 1px solid var(--border);
+                margin: 40px 0;
+            }
+            h2 {
+                font-size: 1.125rem;
+                font-weight: 600;
+                margin: 0 0 8px;
+            }
+            section + section {
+                margin-top: 24px;
+            }
+            a {
+                color: var(--foreground);
+            }
+            footer {
+                font-size: 0.8125rem;
+                color: var(--muted);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <img src="/icon.png" alt="" />
+            <h1>Songs and scripture on screen, for church meetings</h1>
+            <p>Scriptural Project runs the screens in the room. It listens to the preacher and brings up each verse as it is read, so no one has to hunt for it.</p>
+
+            <div class="downloads" id="downloads">
+                <a class="secondary" href="https://github.com/phoenixtype/FreeShow/releases">All downloads</a>
+            </div>
+            <p class="note" id="version"></p>
+
+            <hr />
+
+            <section>
+                <h2>Hears the verse</h2>
+                <p>Say "John 3:16", quote it, or tell the story of the prodigal son. The verse comes up on screen, or waits for a click if you prefer.</p>
+            </section>
+            <section>
+                <h2>Follows the reading</h2>
+                <p>"Next verse", "go to chapter four" and "last verse" move the screen while the preacher keeps going.</p>
+            </section>
+            <section>
+                <h2>Runs on your computer</h2>
+                <p>Speech is turned into text on the computer itself. Songs, Bibles and media stay on it too.</p>
+            </section>
+
+            <hr />
+
+            <footer>
+                Built on <a href="https://freeshow.app">FreeShow</a>, free software under the GNU GPL v3. <a href="https://github.com/phoenixtype/FreeShow">Source code</a>. By <a href="https://scriptural.online">Scriptural</a>.
+            </footer>
+        </main>
+
+        <script>
+            // Download links come from the newest published release, so a new version needs no edit here.
+            const LABELS = [
+                { test: (n) => n.endsWith(".dmg") && n.includes("arm64"), label: "Mac (Apple silicon)" },
+                { test: (n) => n.endsWith(".dmg") && n.includes("x64"), label: "Mac (Intel)" },
+                { test: (n) => n.endsWith(".exe"), label: "Windows" },
+                { test: (n) => n.endsWith(".AppImage"), label: "Linux" }
+            ]
+
+            fetch("https://api.github.com/repos/phoenixtype/FreeShow/releases/latest")
+                .then((response) => (response.ok ? response.json() : null))
+                .then((release) => {
+                    if (!release?.assets) return
+                    const box = document.getElementById("downloads")
+                    const ua = navigator.userAgent
+                    const preferred = /Windows/.test(ua) ? "Windows" : /Mac/.test(ua) ? "Mac (Apple silicon)" : "Linux"
+                    const links = []
+                    for (const { test, label } of LABELS) {
+                        const asset = release.assets.find((a) => test(a.name))
+                        if (!asset) continue
+                        const link = document.createElement("a")
+                        link.href = asset.browser_download_url
+                        link.textContent = label
+                        if (label !== preferred) link.className = "secondary"
+                        links.push({ link, first: label === preferred })
+                    }
+                    links.sort((a, b) => b.first - a.first).forEach(({ link }) => box.insertBefore(link, box.lastElementChild))
+                    document.getElementById("version").textContent = `Version ${release.tag_name.replace(/^v/, "")}`
+                })
+                .catch(() => {})
+        </script>
+    </body>
+</html>

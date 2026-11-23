@@ -146,7 +146,7 @@ function getWritableConfigPath(previousLocation?: string | null, setup = false):
     if (setup && previousLocation) return previousLocation
 
     const downloadsPath = getMediaFolderPath("downloads")
-    const downloadsDataPath = downloadsPath ? path.join(downloadsPath, "FreeShow") : ""
+    const downloadsDataPath = downloadsPath ? path.join(downloadsPath, "Scriptural Project") : ""
 
     const candidates = [getDataFolderRoot(), previousLocation || getDefaultDataFolderRoot(), downloadsDataPath, appDataPath].filter((p): p is string => !!p)
     const uniqueCandidates = [...new Set(candidates)]

@@ -216,11 +216,11 @@
             </div>
 
             <div style="display: flex;flex-direction: column;gap: 0.15em;">
-                <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;text-transform: uppercase;">CPU Usage</span>
+                <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;">CPU Usage</span>
                 <span style="color: #cbd5e1;font-size: 0.95em;font-weight: 700;">{cpuUsage.toFixed(1)}%</span>
             </div>
             <div style="display: flex;flex-direction: column;gap: 0.15em;">
-                <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;text-transform: uppercase;">Framerate</span>
+                <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;">Framerate</span>
                 <span style="color: #cbd5e1;font-size: 0.95em;font-weight: 700;">{activeFps.toFixed(0)} FPS</span>
             </div>
 
@@ -229,11 +229,11 @@
                     <div style="width: 100%;height: 1px;background: #2b303c;margin: 0.15em 0;"></div>
                 </div>
                 <div style="display: flex;flex-direction: column;gap: 0.15em;">
-                    <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;text-transform: uppercase;">Duration</span>
+                    <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;">Duration</span>
                     <span style="color: #ef4444;font-size: 0.95em;font-weight: 700;">{streamDuration}</span>
                 </div>
                 <div style="display: flex;flex-direction: column;gap: 0.15em;">
-                    <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;text-transform: uppercase;">Data Sent</span>
+                    <span style="color: #64748b;font-size: 0.65em;font-weight: 600;letter-spacing: 0.05em;">Data Sent</span>
                     <span style="color: #cbd5e1;font-size: 0.95em;font-weight: 700;">{(streamBytes / (1024 * 1024)).toFixed(1)} MB</span>
                 </div>
             {/if}

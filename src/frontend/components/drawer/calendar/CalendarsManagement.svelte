@@ -81,7 +81,6 @@
     .section-title {
         font-size: 0.85em;
         font-weight: 600;
-        text-transform: uppercase;
         letter-spacing: 0.5px;
         opacity: 0.7;
     }

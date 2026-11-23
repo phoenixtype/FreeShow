@@ -1,6 +1,6 @@
-appId: app.freeshow
-productName: FreeShow
-artifactName: FreeShow-${version}-${arch}.${ext}
+appId: online.scriptural.project
+productName: Scriptural Project
+artifactName: Scriptural-Project-${version}-${arch}.${ext}
 
 files:
     - build/electron/**
@@ -36,11 +36,6 @@ win:
         - "**/node_modules/sherpa-onnx-*/**"
         - "**/assets/bin/aero-peek-helper.exe"
         - "**/assets/bin/hid-input-helper.exe"
-    azureSignOptions:
-        publisherName: Live Church Solutions
-        endpoint: https://wus2.codesigning.azure.net/
-        certificateProfileName: FreeShow
-        codeSigningAccountName: FreeShow
 
 # linux
 

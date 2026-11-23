@@ -327,7 +327,6 @@
         background-color: var(--primary-darkest);
         color: var(--text);
         font-size: 0.8em;
-        text-transform: uppercase;
     }
 
     /* number */

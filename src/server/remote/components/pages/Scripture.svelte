@@ -1436,7 +1436,6 @@
 
     .api-divider {
         font-size: 0.75rem;
-        text-transform: uppercase;
         letter-spacing: 0.08em;
         padding: 8px 14px 4px;
         margin-top: 4px;

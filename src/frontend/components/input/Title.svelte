@@ -17,7 +17,6 @@
 <style>
     h3 {
         color: var(--text);
-        text-transform: uppercase;
         font-size: 0.9em;
         margin-top: 20px;
         margin-bottom: 12px;

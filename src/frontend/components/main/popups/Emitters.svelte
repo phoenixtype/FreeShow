@@ -230,7 +230,7 @@
 
     <DynamicList items={emittersList} let:item={emitter} on:open={(e) => (editEmitter = e.detail)} on:delete={(e) => deleteEmitter(e.detail)} on:add={createEmitter}>
         <p class="emitter" style="display: flex;gap: 5px;width: 100%;min-width: auto;">
-            <span style="display: flex;align-items: center;text-transform: uppercase;opacity: 0.5;min-width: 50px;">{emitter.type}</span>{emitter.name || "—"}
+            <span style="display: flex;align-items: center;opacity: 0.5;min-width: 50px;">{emitter.type}</span>{emitter.name || "—"}
             <span style="display: flex;align-items: center;margin-left: 10px;font-size: 0.8em;opacity: 0.5;font-style: italic;">{emitter.description || ""}</span>
         </p>
     </DynamicList>

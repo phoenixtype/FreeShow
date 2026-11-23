@@ -183,7 +183,6 @@
     .label {
         font-size: 0.65em;
         font-weight: bold;
-        text-transform: uppercase;
         letter-spacing: 0.08em;
         opacity: 0.5;
         margin: 0;

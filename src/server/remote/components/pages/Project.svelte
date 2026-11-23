@@ -375,7 +375,6 @@
         padding: 6px 14px;
         font-size: 0.8rem;
         letter-spacing: 0.05em;
-        text-transform: uppercase;
         opacity: 0.85;
         background: var(--primary-darkest);
         border-bottom: 1px solid var(--primary-lighter);
@@ -440,7 +439,6 @@
         padding: 0.35rem 0.85rem;
         min-height: 48px;
         font-size: 1em;
-        text-transform: uppercase;
         letter-spacing: 0.05em;
         opacity: 0.75;
     }

@@ -28,16 +28,16 @@
 <svelte:head>
     <style>
         :root {
-            --primary: #242832;
-            --primary-lighter: #2f3542;
-            --primary-darker: #191923;
-            --primary-darkest: #12121c;
-            --text: #f0f0ff;
-            --textInvert: #131313;
-            --secondary: #f0008c;
-            --secondary-opacity: rgba(240, 0, 140, 0.5);
-            --secondary-text: #f0f0ff;
-            --transparent: #232530;
+            --primary: #121212;
+            --primary-lighter: #202020;
+            --primary-darker: #0d0d0d;
+            --primary-darkest: #080808;
+            --text: #f7f7f7;
+            --textInvert: #171717;
+            --secondary: #f7f7f7;
+            --secondary-opacity: rgb(247 247 247 / 0.35);
+            --secondary-text: #171717;
+            --transparent: #1c1c1c;
 
             --accent: #90caf9;
 
@@ -53,7 +53,7 @@
             /* --navigation-width: 18vw; */
             --navigation-width: 300px;
 
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
             --font-size: 1em;
         }
 

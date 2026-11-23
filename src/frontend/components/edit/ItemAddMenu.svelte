@@ -321,7 +321,6 @@
 
     .group-label {
         font-size: 0.7rem;
-        text-transform: uppercase;
         letter-spacing: 0.05em;
         color: var(--primary-light);
         padding: 8px 10px 4px;

@@ -5,7 +5,8 @@
     import MaterialButton from "../../inputs/MaterialButton.svelte"
 
     const assets: { name: string; url: string; title?: string }[] = [
-        { name: "CMG Sans (Custom font)", url: "https://www.churchmotiongraphics.com/cmg-sans/" },
+        { name: "Inter (Typeface)", url: "https://rsms.me/inter/" },
+        { name: "CMG Sans (Slide font)", url: "https://www.churchmotiongraphics.com/cmg-sans/" },
         { name: "Google Fonts (Icons)", url: "https://fonts.google.com/icons/" },
         { name: "Icons8 (Icons)", url: "https://icons8.com/" },
         { name: "Pixabay (Web Images)", url: "https://pixabay.com/" },
@@ -24,8 +25,8 @@
 
 <div style="text-align: center;">
     <div class="logo">
-        <img style="height: 35px;" src="./import-logos/freeshow.webp" alt="FreeShow-logo" draggable={false} />
-        <h1 style="color: var(--text);font-size: 1.7em;">FreeShow</h1>
+        <img style="height: 35px;" src="./scriptural-logo.png" alt="Scriptural" draggable={false} />
+        <h1 style="color: var(--text);font-size: 1.7em;">Scriptural</h1>
     </div>
 
     <p style="font-size: 0.8em;margin-top: 2px;">
@@ -44,26 +45,11 @@
 
 <div class="main">
     <div class="text">
-        <div>
-            • <T id="about.more" />
-            <Link url="https://churchapps.org/">ChurchApps</Link>
-        </div>
-        <div>
-            • <T id="about.report" />
-            <Link url="https://github.com/ChurchApps/FreeShow/issues">GitHub Issues</Link>
-        </div>
-        <div>
-            • <T id="about.translate" />
-            <Link url="https://app.transifex.com/nettbiter/freeshow/">Transifex</Link>
-        </div>
-        <!-- <div>
-            • <T id="about.mail" />
-            <Link url="mailto:dev@freeshow.app">dev@freeshow.app</Link>
-        </div> -->
-        <div>
-            • <T id="about.support" />!
-            <Link url="https://churchapps.org/partner#give">churchapps.org/partner</Link>
-        </div>
+        <p>Scriptural for church meetings, by SyntaxReady.</p>
+        <p>
+            Built on FreeShow by Kristoffer Vassbø and ChurchApps. Free software under the GNU GPL v3:
+            <Link url="https://github.com/phoenixtype/FreeShow">source code</Link>
+        </p>
     </div>
 
     <hr />
@@ -73,12 +59,10 @@
 
         <div class="links">
             {#each assets as asset}
-                <span data-title={asset.title}>• <Link url={asset.url}>{asset.name}</Link></span>
+                <span data-title={asset.title}><Link url={asset.url}>{asset.name}</Link></span>
             {/each}
         </div>
     </div>
-
-    <div style="text-align: center;font-size: 0.7em;opacity: 0.5;margin-top: 12px;"><T id="about.made" /> Kristoffer Vassbø (2021)</div>
 </div>
 
 <style>
@@ -99,7 +83,6 @@
 
     h5 {
         color: var(--text);
-        text-transform: uppercase;
         font-size: 0.9em;
         margin-bottom: 5px;
     }

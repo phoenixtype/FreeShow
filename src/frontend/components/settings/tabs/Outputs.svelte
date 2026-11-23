@@ -438,7 +438,7 @@
     </InputRow>
 
     <InputRow>
-        <MaterialTextInput label="inputs.name" value={currentOutput.ndiData?.name || `FreeShow NDI${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} defaultValue={`FreeShow NDI${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} on:change={(e) => updateNdiData(e.detail, "name")} />
+        <MaterialTextInput label="inputs.name" value={currentOutput.ndiData?.name || `Scriptural NDI${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} defaultValue={`Scriptural NDI${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} on:change={(e) => updateNdiData(e.detail, "name")} />
         <MaterialTextInput label="inputs.group" title="settings.comma_seperated" value={currentOutput.ndiData?.groups || ""} defaultValue="" placeholder="public" on:change={(e) => updateNdiData(e.detail, "groups")} />
     </InputRow>
 
@@ -464,7 +464,7 @@
     </InputRow>
 
     <InputRow>
-        <MaterialTextInput label="inputs.name" value={currentOutput.omtData?.name || `FreeShow OMT${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} defaultValue={`FreeShow OMT${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} on:change={(e) => updateOmtData(e.detail, "name")} />
+        <MaterialTextInput label="inputs.name" value={currentOutput.omtData?.name || `Scriptural OMT${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} defaultValue={`Scriptural OMT${currentOutput.name ? ` - ${currentOutput.name}` : ""}`} on:change={(e) => updateOmtData(e.detail, "name")} />
         <MaterialDropdown label="settings.quality" value={currentOutput.omtData?.quality || "Default"} defaultValue="Default" options={omtQualities} on:change={(e) => updateOmtData(e.detail, "quality")} />
     </InputRow>
 
@@ -519,7 +519,7 @@
             {@const status = $rtmpStatus[currentOutput?.id || ""]?.[destination.id]}
 
             <div class="destination">
-                <div style="display: flex;align-items: center;gap: 10px;padding-bottom: 4px;text-transform: uppercase;">
+                <div style="display: flex;align-items: center;gap: 10px;padding-bottom: 4px;">
                     <span class="dot {status?.state || 'idle'}" data-title={status?.error || status?.state || "idle"}></span>
                     <div style="font-size: 0.8em; opacity: 0.5;">{extractPlatformName(destination.url) || ""}</div>
                 </div>

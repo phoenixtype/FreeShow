@@ -5,8 +5,11 @@ const MEASUREMENT_ID = "G-CEE6P1QXG6"
 const API_SECRET = atob("YlVwZE42bXpRVjYyWDc2d0Z3OGMwZw==")
 const SESSION_ID = Date.now().toString()
 
+// Scriptural build: no usage is reported to anyone.
+const ANALYTICS_ENABLED = false
+
 function trackEvent(eventName: string, params?: Record<string, any>) {
-    if (get(isDev)) return
+    if (!ANALYTICS_ENABLED || get(isDev)) return
 
     const clientId = get(deviceId)
     if (!clientId) return
