@@ -33,8 +33,13 @@ type TempleSong = { id: string; title: string; author: string | null; ccli_numbe
 type ProviderProjectItem = { type: "show" | "section"; id: string; scheduleLength: number; name?: string; notes?: string }
 type ProviderProject = { id: string; name: string; scheduledTo: number; created: number; folderId: string; folderName: string; items: ProviderProjectItem[] }
 
-class TempleError extends Error {
-    constructor(public status: number) {
+// export only for tests
+export class TempleError extends Error {
+    // "scope": the token works but was made without services:read (checked here, not by Temple)
+    constructor(
+        public status: number,
+        public reason?: "scope"
+    ) {
         super(`HTTP ${status}`)
     }
 }
@@ -51,9 +56,10 @@ function templeGet<T>(token: string, path: string): Promise<T> {
 /** What to tell the person when Temple refuses. */
 export function templeErrorMessage(error: unknown): string {
     const status = error instanceof TempleError ? error.status : 0
+    if (error instanceof TempleError && error.reason === "scope") return "This Temple token cannot read services. Make one with the services:read permission."
     if (status === 401) return "Temple did not accept this token. Make a new one in Temple under Settings, System, Integrations, API tokens."
-    if (status === 402) return "Your Temple plan does not include the API. It comes with Growth and Enterprise."
-    if (status === 403) return "This Temple token cannot read services. Make one with the services:read permission."
+    // Temple answers 403 before reading the request only when the church's plan has no API
+    if (status === 403) return "Connecting Temple needs Temple's Growth or Enterprise plan."
     if (status === 429) return "Temple is busy. Try again in a minute."
     return "Could not reach Temple. Check the internet connection and try again."
 }
@@ -69,7 +75,7 @@ export async function templeConnect(token: string, scope: TempleScopes = "servic
 
     try {
         const me = await templeGet<{ data: { church: { id: string; name: string }; scopes: string[] } }>(cleaned, "/me")
-        if (!me?.data?.scopes?.includes("services:read")) throw new TempleError(403)
+        if (!me?.data?.scopes?.includes("services:read")) throw new TempleError(403, "scope")
 
         const access: TempleAccess = { access_token: cleaned, church_id: me.data.church?.id || "", church_name: me.data.church?.name || "", created_at: Date.now() }
         setContentProviderAccess("temple", scope, access)

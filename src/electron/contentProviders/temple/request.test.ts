@@ -7,7 +7,7 @@ vi.mock("../planningCenter/request", () => ({
     getShow: (songData: any, song: any, sections: any[]) => ({ name: songData.attributes.title, category: "planning_center", meta: { key: song.chord_chart_key }, slides: sections, layouts: {} })
 }))
 
-const { templeSongShow, upcomingPlans, templeErrorMessage } = await import("./request")
+const { templeSongShow, upcomingPlans, templeErrorMessage, TempleError } = await import("./request")
 
 const plan = (id: string, plan_date: string) => ({ id, title: id, plan_date, status: "published", notes: null, updated_at: "", created_at: "" })
 
@@ -29,6 +29,14 @@ describe("templeSongShow", () => {
 })
 
 describe("templeErrorMessage", () => {
+    it("tells a church below Growth that the plan is what's missing", () => {
+        expect(templeErrorMessage(new TempleError(403))).toMatch(/Growth or Enterprise/)
+    })
+
+    it("tells a token without services:read apart from a plan refusal", () => {
+        expect(templeErrorMessage(new TempleError(403, "scope"))).toMatch(/services:read/)
+    })
+
     it("explains a network failure without a status", () => {
         expect(templeErrorMessage(new Error("ENOTFOUND"))).toMatch(/internet/)
     })
