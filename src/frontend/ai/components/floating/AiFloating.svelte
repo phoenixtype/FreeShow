@@ -16,9 +16,13 @@
 
     // Active tab state
     let activeTab: "transcription" | "chat" = "transcription"
+    // the chat acts on the app (show a passage, add or present a song) once a model is chosen
+    $: hasModel = !!$ai.llm?.provider && $ai.llm.provider !== "none"
     $: tabs = {
-        transcription: { name: "ai.transcription", icon: "microphone" }
+        transcription: { name: "ai.transcription", icon: "microphone" },
+        ...(hasModel ? { chat: { name: "Chat", icon: "chat" } } : {})
     }
+    $: if (!hasModel && activeTab === "chat") activeTab = "transcription"
 
     let isOpen = false
     function toggleExpand() {

@@ -1,6 +1,7 @@
 import { getContentProviderAccess } from "../data/contentProviders"
 import { AmazingLifeProvider } from "./amazingLife/AmazingLifeProvider"
 import { CanvaProvider } from "./canva/CanvaProvider"
+import { TempleProvider } from "./temple/TempleProvider"
 import type { ContentProvider } from "./base/ContentProvider"
 import { ContentProviderFactory } from "./base/ContentProvider"
 import type { ContentProviderId } from "./base/types"
@@ -29,6 +30,7 @@ export class ContentProviderRegistry {
         ContentProviderFactory.register("amazinglife", AmazingLifeProvider)
         ContentProviderFactory.register("onstage", OnStageProvider)
         ContentProviderFactory.register("canva", CanvaProvider)
+        ContentProviderFactory.register("temple", TempleProvider)
 
         this.initialized = true
         // console.log("Content provider registry initialized")

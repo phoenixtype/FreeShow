@@ -1061,7 +1061,7 @@ function getDateTitle(dateString: string) {
 
 const itemStyle = "left:50px;top:120px;width:1820px;height:840px;"
 
-function getShow(SONG_DATA: any, SONG: any, SECTIONS: any[], type = "") {
+export function getShow(SONG_DATA: any, SONG: any, SECTIONS: any[], type = "") {
     const slides: { [key: string]: Slide } = {}
     const layoutSlides: SlideData[] = []
     SECTIONS.forEach((section) => {

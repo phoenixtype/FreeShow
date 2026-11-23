@@ -5,10 +5,12 @@
 
 import { setTempShows } from "../converters/importHelpers"
 import { convertText } from "../converters/txt"
-import { categories } from "../stores"
+import { loadShows } from "../components/helpers/setShow"
+import { categories, shows, showsCache } from "../stores"
+import { get } from "svelte/store"
 import { save } from "../utils/save"
 import { churchLibrary, ScripturalError } from "./connection"
-import type { SongSection } from "./songFormat"
+import { showToSong, type SongSection } from "./songFormat"
 
 export interface Church {
     id: string
@@ -25,6 +27,8 @@ interface LibrarySong {
     arrangement: string[]
     updated_at: string
     deleted_at: string | null
+    source: string | null
+    source_id: string | null
 }
 
 const PAGE_SIZE = 1000
@@ -63,7 +67,7 @@ export async function syncSongs(churchId: string, onProgress?: (count: number) =
     const since = localStorage.getItem(cursorKey(churchId)) || "1970-01-01T00:00:00Z"
     const changed: LibrarySong[] = []
     for (let offset = 0; ; offset += PAGE_SIZE) {
-        const { data } = await churchLibrary.rest<LibrarySong[]>(`songs?select=id,title,authors,copyright,ccli,sections,arrangement,updated_at,deleted_at&church_id=eq.${churchId}&updated_at=gt.${encodeURIComponent(since)}&order=updated_at.asc,id.asc&offset=${offset}&limit=${PAGE_SIZE}`)
+        const { data } = await churchLibrary.rest<LibrarySong[]>(`songs?select=id,title,authors,copyright,ccli,sections,arrangement,updated_at,deleted_at,source,source_id&church_id=eq.${churchId}&updated_at=gt.${encodeURIComponent(since)}&order=updated_at.asc,id.asc&offset=${offset}&limit=${PAGE_SIZE}`)
         changed.push(...(data || []))
         onProgress?.(changed.length)
         if (!data || data.length < PAGE_SIZE) break
@@ -82,11 +86,44 @@ export async function syncSongs(churchId: string, onProgress?: (count: number) =
             show.name = song.title
             show.origin = "church-library"
             show.meta = { ...show.meta, title: song.title, author: song.authors || "", copyright: song.copyright || "", CCLI: song.ccli || "" }
-            return { id: song.id, show }
+            // a song first made in the app keeps that id on every computer
+            return { id: song.source === "app" && song.source_id ? song.source_id : song.id, show }
         })
     if (tempShows.length) setTempShows(tempShows, { suppressFinishedToast: true })
 
     localStorage.setItem(cursorKey(churchId), changed[changed.length - 1].updated_at)
     save()
     return tempShows.length
+}
+
+const pushedKey = (churchId: string) => `church-library-pushed:${churchId}`
+const isLibraryId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)
+
+/** Sends songs changed or added in the Church library category on this computer. Returns how many went up. */
+export async function pushSongs(churchId: string): Promise<number> {
+    if (!churchLibrary.getSession()) throw new ScripturalError("Sign in to your church library first.")
+    const since = Number(localStorage.getItem(pushedKey(churchId)) || 0)
+    const changed = Object.entries(get(shows))
+        .filter(([, show]) => show.category === "church_library" && (show.timestamps?.modified || 0) > since)
+        .map(([id]) => id)
+    if (!changed.length) return 0
+
+    await loadShows(changed)
+    const cache = get(showsCache)
+    let sent = 0
+    for (const id of changed) {
+        const show = cache[id]
+        if (!show) continue
+        const song = JSON.parse(JSON.stringify(showToSong(show as any)))
+        if (!song.sections.length) continue
+        const row = { authors: null, copyright: null, ccli: null, ...song }
+        if (isLibraryId(id)) {
+            await churchLibrary.rest(`songs?id=eq.${id}&church_id=eq.${churchId}`, { method: "PATCH", body: row, headers: { Prefer: "return=minimal" } })
+        } else {
+            await churchLibrary.rest("songs?on_conflict=church_id,source,source_id", { method: "POST", body: { ...row, church_id: churchId, source: "app", source_id: id }, headers: { Prefer: "resolution=merge-duplicates,return=minimal" } })
+        }
+        sent++
+    }
+    localStorage.setItem(pushedKey(churchId), String(Date.now()))
+    return sent
 }

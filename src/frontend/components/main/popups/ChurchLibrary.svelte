@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
-    import { createChurch, joinChurch, myChurches, syncSongs, type Church } from "../../../scriptural/churchSync"
+    import { createChurch, joinChurch, myChurches, pushSongs, syncSongs, type Church } from "../../../scriptural/churchSync"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import { Main } from "../../../../types/IPC/Main"
     import { sendMain } from "../../../IPC/main"
@@ -103,8 +103,9 @@
         message = ""
         received = 0
         try {
+            const sent = await pushSongs(activeId)
             const count = await syncSongs(activeId, (n) => (received = n))
-            message = count ? `${count} songs are up to date on this computer.` : "Everything is already up to date."
+            message = [sent ? `${sent} songs sent to the library.` : "", count ? `${count} songs updated on this computer.` : "", !sent && !count ? "Everything is already up to date." : ""].filter(Boolean).join(" ")
         } catch (err) {
             message = errorText(err, "The sync stopped. Try again.")
         }

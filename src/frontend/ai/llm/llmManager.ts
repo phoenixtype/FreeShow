@@ -70,7 +70,13 @@ export class LLMManager {
 
         try {
             const data = { providerId: this.providerId, model: this.model, options }
-            const response = this.providerId === "scriptural" ? await completeWithScripturalAI(options) : await requestMain(Main.AI_LLM_COMPLETE, data, undefined, 60000)
+            let response = this.providerId === "scriptural" ? await completeWithScripturalAI(options) : await requestMain(Main.AI_LLM_COMPLETE, data, undefined, 60000)
+
+            // the paid or cloud model could not answer (offline, no key, plan used up): ask the local one
+            const localFallback = get(ai).llm?.localFallback
+            if ((response?.error || !response?.text) && localFallback && this.providerId !== "ollama") {
+                response = await requestMain(Main.AI_LLM_COMPLETE, { providerId: "ollama", model: localFallback, options }, undefined, 60000)
+            }
 
             if (response?.error || !response?.text) {
                 if (response?.error) console.error("LLM error:", response.error)

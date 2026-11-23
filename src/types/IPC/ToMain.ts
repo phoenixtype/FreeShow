@@ -24,6 +24,7 @@ export enum ToMain {
     // AI
     AI_STATUS = "AI_STATUS",
     AI_TRANSCRIPT = "AI_TRANSCRIPT",
+    AI_OLLAMA_PULL = "AI_OLLAMA_PULL",
     // Unified provider callbacks
     PROVIDER_CONNECT = "PROVIDER_CONNECT",
     PROVIDER_PROJECTS = "PROVIDER_PROJECTS",
@@ -78,6 +79,7 @@ export interface ToMainSendPayloads {
     [ToMain.RECEIVE_MIDI2]: { id: string; values: any; type: "noteon" | "noteoff" | "control" }
     // AI
     [ToMain.AI_STATUS]: { state: "listening" | "stopped" | "error"; message?: string }
+    [ToMain.AI_OLLAMA_PULL]: { model: string; percent: number }
     [ToMain.AI_TRANSCRIPT]: { text: string; interim?: boolean; startMs?: number; endMs?: number; language?: string; music?: boolean; utteranceEnd?: boolean; confidence?: number; glue?: boolean }
     [ToMain.HID_DATA]: { path?: string; data: number[] }
 }

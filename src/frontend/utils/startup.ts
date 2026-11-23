@@ -169,7 +169,8 @@ export async function contentProviderSync(startup = false, remainingOnly = false
         { providerId: "planningcenter" as ContentProviderId, scope: "services", data: { syncFolderIds: get(contentProviderData).planningcenter?.syncFolderIds || [], songOrigin: get(contentProviderData).planningcenter?.songOrigin || "" }, autoSync: get(contentProviderData).planningcenter?.autoSync !== false },
         { providerId: "churchApps" as ContentProviderId, scope: "plans", data: { shows: get(shows), categories: get(contentProviderData).churchApps?.syncCategories || [] } },
         { providerId: "amazinglife" as ContentProviderId, scope: "openid profile email" },
-        { providerId: "onstage" as ContentProviderId, scope: "presenter", data: get(contentProviderData).onstage || {}, autoSync: get(contentProviderData).onstage?.autoSync !== false }
+        { providerId: "onstage" as ContentProviderId, scope: "presenter", data: get(contentProviderData).onstage || {}, autoSync: get(contentProviderData).onstage?.autoSync !== false },
+        { providerId: "temple" as ContentProviderId, scope: "services", autoSync: get(contentProviderData).temple?.autoSync !== false }
     ]
 
     providers.forEach(({ providerId, scope, data, autoSync }) => {

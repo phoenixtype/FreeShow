@@ -145,6 +145,17 @@
         }
     }
 
+    // Temple has no OAuth: a church admin pastes an API token made in Temple
+    const TEMPLE_TOKEN_URL = "https://templeadmin.com/dashboard/settings?tab=system&expand=integrations"
+    let templeTokenOpen = false
+    let templeToken = ""
+    function connectTemple() {
+        if (!templeToken.trim()) return
+        sendMain(Main.PROVIDER_LOAD_SERVICES, { providerId: "temple", data: { token: templeToken.trim() } })
+        templeToken = ""
+        templeTokenOpen = false
+    }
+
     function syncContentProvider() {
         contentProviderSync()
 
@@ -284,7 +295,7 @@
     <MaterialToggleSwitch label="" checked={$special.remoteController} on:change={(e) => toggleRemoteController(e.detail)} />
 </InputRow>
 
-{#if !$providerConnections.planningcenter && (!$providerConnections.churchApps || cloudOnly.churchApps) && !$providerConnections.amazinglife && !$providerConnections.onstage}
+{#if !$providerConnections.planningcenter && (!$providerConnections.churchApps || cloudOnly.churchApps) && !$providerConnections.amazinglife && !$providerConnections.onstage && !$providerConnections.temple}
     <!-- No provider connected - show connection options -->
     <Title label="settings.content_provider" icon="list" />
 
@@ -311,6 +322,42 @@
             <T id="settings.connect_to" replace={["OnStage"]} />
         </MaterialButton>
     </InputRow>
+
+    <InputRow>
+        <MaterialButton on:click={() => (templeTokenOpen = !templeTokenOpen)} style="flex: 1;" icon="login" isActive={templeTokenOpen}>
+            <T id="settings.connect_to" replace={["Temple"]} />
+        </MaterialButton>
+    </InputRow>
+
+    {#if templeTokenOpen}
+        <InputRow>
+            <MaterialTextInput label="Temple API token" type="password" value={templeToken} pasteBtn autofocus on:input={(e) => (templeToken = e.detail)} on:change={(e) => (templeToken = e.detail)} />
+            <MaterialButton on:click={() => sendMain(Main.URL, TEMPLE_TOKEN_URL)} title="Make a token in Temple with the services:read permission">
+                <Icon id="launch" white />
+                Get a token
+            </MaterialButton>
+            <MaterialButton variant="contained" disabled={!templeToken.trim()} on:click={connectTemple}>Connect</MaterialButton>
+        </InputRow>
+    {/if}
+{:else if $providerConnections.temple}
+    <!-- Temple connected -->
+    <Title label="Content Provider: Temple" icon="list" />
+
+    <InputRow>
+        <MaterialButton on:click={() => contentProviderConnect("temple")} style="flex: 1;border-bottom: 2px solid var(--connected) !important;" icon="logout">
+            <T id="settings.disconnect_from" replace={["Temple"]} />
+        </MaterialButton>
+        <MaterialButton icon="cloud_sync" on:click={syncContentProvider}>
+            <T id="cloud.sync" />
+        </MaterialButton>
+        <MaterialButton on:click={() => sendMain(Main.URL, "https://templeadmin.com")} title="Temple" white>
+            <Icon id="launch" white />
+        </MaterialButton>
+    </InputRow>
+
+    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.temple?.autoSync !== false} on:change={(e) => updateProvider("temple", "autoSync", e.detail)} />
+
+    <MaterialDropdown label="Song origin" options={providerOriginOptions} value={$contentProviderData.temple?.songOrigin || ""} on:change={(e) => updateProvider("temple", "songOrigin", e.detail)} />
 {:else if $providerConnections.planningcenter}
     <!-- Planning Center connected -->
     <Title label="Content Provider: Planning Center" icon="list" />

@@ -1,4 +1,4 @@
-export type ContentProviderId = "planningcenter" | "churchApps" | "amazinglife" | "onstage" | "canva"
+export type ContentProviderId = "planningcenter" | "churchApps" | "amazinglife" | "onstage" | "canva" | "temple"
 
 /**
  * Common types and interfaces for content providers

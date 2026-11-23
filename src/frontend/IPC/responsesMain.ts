@@ -1,4 +1,5 @@
 import { get } from "svelte/store"
+import { localModelDownloads } from "../ai/llm/localModels"
 import { uid } from "uid"
 import type { ContentProviderId } from "../../electron/contentProviders/base/types"
 import type { ToMainSendPayloads } from "../../types/IPC/ToMain"
@@ -437,7 +438,7 @@ export const mainResponses: MainResponses = {
                 }
             }
 
-            const providerName = data.providerId === "planningcenter" ? "Planning Center" : data.providerId === "churchApps" ? "ChurchApps" : data.providerId === "onstage" ? "OnStage" : "the cloud"
+            const providerName = data.providerId === "planningcenter" ? "Planning Center" : data.providerId === "churchApps" ? "ChurchApps" : data.providerId === "onstage" ? "OnStage" : data.providerId === "temple" ? "Temple" : "the cloud"
 
             // first find any shows linked to the id
             const link = getProviderItemLink(data.providerId, id)
@@ -686,5 +687,6 @@ export const mainResponses: MainResponses = {
 
     // AI
     [ToMain.AI_STATUS]: (data) => aiSttStatus.set(data),
-    [ToMain.AI_TRANSCRIPT]: (data) => Transcript.push(data)
+    [ToMain.AI_TRANSCRIPT]: (data) => Transcript.push(data),
+    [ToMain.AI_OLLAMA_PULL]: (data) => localModelDownloads.update((a) => ({ ...a, [data.model]: data.percent }))
 }

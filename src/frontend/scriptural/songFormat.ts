@@ -173,3 +173,57 @@ export function cleanEasyWorshipSong(song: { title?: string; author?: string; co
         arrangement
     }
 }
+
+// THE APP'S SHOWS //
+
+interface ShowLike {
+    name: string
+    settings: { activeLayout: string }
+    layouts: { [id: string]: { slides: { id: string }[] } }
+    slides: { [id: string]: { group: string | null; globalGroup?: string; children?: string[]; items?: { lines?: { text?: { value?: string }[] }[] }[] } }
+    meta?: { author?: string; copyright?: string; CCLI?: string }
+}
+
+const slideLines = (slide?: ShowLike["slides"][string]): string[] =>
+    (slide?.items || [])
+        .flatMap((item) =>
+            (item.lines || []).map((line) =>
+                (line.text || [])
+                    .map((t) => t.value || "")
+                    .join("")
+                    .trim()
+            )
+        )
+        .filter(Boolean)
+
+/** A show in the app -> the library's shape: each group is a section, the layout is the sung order. */
+export function showToSong(show: ShowLike): CleanSong {
+    const order = show.layouts[show.settings.activeLayout]?.slides || []
+    const sections: SongSection[] = []
+    const labelOf = new Map<string, string>()
+    const counts: Partial<Record<SectionType, number>> = {}
+
+    for (const { id } of order) {
+        if (labelOf.has(id)) continue
+        const slide = show.slides[id]
+        if (!slide) continue
+        const lines = [...slideLines(slide), ...(slide.children || []).flatMap((child) => slideLines(show.slides[child]))]
+        if (!lines.length) continue
+        const named = readLabel(slide.group || slide.globalGroup || "")
+        const type: SectionType = named?.type || "verse"
+        counts[type] = (counts[type] || 0) + 1
+        let label = named?.number ? `${named.name} ${named.number}` : named && type !== "verse" ? named.name : `Verse ${counts[type]}`
+        while (sections.some((s) => s.label === label)) label = `${named?.name || "Verse"} ${++counts[type]!}`
+        sections.push({ label, type, lines })
+        labelOf.set(id, label)
+    }
+
+    return {
+        title: show.name,
+        authors: show.meta?.author || undefined,
+        copyright: show.meta?.copyright || undefined,
+        ccli: show.meta?.CCLI || undefined,
+        sections,
+        arrangement: order.map(({ id }) => labelOf.get(id)).filter((l): l is string => !!l)
+    }
+}

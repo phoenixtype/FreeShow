@@ -10,6 +10,7 @@ import { Main } from "../../types/IPC/Main"
 import { ToMain } from "../../types/IPC/ToMain"
 import type { ErrorLog, LyricSearchResult, OS } from "../../types/Main"
 import { completeLLM, fetchProviderModels } from "../ai/llm/llmProviders"
+import { ollamaProvider } from "../ai/llm/providers/ollama"
 import { setAiKey } from "../ai/setup/aiKeys"
 import { aiHandleLocalSetup, LocalModelManager } from "../ai/setup/LocalModelManager"
 import { aiGetModelStatus } from "../ai/setup/status"
@@ -295,7 +296,9 @@ export const mainResponses: MainResponses = {
     [Main.AI_GET_STATUS]: (data) => aiGetModelStatus(data),
     [Main.AI_SETUP]: (data) => aiHandleLocalSetup(data),
     [Main.AI_SET_KEY]: (data) => setAiKey(data),
-    [Main.AI_LLM_COMPLETE]: (data) => completeLLM(data)
+    [Main.AI_LLM_COMPLETE]: (data) => completeLLM(data),
+    [Main.AI_OLLAMA_STATUS]: () => ollamaProvider.status(),
+    [Main.AI_OLLAMA_PULL]: (data) => ollamaProvider.pull(data.model, (percent) => sendToMain(ToMain.AI_OLLAMA_PULL, { model: data.model, percent }))
 }
 
 /// ///////

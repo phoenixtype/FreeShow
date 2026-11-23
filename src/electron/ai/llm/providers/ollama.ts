@@ -18,6 +18,51 @@ class OllamaProvider extends APIModel {
         }
     }
 
+    // is the free Ollama app running here, and which models has it downloaded
+    async status(): Promise<{ running: boolean; models: string[] }> {
+        try {
+            const { data } = await axios.get(`${API_URL}/api/tags`, { timeout: 3000 })
+            const models = Array.isArray(data?.models) ? data.models.map((m: any) => String(m.name)) : []
+            return { running: true, models }
+        } catch {
+            return { running: false, models: [] }
+        }
+    }
+
+    // downloads a model through Ollama, reporting progress as it streams in
+    async pull(model: string, onProgress: (percent: number) => void): Promise<{ ok: boolean; error?: string }> {
+        try {
+            const response = await axios.post(`${API_URL}/api/pull`, { model, stream: true }, { responseType: "stream", timeout: 0 })
+            return await new Promise((resolve) => {
+                let buffer = ""
+                let failed = ""
+                let lastPercent = -1
+                response.data.on("data", (chunk: Buffer) => {
+                    buffer += chunk.toString()
+                    const lines = buffer.split("\n")
+                    buffer = lines.pop() || ""
+                    for (const line of lines) {
+                        if (!line.trim()) continue
+                        try {
+                            const event = JSON.parse(line)
+                            if (event.error) failed = String(event.error)
+                            if (event.total && event.completed) {
+                                const percent = Math.floor((event.completed / event.total) * 100)
+                                if (percent !== lastPercent) onProgress((lastPercent = percent))
+                            }
+                        } catch {
+                            // a partial line; the next chunk completes it
+                        }
+                    }
+                })
+                response.data.on("end", () => resolve(failed ? { ok: false, error: failed } : { ok: true }))
+                response.data.on("error", (err: Error) => resolve({ ok: false, error: err.message }))
+            })
+        } catch {
+            return { ok: false, error: "Ollama is not running on this computer" }
+        }
+    }
+
     async testConnection(_apiKey: string, model: string) {
         try {
             const models = await this.fetchModels()

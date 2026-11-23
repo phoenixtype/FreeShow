@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cleanEasyWorshipSong, easyWorshipSlides, readLabel, tidyLine, tidyTitle, toSections } from "./songFormat"
+import { cleanEasyWorshipSong, easyWorshipSlides, readLabel, showToSong, tidyLine, tidyTitle, toSections } from "./songFormat"
 
 const rtf = (body: string) => `{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0\\fnil Arial;}}{\\colortbl\\red0\\green0\\blue0;}${body}}`
 const par = (text: string) => `\\li0\\fi0\\ri0\\sb0\\sl\\sa0 \\plain\\f1 ${text}\\par\n`
@@ -83,5 +83,28 @@ describe("cleanEasyWorshipSong", () => {
         expect(song.authors).toBe("Sinach")
         expect(song.ccli).toBe("7115744")
         expect(song.sections[0].label).toBe("Verse 1")
+    })
+})
+
+describe("showToSong", () => {
+    const text = (value: string) => ({ lines: value.split("\n").map((v) => ({ text: [{ value: v }] })) })
+    it("turns groups into sections and the layout into the sung order", () => {
+        const song = showToSong({
+            name: "Way Maker",
+            settings: { activeLayout: "L" },
+            layouts: { L: { slides: [{ id: "a" }, { id: "b" }, { id: "a" }] } },
+            slides: {
+                a: { group: "Verse", items: [text("You are here\nMoving in our midst")] },
+                b: { group: "Chorus", children: ["c"], items: [text("Way maker")] },
+                c: { group: null, items: [text("Promise keeper")] }
+            },
+            meta: { author: "Sinach", CCLI: "7115744" }
+        })
+        expect(song.sections).toEqual([
+            { label: "Verse 1", type: "verse", lines: ["You are here", "Moving in our midst"] },
+            { label: "Chorus", type: "chorus", lines: ["Way maker", "Promise keeper"] }
+        ])
+        expect(song.arrangement).toEqual(["Verse 1", "Chorus", "Verse 1"])
+        expect(song.ccli).toBe("7115744")
     })
 })

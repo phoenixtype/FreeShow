@@ -10,6 +10,7 @@
     import { newToast } from "../../../utils/common"
     import { translateText } from "../../../utils/language"
     import { llmSession } from "../../llm/llmSession"
+    import LocalModels from "./LocalModels.svelte"
 
     $: llmOptions = $ai.llm || {}
 
@@ -113,7 +114,8 @@
 {:else if provider === "scriptural"}
     <p style="opacity: 0.8;margin: 10px 0;">Included with a Church or Multi-campus plan: no key needed. Sign in under Import &gt; Church library. Or choose Anthropic or Google to use your own key.</p>
 {:else if provider === "ollama"}
-    <!-- no API key: everything runs on the local ollama server - just make sure the model is pulled -->
+    <!-- no API key: everything runs on the local ollama server -->
+    <LocalModels mode="main" on:changed={() => fetchModelsForProvider("ollama")} />
 {:else}
     <Tip type="warning" value="ai.privacy_cloud" top={10} bottom={10} />
 
@@ -130,7 +132,17 @@
     </div>
 {/if}
 
+{#if provider !== "none" && provider !== "ollama"}
+    <p class="backupTitle">Free backup on this computer</p>
+    <LocalModels mode="fallback" />
+{/if}
+
 <style>
+    .backupTitle {
+        margin-top: 20px;
+        font-weight: 600;
+    }
+
     .modelSelectRow {
         position: relative;
         display: flex;

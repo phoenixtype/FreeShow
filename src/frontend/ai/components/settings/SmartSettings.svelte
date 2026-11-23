@@ -5,6 +5,8 @@
     import { translateText } from "../../../utils/language"
     import { enableLiveCopilot } from "../../liveCopilot"
     import AutoScriptureOptions from "./AutoScriptureOptions.svelte"
+    import Title from "../../../components/input/Title.svelte"
+    import LlmOptions from "../popups/LlmOptions.svelte"
     import STTOptions from "./STTOptions.svelte"
 
     $: isEnabled = $ai.enabled
@@ -27,6 +29,10 @@
     <STTOptions />
 
     <AutoScriptureOptions />
+
+    <!-- the model behind the chat and the smarter detection: Scriptural AI, your own key, or free on this computer -->
+    <Title label="AI model" icon="ai" />
+    <LlmOptions />
 
     <!-- TODO: auto lyrics & more -->
 {:else}
