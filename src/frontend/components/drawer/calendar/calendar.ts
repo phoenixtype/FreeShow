@@ -12,11 +12,10 @@ import { checkName, getLayoutRef } from "../../helpers/show"
 import { _show } from "../../helpers/shows"
 import { getMonthName, getWeekday } from "../../helpers/time"
 import { isCalendarHidden } from "./calendars"
+import { copyDate, getDaysInMonth, getWeekNumber, isSameDay, MILLISECONDS_IN_A_DAY } from "./calendarDates"
 
-export const MILLISECONDS_IN_A_DAY = 86400000
+export { copyDate, getDaysInMonth, getWeekNumber, isSameDay, MILLISECONDS_IN_A_DAY }
 
-export const copyDate = (date: Date, add = 0) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + add)
-export const isSameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 export const isBetween = (from: Date, to: Date, date: Date) => {
     if (isNaN(from.getTime())) return false
     if (isNaN(to.getTime()) || to < from) to = from
@@ -29,8 +28,6 @@ export const isBetween = (from: Date, to: Date, date: Date) => {
 }
 const endsMidnight = (from: Date, to: Date) => to.getTime() > from.getTime() && to.getHours() === 0 && to.getMinutes() === 0 && to.getSeconds() === 0 && to.getMilliseconds() === 0
 export const endsMidnightNextDay = (from: Date, to: Date) => endsMidnight(from, to) && isSameDay(copyDate(to, -1), from)
-export const getDaysInMonth = (year: number, month: number) => new Date(year, getMonthIndex(month), 0).getDate()
-const getMonthIndex = (month: number) => (month + 1 > 12 ? month + 1 : 0)
 
 export const getDateString = (date: Date) => {
     const d = ("0" + date.getDate()).slice(-2)
@@ -283,20 +280,3 @@ export function getSelectedEvents(selectedDays: number[] = get(activeDays)) {
 // HELPERS
 
 // https://stackoverflow.com/a/6117889
-export function getWeekNumber(d: Date) {
-    d = copyDate(d)
-    d.setDate(getNearestThursday())
-
-    const firstDayInYear = new Date(d.getFullYear(), 0, 1)
-    const daysPassedCurrentYear = (d.getTime() - firstDayInYear.getTime()) / MILLISECONDS_IN_A_DAY + 1
-    const weekNumber = Math.ceil(daysPassedCurrentYear / 7)
-
-    return weekNumber
-
-    // ISO 8601 states that week 1 is the week with the first Thursday of that year
-    function getNearestThursday() {
-        const todaysWeekday = d.getDay() || 7 // change Sunday to 7
-        const nearestThursday = d.getDate() + 4 - todaysWeekday
-        return nearestThursday
-    }
-}

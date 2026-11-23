@@ -6,7 +6,6 @@
     import { sortByTime } from "../../helpers/array"
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
-    import { getMonthName } from "../../helpers/time"
     import Center from "../../system/Center.svelte"
     import { copyDate, endsMidnightNextDay, getTime, isBetween, isSameDay } from "./calendar"
     import { isCalendarHidden } from "./calendars"
@@ -43,8 +42,8 @@
 {#if $activeDays.length}
     <div class="main">
         <span class="date">
-            {current.getDate()}. {getMonthName(current.getMonth())}
-            {current.getFullYear()}
+            <!-- the computer's own date format: "Monday, November 23, 2026" in Canada -->
+            {current.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         </span>
 
         <div class="scroll">

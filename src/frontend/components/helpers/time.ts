@@ -120,8 +120,9 @@ export function getWeekday(day: number, d = get(dictionary), uppercase = false, 
     return weekday
 }
 
+// month: 0 to 11, as Date.getMonth() gives it (every caller passes that)
 export function getMonthName(month: number, d = get(dictionary), uppercase = false, locale?: string) {
-    const mIndex = month >= 1 && month <= 12 ? month - 1 : month
+    const mIndex = ((month % 12) + 12) % 12
     const loc = (locale || get(language) || "").replace("_", "-") || undefined
     let monthname = ""
     try {

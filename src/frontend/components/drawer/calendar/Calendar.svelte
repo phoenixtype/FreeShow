@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte"
     import { activeDays, activePopup, calendars, eventEdit, events, labelsDisabled, popupData, special } from "../../../stores"
     import { actionData } from "../../actions/actionData"
     import { removeDuplicates, sortByTime } from "../../helpers/array"
@@ -25,6 +26,14 @@
     $: sundayFirstDay = $special.firstDayOfWeek === "7"
 
     let today = new Date()
+    // left open overnight (Saturday's setup into Sunday's service), today moves on
+    onMount(() => {
+        const tick = setInterval(() => {
+            const now = new Date()
+            if (!isSameDay(now, today)) today = now
+        }, 60_000)
+        return () => clearInterval(tick)
+    })
     $: current = new Date(today.getFullYear(), today.getMonth())
     $: year = current.getFullYear()
     $: month = current.getMonth()
@@ -207,9 +216,7 @@
 
 <div class="calendar">
     <div class="week" style="flex: 1;">
-        <div class="weekday" style="min-width: 25px;flex: 1;padding: 0;background-color: var(--primary-darker);font-size: 0.9em;opacity: 0.7;font-weight: 600;">
-            {current.getFullYear().toString().slice(2)}
-        </div>
+        <div class="weekday" style="min-width: 25px;flex: 1;padding: 0;background-color: var(--primary-darker);font-size: 0.9em;opacity: 0.7;font-weight: 600;"></div>
 
         {#each weekdays as weekday}
             <div class="weekday">
@@ -223,7 +230,8 @@
         {#each days as week}
             <div class="week">
                 <span class="weeknumber">
-                    {getWeekNumber(week[0])}
+                    <!-- ISO weeks start on Monday, which is the second day of a Sunday-first row -->
+                    {getWeekNumber(week[sundayFirstDay ? 1 : 0])}
                 </span>
 
                 {#each week as day}
