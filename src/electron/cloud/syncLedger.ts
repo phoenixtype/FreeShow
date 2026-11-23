@@ -91,6 +91,11 @@ export class SyncLedger {
 
         if (this.changes[type][instanceId].includes(this.deviceId)) return
         this.changes[type][instanceId].push(this.deviceId)
+        // the ledger itself changed, so it has to go up even when no file did: a
+        // sync whose only change was deleting shows used to skip the upload
+        // whenever every store happened to look newer in the cloud, and other
+        // computers never heard of the deletion
+        this.localMergedIn = true
 
         // once every device has acknowledged the change, drop the entry
         if (this.changes[type][instanceId].length >= this.changes.devices.length) {
