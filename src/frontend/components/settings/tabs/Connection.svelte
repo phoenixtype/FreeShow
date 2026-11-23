@@ -338,6 +338,7 @@
             </MaterialButton>
             <MaterialButton variant="contained" disabled={!templeToken.trim()} on:click={connectTemple}>Connect</MaterialButton>
         </InputRow>
+        <Tip type="info" value="Needs a Temple Growth or Enterprise plan. Make the token with the services:read permission." top={10} />
     {/if}
 {:else if $providerConnections.temple}
     <!-- Temple connected -->
