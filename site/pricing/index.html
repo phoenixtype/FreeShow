@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Plans: Scriptural Project</title>
+        <meta name="description" content="Put songs and scripture on screen in church meetings. Scriptural listens to the preacher and brings up each verse as it is read." />
+        <link rel="icon" href="/favicon.ico" />
+        <style>
+            @font-face {
+                font-family: "Inter";
+                src: url("/inter.woff2") format("woff2");
+                font-weight: 100 900;
+                font-display: swap;
+            }
+            :root {
+                --background: #080808;
+                --card: #121212;
+                --border: #262626;
+                --foreground: #f7f7f7;
+                --muted: #bdbdbd;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--background);
+                color: var(--foreground);
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                line-height: 1.55;
+                -webkit-font-smoothing: antialiased;
+            }
+            main {
+                max-width: 640px;
+                margin: 0 auto;
+                padding: 72px 24px 48px;
+            }
+            img {
+                width: 56px;
+                height: 56px;
+                border-radius: 14px;
+            }
+            h1 {
+                font-size: 2.25rem;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+                margin: 28px 0 12px;
+            }
+            p {
+                color: var(--muted);
+                margin: 0 0 16px;
+            }
+            .downloads {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin: 32px 0 12px;
+            }
+            .downloads a {
+                display: inline-block;
+                padding: 10px 18px;
+                border-radius: 10px;
+                background: var(--foreground);
+                color: var(--background);
+                font-weight: 600;
+                text-decoration: none;
+            }
+            .downloads a.secondary {
+                background: transparent;
+                color: var(--foreground);
+                border: 1px solid var(--border);
+            }
+            .note {
+                font-size: 0.875rem;
+            }
+            hr {
+                border: 0;
+                border-top: 1px solid var(--border);
+                margin: 40px 0;
+            }
+            h2 {
+                font-size: 1.125rem;
+                font-weight: 600;
+                margin: 0 0 8px;
+            }
+            section + section {
+                margin-top: 24px;
+            }
+            a {
+                color: var(--foreground);
+            }
+            footer {
+                font-size: 0.8125rem;
+                color: var(--muted);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <a href="/"><img src="/icon.png" alt="Scriptural Project" /></a>
+            <h1>Plans for every size of church</h1>
+            <p>The app is free, with every public-domain Bible and live scripture. A plan adds the shared church library, Scriptural AI and licensed versions on request. Prices in US dollars, plus tax where it applies.</p>
+
+            <section>
+                <h2>Free</h2>
+                <p>The whole app on every computer. Church library for 3 people and 500 songs. Use AI with your own Claude or Gemini key.</p>
+            </section>
+            <section>
+                <h2>Church: $19 a month, or $190 a year</h2>
+                <p>Church library for 10 people and every song you have. 25 GB of media. Scriptural AI included, no key needed. Licensed versions such as the NIV and NKJV on request.</p>
+            </section>
+            <section>
+                <h2>Multi-campus: $49 a month, or $490 a year</h2>
+                <p>Up to 50 people across campuses, 100 GB of media and five times the Scriptural AI.</p>
+            </section>
+
+            <hr />
+            <p>Choose a plan in the app: Import, then Church library. Cancel any time from the same place.</p>
+        </main>
+    </body>
+</html>

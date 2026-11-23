@@ -3,6 +3,9 @@
 import Stripe from "npm:stripe@23"
 import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
 
+// this product's own portal (plans, card, invoices, cancel); the account's default belongs to other products
+const PORTAL_CONFIGURATION = "bpc_1Uf3UcD543enPilsAeoNb0c1"
+
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors })
     if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405)
@@ -18,7 +21,7 @@ Deno.serve(async (req) => {
         if (error) throw error
         if (!data?.stripe_customer_id) return json({ error: "no_subscription", message: "This church has no paid plan yet." }, 404)
 
-        const session = await new Stripe(key).billingPortal.sessions.create({ customer: data.stripe_customer_id, return_url: "https://project.scriptural.online" })
+        const session = await new Stripe(key).billingPortal.sessions.create({ customer: data.stripe_customer_id, configuration: PORTAL_CONFIGURATION, return_url: "https://project.scriptural.online" })
         return json({ url: session.url })
     } catch (error) {
         return failure(error)

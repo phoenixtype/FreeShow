@@ -55,7 +55,12 @@ Deno.serve(async (req) => {
         const userDb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization")! } }, auth: { persistSession: false } })
         const { data: allowed, error } = await userDb.rpc("use_ai_request", { target: body.churchId })
         if (error) throw error
-        if (!allowed) return json({ error: "allowance_used", message: "This month's Scriptural AI is used up. Upgrade, or add your own Claude or Gemini key in Settings." }, 402)
+        if (!allowed) {
+            const { data: limits } = await userDb.rpc("church_limits", { target: body.churchId }).single()
+            const free = (limits as { plan?: string } | null)?.plan === "free"
+            const message = free ? "Scriptural AI comes with a Church plan. Or add your own Claude or Gemini key in Settings." : "This month's Scriptural AI is used up. Upgrade, or add your own Claude or Gemini key in Settings."
+            return json({ error: free ? "plan_required" : "allowance_used", message }, 402)
+        }
 
         let text: string
         try {
