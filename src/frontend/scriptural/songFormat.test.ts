@@ -108,3 +108,9 @@ describe("showToSong", () => {
         expect(song.ccli).toBe("7115744")
     })
 })
+
+describe("review fixes", () => {
+    it("keeps the capital I in contractions", () => {
+        expect(tidyLine("AND I'M FREE, I'LL SING")).toBe("And I'm free, I'll sing")
+    })
+})

@@ -22,6 +22,15 @@ interface ScripturalSession {
 }
 
 export class ScripturalError extends Error {}
+// the auth server answered and said no (as opposed to not being reached)
+class AuthRejected extends ScripturalError {
+    constructor(
+        message: string,
+        public status: number
+    ) {
+        super(message)
+    }
+}
 
 function makeConnection(projectUrl: string, anonKey: string, sessionKey: string, createUsers: boolean) {
     const REST_URL = `${projectUrl}/rest/v1`
@@ -43,7 +52,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
     async function authRequest(path: string, body: object): Promise<any> {
         const response = await fetch(`${AUTH_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", apikey: anonKey }, body: JSON.stringify(body) })
         const data = await response.json().catch(() => ({}))
-        if (!response.ok) throw new ScripturalError(data?.msg || data?.error_description || data?.message || "Could not be reached. Try again.")
+        if (!response.ok) throw new AuthRejected(data?.msg || data?.error_description || data?.message || "Could not be reached. Try again.", response.status)
         return data
     }
 
@@ -77,15 +86,22 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
             const refreshed = toSession(await authRequest("/token?grant_type=refresh_token", { refresh_token: session.refresh_token }), session.email)
             storeSession(refreshed)
             return refreshed.access_token
-        } catch {
-            storeSession(null)
-            return null
+        } catch (err) {
+            // only a refused refresh token ends the session; offline in the meeting room, it is kept
+            if (err instanceof AuthRejected && err.status >= 400 && err.status < 500) {
+                storeSession(null)
+                return null
+            }
+            throw new ScripturalError("Could not reach the church library. Check the connection and try again.")
         }
     }
 
-    /** A REST call as the signed-in account (or anonymously). Throws on any failure. */
-    async function rest<T>(pathAndQuery: string, init: { method?: string; body?: unknown; headers?: Record<string, string> } = {}): Promise<{ data: T; response: Response }> {
-        const token = (await accessToken()) || anonKey
+    /** A REST call as the signed-in account (or anonymously, unless signedIn). Throws on any failure. */
+    async function rest<T>(pathAndQuery: string, init: { method?: string; body?: unknown; headers?: Record<string, string>; signedIn?: boolean } = {}): Promise<{ data: T; response: Response }> {
+        const userToken = await accessToken()
+        // anonymous, row-level security turns a write into a silent no-op
+        if (!userToken && init.signedIn) throw new ScripturalError("Your sign-in has ended. Sign in to the church library again.")
+        const token = userToken || anonKey
         const response = await fetch(`${REST_URL}/${pathAndQuery}`, {
             method: init.method || "GET",
             headers: { apikey: anonKey, Authorization: `Bearer ${token}`, ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...init.headers },

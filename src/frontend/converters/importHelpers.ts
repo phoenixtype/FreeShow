@@ -36,7 +36,8 @@ export function createCategory(name: string, icon = "song", { isDefault, isArchi
     return id
 }
 
-export function setTempShows(tempShows: { id: string; show: Show }[], options: { suppressFinishedToast?: boolean } = {}) {
+// quiet: a background sync; nothing is opened, added to the project or put on screen
+export function setTempShows(tempShows: { id: string; show: Show }[], options: { suppressFinishedToast?: boolean; quiet?: boolean } = {}) {
     const batchIds = new Set(tempShows.map((a) => a.id))
     const taken = Object.entries(get(shows) || {})
         .filter(([id]) => !batchIds.has(id))
@@ -48,14 +49,14 @@ export function setTempShows(tempShows: { id: string; show: Show }[], options: {
     )
     tempShows.forEach((a, i) => (a.show.name = names[i]))
 
-    if (tempShows.length === 1) {
+    if (tempShows.length === 1 && !options.quiet) {
         const selectedIndex = get(activeShow)?.index === undefined ? undefined : get(activeShow)!.index! + 1
         history({ id: "UPDATE", newData: { data: tempShows[0].show, remember: { project: get(activeProject), index: selectedIndex } }, oldData: { id: tempShows[0].id }, location: { page: "show", id: "show" } })
     } else {
         history({ id: "SHOWS", newData: { data: tempShows, replace: true }, location: { page: "show" } })
     }
 
-    activePopup.set(null)
+    if (!options.quiet) activePopup.set(null)
     if (!options.suppressFinishedToast) newToast("main.finished")
 }
 

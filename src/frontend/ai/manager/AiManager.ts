@@ -24,19 +24,19 @@ export class AiManager {
     private static MAX_LLM_REQUEST_AFTER_MATCH = 5000
     private static latestSearchId: number = 0
 
-    static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number }) {
+    static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number; utterance?: string }) {
         this.triggerBackgroundPreload()
+        // watch the output from the first word heard, so slides moved by hand are seen
+        this.listenToOutput()
 
         const searchId = ++this.latestSearchId
         const isCancelled = () => searchId !== this.latestSearchId
 
         // a spoken command ("next verse") moves the screen and is not searched for
         const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
-        const command = parseCopilotCommand(newWords)
-        if (command) {
-            await this.navigate(command)
-            return
-        }
+        const command = parseCopilotCommand(newWords, false) || (chunk.utterance ? parseCopilotCommand(chunk.utterance, true) : null)
+        // a command that moved nothing (no passage on screen) is searched like any other words
+        if (command && (await this.navigate(command))) return
 
         const stringMatch = await this.stringDetection(chunk.chunkWithOverlap, isCancelled)
         if (isCancelled()) return
@@ -75,6 +75,8 @@ export class AiManager {
 
         // only report to LLM if nothing is auto detected
         const llmMatch = await llmManager.detectMatch(chunk)
+        // a newer chunk has spoken since: this answer is stale
+        if (isCancelled()) return
         if (llmMatch) {
             this.newMatch(llmMatch)
             this.lastMatch = Date.now()
@@ -102,6 +104,7 @@ export class AiManager {
             if (this.autoLevel("lyrics") === "ask" || hit.confidence <= 50) return true
             if (this.lastOutputUpdate && Date.now() - this.lastOutputUpdate < this.MAX_AUTO_PLAY_INTERVAL) return true
             this.listenToOutput()
+            this.expectOwnChange()
             if (await followSong(hit.id, recent)) this.outputUpdate(hit.name)
             return true
         }
@@ -124,11 +127,12 @@ export class AiManager {
 
     private static lastCommand = 0
     private static COMMAND_COOLDOWN = 1500
-    private static async navigate(command: CopilotCommand) {
-        if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return
+    private static async navigate(command: CopilotCommand): Promise<boolean> {
+        // a repeat within the cooldown still counts as handled
+        if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return true
 
         const { id, reference } = get(activeScripture)
-        if (!id || !reference?.book || !reference.chapters?.length) return
+        if (!id || !reference?.book || !reference.chapters?.length) return false
 
         const chapter = Number(reference.chapters[reference.chapters.length - 1])
         const verses = (reference.verses?.[reference.verses.length - 1] || []).map((v) => parseInt(String(v), 10)).filter((v) => !isNaN(v))
@@ -136,16 +140,17 @@ export class AiManager {
 
         const bible = (await loadJsonBible(id))?.data
         const book = bible?.books?.find((b) => Number(b.number) === Number(reference.book))
-        if (!book) return
+        if (!book) return false
 
         const chapterOf = (n: number) => book.chapters.find((c) => Number(c.number) === n)
         const target = resolveNavigation(command, { chapter, verse }, { chapterCount: book.chapters.length, verseCount: (n) => chapterOf(n)?.verses.length || 0 })
-        if (!target) return
+        if (!target) return false
 
         this.lastCommand = Date.now()
         const content = `${book.name} ${target.chapter}:${target.verse}`
-        const trigger = () => {
-            startScripture({ id, reference: `${reference.book}.${target.chapter}.${target.verse}` })
+        const trigger = async () => {
+            this.expectOwnChange()
+            await startScripture({ id, reference: `${reference.book}.${target.chapter}.${target.verse}` })
             this.outputUpdate(content)
         }
 
@@ -153,11 +158,12 @@ export class AiManager {
         const draft = { id: uid(5), timestamp: Date.now(), content, confidence: 100 }
         if ((get(ai).scripture?.confidence || "ask") === "ask") {
             this.addSuggestion({ ...draft, action: "present", trigger })
-            return
+            return true
         }
 
         this.addSuggestion({ ...draft, action: "presented" })
         trigger()
+        return true
     }
 
     private static isPreloadStarted: boolean = false
@@ -303,25 +309,35 @@ export class AiManager {
     }
 
     static liveContent: string = ""
-    private static triggerMatchAction(match: MatchResult) {
-        if (match.type === "scripture_version") {
-            if (match.scriptureTranslation) setActiveScripture(match.scriptureTranslation)
-        } else if (match.type === "scripture") {
-            startScripture({ reference: match.content })
-            this.outputUpdate(match.content)
-        } else if (match.type === "lyrics" && match.showId) {
-            presentSong(match.showId, match.lyricsText || "")
-            this.outputUpdate(match.content)
+    private static async triggerMatchAction(match: MatchResult) {
+        try {
+            if (match.type === "scripture_version") {
+                if (match.scriptureTranslation) setActiveScripture(match.scriptureTranslation)
+            } else if (match.type === "scripture") {
+                this.expectOwnChange()
+                await startScripture({ reference: match.content })
+                this.outputUpdate(match.content)
+            } else if (match.type === "lyrics" && match.showId) {
+                this.expectOwnChange()
+                await presentSong(match.showId, match.lyricsText || "")
+                this.outputUpdate(match.content)
+            }
+        } catch (err) {
+            console.warn("Live Copilot could not present", match.content, err)
         }
     }
 
+    // Output changes the copilot makes itself are not "moved by hand". Loading a
+    // song or a Bible can take a few seconds, so the window runs from just before
+    // the present until shortly after it lands.
+    private static ownChangeUntil = 0
+    private static expectOwnChange() {
+        this.ownChangeUntil = Date.now() + 15_000
+    }
     private static outputUpdate(content: string) {
         this.liveContent = content
-
-        setTimeout(() => {
-            // reset output updates when not "manually" played
-            this.lastOutputUpdate = 0
-        }, 500)
+        this.lastOutputUpdate = 0
+        this.ownChangeUntil = Date.now() + 1500
     }
 
     /////
@@ -377,10 +393,14 @@ export class AiManager {
             const slide = firstOutput?.out?.slide || null
 
             const slideKey = JSON.stringify(slide)
-            if (slideKey === JSON.stringify(previousOutput)) return
+            // previousOutput is already a string: comparing it stringified again never matched
+            if (slideKey === previousOutput) return
             previousOutput = slideKey
 
-            if (initialized) this.lastOutputUpdate = Date.now()
+            if (!initialized || Date.now() < this.ownChangeUntil) return
+            // moved by hand: hold off auto-present, and what was on screen is no longer live
+            this.lastOutputUpdate = Date.now()
+            this.liveContent = ""
         })
     }
 }

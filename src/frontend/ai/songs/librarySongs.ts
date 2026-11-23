@@ -11,8 +11,11 @@ import { bestSlide, SongDetector, SongIndex } from "./songDetection"
 
 let detector: SongDetector | null = null
 let builtFrom: unknown = null
+let builtTexts = new Map<string, string>()
 
-// rebuilt only when the library's text changes (an import, a sync, an edit)
+// rebuilt only when a song's words change (an import, a sync, an edit). The
+// text cache is replaced whenever any show is opened, usually with the same
+// words, and a rebuild would throw away what has been heard so far.
 export function songDetector(): SongDetector | null {
     const cache = get(textCache)
     if (detector && builtFrom === cache) return detector
@@ -20,10 +23,14 @@ export function songDetector(): SongDetector | null {
     const list = Object.entries(get(shows))
         .filter(([id, show]) => typeof cache[id] === "string" && !show?.private)
         .map(([id, show]) => ({ id, name: show.name || "", text: cache[id] as string }))
-    if (!list.length) return null
+    builtFrom = cache
+    if (!list.length) return (detector = null)
+
+    const same = detector && list.length === builtTexts.size && list.every((song) => builtTexts.get(song.id) === song.text)
+    if (same) return detector
 
     detector = new SongDetector(new SongIndex(list))
-    builtFrom = cache
+    builtTexts = new Map(list.map((song) => [song.id, song.text]))
     return detector
 }
 

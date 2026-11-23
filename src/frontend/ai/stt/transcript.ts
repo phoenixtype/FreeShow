@@ -52,7 +52,7 @@ export class Transcript {
             }, this.INTERIM_DEBOUNCE_MS)
         } else {
             this.interimTimeout = null
-            this.processPendingChunk()
+            this.processPendingChunk(textPart)
         }
     }
 
@@ -64,11 +64,12 @@ export class Transcript {
         newToast("actions.copied")
     }
 
-    private static processPendingChunk() {
+    // utterance: the finished phrase just heard, when this chunk ends one
+    private static processPendingChunk(utterance?: string) {
         const chunk = this.getTranscriptChunk()
         if (chunk.newWordsCount === 0) return
 
-        AiManager.processSTTChunk(chunk)
+        AiManager.processSTTChunk({ ...chunk, utterance })
     }
 
     private static readonly OVERLAP_WORDS = 8
@@ -137,7 +138,17 @@ export class Transcript {
         }
         if (prefixCount > 0 && prefixCount >= last.length - 3) return prefixCount
 
-        // 2. Seam match
+        // 2. The window slid: once past MAX_CHUNK_WORDS the oldest words drop off the
+        // front, so what was sent before now starts a few words in
+        for (let shift = 1; shift <= last.length - 3; shift++) {
+            const overlap = last.length - shift
+            if (overlap > curr.length) continue
+            let same = true
+            for (let i = 0; i < overlap && same; i++) same = last[shift + i] === curr[i]
+            if (same) return overlap
+        }
+
+        // 3. Seam match
         const maxSeam = Math.min(last.length, curr.length, 30)
         for (let seam = maxSeam; seam >= 3; seam--) {
             const tail = last.slice(-seam)

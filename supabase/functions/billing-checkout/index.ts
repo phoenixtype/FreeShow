@@ -25,14 +25,19 @@ Deno.serve(async (req) => {
         if (!prices.data[0]) return json({ error: "billing_unavailable", message: "Plans are not on sale yet." }, 503)
 
         const db = admin()
-        const { data: existing, error } = await db.from("church_subscriptions").select("stripe_customer_id").eq("church_id", churchId).maybeSingle()
+        const { data: existing, error } = await db.from("church_subscriptions").select("stripe_customer_id, plan, status").eq("church_id", churchId).maybeSingle()
         if (error) throw error
+        // a second checkout would bill the church twice: changes go through the billing portal
+        if (existing && existing.plan !== "free" && ["active", "trialing", "past_due"].includes(existing.status)) {
+            return json({ error: "already_subscribed", message: "This church already has a plan. Use Manage billing to change it." }, 409)
+        }
 
         const session = await stripe.checkout.sessions.create({
             mode: "subscription",
             line_items: [{ price: prices.data[0].id, quantity: 1 }],
             // reuse the church's customer only when we created it; otherwise Checkout asks for the email
-            ...(existing?.stripe_customer_id ? { customer: existing.stripe_customer_id } : { customer_email: caller.email }),
+            // automatic tax needs the customer's address: Checkout saves the one entered
+            ...(existing?.stripe_customer_id ? { customer: existing.stripe_customer_id, customer_update: { address: "auto", name: "auto" } } : { customer_email: caller.email }),
             client_reference_id: churchId,
             metadata: { app: "scriptural-project", church_id: churchId },
             subscription_data: { metadata: { app: "scriptural-project", church_id: churchId } },

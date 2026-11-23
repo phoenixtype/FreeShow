@@ -31,9 +31,10 @@ async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?
 async function gemini(body: { prompt: string; systemPrompt?: string; maxTokens?: number }): Promise<string> {
     const key = Deno.env.get("GEMINI_API_KEY")
     if (!key) throw new Error("no Gemini key")
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`, {
+    // the key goes in a header: a URL ends up in error messages and logs
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: body.prompt }] }], ...(body.systemPrompt ? { systemInstruction: { parts: [{ text: body.systemPrompt }] } } : {}), generationConfig: { maxOutputTokens: Math.min(body.maxTokens || MAX_TOKENS, MAX_TOKENS) } }),
         signal: AbortSignal.timeout(45_000)
     })
@@ -47,7 +48,12 @@ Deno.serve(async (req) => {
     if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405)
     try {
         const body = await req.json().catch(() => ({}))
-        if (typeof body.prompt !== "string" || !body.prompt.trim() || body.prompt.length > MAX_PROMPT_CHARS) return json({ error: "bad_request" }, 400)
+        if (typeof body.prompt !== "string" || !body.prompt.trim()) return json({ error: "bad_request" }, 400)
+        // one request is one request: the system prompt and schema share the prompt's budget
+        const size = body.prompt.length + (typeof body.systemPrompt === "string" ? body.systemPrompt.length : 0) + (body.jsonSchema ? JSON.stringify(body.jsonSchema).length : 0)
+        if (size > MAX_PROMPT_CHARS) return json({ error: "bad_request", message: "That request is too long." }, 400)
+        if (body.systemPrompt !== undefined && typeof body.systemPrompt !== "string") return json({ error: "bad_request" }, 400)
+        if (body.maxTokens !== undefined && !(Number.isInteger(body.maxTokens) && body.maxTokens > 0)) return json({ error: "bad_request" }, 400)
         const caller = await callerRole(req, String(body.churchId || ""))
         if (!caller) return json({ error: "unauthorized" }, 401)
 
@@ -67,7 +73,14 @@ Deno.serve(async (req) => {
             text = await claude(body)
         } catch (claudeError) {
             console.warn("Claude failed, trying Gemini:", String(claudeError))
-            text = await gemini(body)
+            try {
+                text = await gemini(body)
+            } catch (geminiError) {
+                // neither answered: the church is not charged for it
+                await userDb.rpc("refund_ai_request", { target: body.churchId })
+                console.error("Gemini failed too:", String(geminiError))
+                return json({ error: "ai_unavailable", message: "Scriptural AI is not answering right now. Try again in a minute." }, 503)
+            }
         }
         return json({ text })
     } catch (error) {

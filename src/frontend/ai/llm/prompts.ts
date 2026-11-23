@@ -349,12 +349,12 @@ export const CHAT_RESPONSE_SCHEMA = {
             properties: {
                 type: {
                     type: "string",
-                    enum: ["CREATE_SLIDE", "CREATE_TEMPLATE", "CREATE_OVERLAY", "CREATE_OUTPUT", "SHOW_SCRIPTURE", "ADD_SONG", "PRESENT_SONG"],
+                    enum: ["CREATE_SLIDE", "CREATE_TEMPLATE", "CREATE_OVERLAY", "SHOW_SCRIPTURE", "ADD_SONG", "PRESENT_SONG"],
                     description: "The action type to execute."
                 },
                 data: {
                     type: "object",
-                    description: "Payload parameters associated with the action.",
+                    description: "Payload parameters. SHOW_SCRIPTURE needs reference; ADD_SONG needs name and lyrics; PRESENT_SONG needs name; CREATE_* need items.",
                     properties: {
                         name: { type: "string" },
                         reference: { type: ["string", "null"], description: "SHOW_SCRIPTURE: a Bible reference such as 'John 3:16' or 'Romans 8:28-30'." },
@@ -406,7 +406,7 @@ export const CHAT_RESPONSE_SCHEMA = {
                             }
                         }
                     },
-                    required: ["name", "category", "items"]
+                    required: ["name"]
                 }
             },
             required: ["type", "data"]

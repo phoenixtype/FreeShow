@@ -1,5 +1,8 @@
-// Stripe -> church_subscriptions. Signed, idempotent per event id, and only
-// for this product's subscriptions (metadata.app = scriptural-project).
+// Stripe -> church_subscriptions. Signed, and only for this product's
+// subscriptions (metadata.app = scriptural-project). Stripe sends events out of
+// order and retries them, so each one only says "look again": the subscription
+// is read fresh from Stripe and written as it is now. Running an event twice is
+// harmless; stripe_events records it once the write has landed.
 import Stripe from "npm:stripe@23"
 import { admin, failure, json } from "../_shared/church.ts"
 
@@ -25,17 +28,27 @@ Deno.serve(async (req) => {
 
     try {
         const db = admin()
-        const { error: seenError } = await db.from("stripe_events").insert({ id: event.id, type: event.type })
-        if (seenError?.code === "23505") return json({ received: true, duplicate: true })
-        if (seenError) throw seenError
+        const { data: seen } = await db.from("stripe_events").select("id").eq("id", event.id).maybeSingle()
+        if (seen) return json({ received: true, duplicate: true })
 
         if (event.type.startsWith("customer.subscription.")) {
-            const sub = event.data.object as Stripe.Subscription
-            const churchId = sub.metadata?.church_id
-            if (sub.metadata?.app !== "scriptural-project" || !churchId) return json({ received: true, ignored: true })
+            const snapshot = event.data.object as Stripe.Subscription
+            const churchId = snapshot.metadata?.church_id
+            if (snapshot.metadata?.app !== "scriptural-project" || !churchId) return json({ received: true, ignored: true })
+
+            const sub = await stripe.subscriptions.retrieve(snapshot.id)
+            const ended = ["canceled", "incomplete_expired", "unpaid"].includes(sub.status)
+
+            // a church has one plan: an ended second subscription must not end the live one
+            const { data: stored, error: storedError } = await db.from("church_subscriptions").select("stripe_subscription_id, status").eq("church_id", churchId).maybeSingle()
+            if (storedError) throw storedError
+            const otherLive = stored?.stripe_subscription_id && stored.stripe_subscription_id !== sub.id && ["active", "trialing", "past_due"].includes(stored.status)
+            if (otherLive && ended) {
+                await markSeen(db, event)
+                return json({ received: true, ignored: true })
+            }
 
             const lookup = sub.items.data[0]?.price?.lookup_key || ""
-            const ended = event.type === "customer.subscription.deleted" || ["canceled", "incomplete_expired", "unpaid"].includes(sub.status)
             const { error } = await db.from("church_subscriptions").upsert({
                 church_id: churchId,
                 plan: ended ? "free" : PLAN_BY_LOOKUP[lookup] || "free",
@@ -47,10 +60,15 @@ Deno.serve(async (req) => {
             })
             if (error) throw error
         }
+        await markSeen(db, event)
         return json({ received: true })
     } catch (error) {
-        // let Stripe retry: forget the event so the retry is processed
-        await admin().from("stripe_events").delete().eq("id", event.id)
+        // nothing recorded, so Stripe's retry is processed in full
         return failure(error)
     }
 })
+
+async function markSeen(db: ReturnType<typeof admin>, event: Stripe.Event) {
+    const { error } = await db.from("stripe_events").insert({ id: event.id, type: event.type })
+    if (error && error.code !== "23505") throw error
+}

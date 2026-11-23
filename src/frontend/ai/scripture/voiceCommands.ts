@@ -111,7 +111,9 @@ function normalizeNumberWords(text: string): string {
  * Returns the structured navigation command spoken in this transcript chunk,
  * or null when it's ordinary speech.
  */
-export function parseCopilotCommand(chunk: string): CopilotCommand | null {
+// allowBare: the one-word commands ("next", "back") count only as a whole finished
+// utterance; in the middle of a sentence they are just words
+export function parseCopilotCommand(chunk: string, allowBare = true): CopilotCommand | null {
     let t = chunk
         .trim()
         .toLowerCase()
@@ -136,10 +138,10 @@ export function parseCopilotCommand(chunk: string): CopilotCommand | null {
     if (gotoVerse) return { type: "goto-verse", verse: parseInt(gotoVerse[1], 10) }
 
     // Beginning / end of the book.
-    if (/\b(go to the beginning|from the beginning|beginning of the book|start of the book|first chapter)\b/.test(t)) {
+    if (/\b(go to the beginning|from the beginning|beginning of the book|start of the book|first chapter(?! of))\b/.test(t)) {
         return { type: "first-chapter" }
     }
-    if (/\b(last chapter|final chapter|end of the book)\b/.test(t)) {
+    if (/\b(last chapter(?! of)|final chapter(?! of)|end of the book)\b/.test(t)) {
         return { type: "last-chapter" }
     }
 
@@ -160,6 +162,7 @@ export function parseCopilotCommand(chunk: string): CopilotCommand | null {
     if (/\b(previous verse|verse back|back a verse|back one verse)\b/.test(t)) return { type: "verse-step", delta: -1 }
 
     // --- Bare commands: whole utterance only ---
+    if (!allowBare) return null
 
     if (BARE_NEXT.has(t)) return { type: "verse-step", delta: 1 }
     if (BARE_BACK.has(t)) return { type: "verse-step", delta: -1 }

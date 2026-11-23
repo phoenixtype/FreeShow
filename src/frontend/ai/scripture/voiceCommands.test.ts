@@ -84,3 +84,16 @@ describe("parseCopilotCommand", () => {
         expect(parseCopilotCommand("go to chapter 3 in the NIV")).toEqual({ type: "goto-chapter", chapter: 3 })
     })
 })
+
+describe("review fixes", () => {
+    it("ignores one-word commands mid-sentence", () => {
+        expect(parseCopilotCommand("next", false)).toBeNull()
+        expect(parseCopilotCommand("next")).toEqual({ type: "verse-step", delta: 1 })
+        expect(parseCopilotCommand("next verse", false)).toEqual({ type: "verse-step", delta: 1 })
+    })
+
+    it("leaves 'the first chapter of James' to reference detection", () => {
+        expect(parseCopilotCommand("turn with me to the first chapter of James")).toBeNull()
+        expect(parseCopilotCommand("go to the first chapter")).toEqual({ type: "first-chapter" })
+    })
+})

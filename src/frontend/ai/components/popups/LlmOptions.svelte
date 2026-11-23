@@ -79,7 +79,8 @@
 
         const result = await requestMain(Main.AI_GET_STATUS, { engineId: provider })
         status = result || null
-        if (status?.[provider]?.error) newToast(status?.[provider]?.error)
+        const error = status?.[provider]?.error
+        if (error) newToast(error)
     }
 
     // API KEY

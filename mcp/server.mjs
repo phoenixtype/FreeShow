@@ -13,9 +13,12 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { mkdir, copyFile, writeFile } from "node:fs/promises"
+import { constants as fsConstants, createWriteStream } from "node:fs"
+import { access, copyFile, mkdir } from "node:fs/promises"
+import { Readable } from "node:stream"
+import { pipeline } from "node:stream/promises"
 import { homedir } from "node:os"
-import { basename, join } from "node:path"
+import { basename, extname, join } from "node:path"
 import { z } from "zod"
 
 const APP_URL = process.env.SCRIPTURAL_PROJECT_URL || "http://127.0.0.1:5506"
@@ -36,7 +39,8 @@ async function app(action, data = {}) {
         response = await fetch(APP_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action, ...data, ...(TOKEN ? { token: TOKEN } : {}) })
+            body: JSON.stringify({ action, ...data, ...(TOKEN ? { token: TOKEN } : {}) }),
+            signal: AbortSignal.timeout(15_000)
         })
     } catch {
         throw new Error(`Scriptural Project is not reachable at ${APP_URL}. Open the app and turn on Settings > Connection > API.`)
@@ -48,6 +52,42 @@ async function app(action, data = {}) {
     // the API answers { action, data }
     return body?.data ?? null
 }
+
+// a song by name: the exact title, or the only one containing the words. Several
+// close matches come back as a question rather than a guess on screen.
+function findShow(shows, name) {
+    const wanted = name.trim().toLowerCase()
+    if (!wanted) return { error: "Say which song or presentation." }
+    const entries = Object.entries(shows)
+    const exact = entries.find(([, s]) => s.name?.trim().toLowerCase() === wanted)
+    if (exact) return { match: exact }
+    const partial = entries.filter(([, s]) => s.name?.toLowerCase().includes(wanted))
+    if (partial.length === 1) return { match: partial[0] }
+    if (partial.length)
+        return {
+            error: `Several match "${name}": ${partial
+                .slice(0, 8)
+                .map(([id, s]) => `${s.name} (${id})`)
+                .join("; ")}. Ask again with the full name.`
+        }
+    return { error: `No song or presentation named "${name}". Use list_songs to see what is there.` }
+}
+
+// "Sunrise.jpg" taken: "Sunrise 2.jpg"
+async function freePath(path) {
+    const ext = extname(path)
+    const stem = path.slice(0, path.length - ext.length)
+    for (let n = 1; ; n++) {
+        const candidate = n === 1 ? path : `${stem} ${n}${ext}`
+        try {
+            await access(candidate)
+        } catch {
+            return candidate
+        }
+    }
+}
+
+const MAX_DOWNLOAD_BYTES = 500 * 1024 * 1024
 
 const tool = (handler) => async (args) => {
     try {
@@ -62,14 +102,15 @@ const server = new McpServer({ name: "scriptural-project", version: "1.0.0" })
 server.registerTool(
     "search_bible",
     {
-        description: "Find Bible passages by reference, exact wording, or meaning (\"God loved everyone so much he gave his son\"). Returns references with the verse text.",
+        description: 'Find Bible passages by reference, exact wording, or meaning ("God loved everyone so much he gave his son"). Returns references with the verse text.',
         inputSchema: { query: z.string().min(2), version: z.string().default("KJV").describe("Version code for the returned text, e.g. KJV, NKJV, NIV") }
     },
     tool(async ({ query, version }) => {
         const response = await fetch(SEARCH_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
-            body: JSON.stringify({ query, version, limit: 8 })
+            body: JSON.stringify({ query, version, limit: 8 }),
+            signal: AbortSignal.timeout(15_000)
         })
         if (!response.ok) return failure(`Scripture search answered ${response.status}. Try again.`)
         const { results = [], meaning } = await response.json()
@@ -80,12 +121,13 @@ server.registerTool(
 server.registerTool(
     "show_scripture",
     {
-        description: "Put a passage on the output screen in the Bible version open in the app, e.g. \"John 3:16\" or \"Romans 8:28-30\".",
+        description: 'Put a passage on the output screen in the Bible version open in the app, e.g. "John 3:16" or "Romans 8:28-30".',
         inputSchema: { reference: z.string().min(3) }
     },
     tool(async ({ reference }) => {
         await app("start_scripture", { reference })
-        return text(`Showing ${reference}.`)
+        // the app does not say whether it found the passage
+        return text(`Sent ${reference} to the screen. If nothing changed, check the reference with search_bible.`)
     })
 )
 
@@ -124,11 +166,9 @@ server.registerTool(
         inputSchema: { name: z.string().min(1) }
     },
     tool(async ({ name }) => {
-        const shows = (await app("get_shows")) || {}
-        const wanted = name.trim().toLowerCase()
-        const entries = Object.entries(shows)
-        const match = entries.find(([, s]) => s.name?.toLowerCase() === wanted) || entries.find(([, s]) => s.name?.toLowerCase().includes(wanted))
-        if (!match) return failure(`No song or presentation named "${name}". Use list_songs to see what is there.`)
+        const found = findShow((await app("get_shows")) || {}, name)
+        if (!found.match) return failure(found.error)
+        const match = found.match
         await app("start_show", { id: match[0] })
         return text(`Presenting "${match[1].name}".`)
     })
@@ -154,7 +194,7 @@ server.registerTool(
 
 server.registerTool(
     "create_project",
-    { description: "Create a service plan (project), e.g. \"Sunday 30 November\".", inputSchema: { name: z.string().min(1) } },
+    { description: 'Create a service plan (project), e.g. "Sunday 30 November".', inputSchema: { name: z.string().min(1) } },
     tool(async ({ name }) => {
         await app("create_project", { name })
         return text(`Created "${name}".`)
@@ -168,6 +208,10 @@ server.registerTool(
         inputSchema: { projectId: z.string(), showId: z.string() }
     },
     tool(async ({ projectId, showId }) => {
+        // the app would switch to a plan that does not exist rather than refuse
+        const [projects, shows] = await Promise.all([app("get_projects"), app("get_shows")])
+        if (!projects?.[projectId]) return failure(`No plan with id ${projectId}. Use list_projects.`)
+        if (!shows?.[showId]) return failure(`No song or presentation with id ${showId}. Use list_songs.`)
         await app("add_to_project", { projectId, id: showId })
         return text("Added to the plan.")
     })
@@ -181,16 +225,20 @@ server.registerTool(
     },
     tool(async ({ source, name, show }) => {
         await mkdir(MEDIA_DIR, { recursive: true })
-        let target
-        if (/^https?:\/\//i.test(source)) {
-            const response = await fetch(source)
+        const remote = /^https?:\/\//i.test(source)
+        const original = remote ? basename(new URL(source).pathname) : basename(source)
+        // a name never leaves the media folder, keeps the file type, and never replaces a file
+        let fileName = basename(name || original || "media").replace(/[^\w.\- ]+/g, "_") || "media"
+        if (!extname(fileName) && extname(original)) fileName += extname(original)
+        const target = await freePath(join(MEDIA_DIR, fileName))
+
+        if (remote) {
+            const response = await fetch(source, { signal: AbortSignal.timeout(5 * 60_000) })
             if (!response.ok) return failure(`Could not download ${source} (${response.status}).`)
-            const fileName = (name || basename(new URL(source).pathname) || "media").replace(/[^\w.\- ]+/g, "_")
-            target = join(MEDIA_DIR, fileName)
-            await writeFile(target, Buffer.from(await response.arrayBuffer()))
+            if (Number(response.headers.get("content-length") || 0) > MAX_DOWNLOAD_BYTES) return failure("That file is over 500 MB. Download it yourself and pass the file path.")
+            await pipeline(Readable.fromWeb(response.body), createWriteStream(target))
         } else {
-            target = join(MEDIA_DIR, name || basename(source))
-            await copyFile(source, target)
+            await copyFile(source, target, fsConstants.COPYFILE_EXCL)
         }
         if (show) await app("play_media", { path: target })
         return text(`Saved to ${target}${show ? " and showing it" : ""}. Add the folder "${MEDIA_DIR}" under Media once to see everything added here.`)

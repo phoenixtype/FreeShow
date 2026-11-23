@@ -1,0 +1,6 @@
+# Only what deploys need: Stripe calls the webhook without a Supabase login,
+# and checks its own signature instead.
+project_id = "gsrpimdgxepoydbrdlqx"
+
+[functions.stripe-webhook]
+verify_jwt = false

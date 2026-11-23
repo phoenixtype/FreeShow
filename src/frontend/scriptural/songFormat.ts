@@ -50,7 +50,8 @@ export function readLabel(line: string): { type: SectionType; name: string; numb
 const PROPER = new Set("i god god's lord lord's jesus jesus' christ christ's spirit father father's son messiah emmanuel immanuel yahweh jehovah elohim adonai el shaddai rapha jireh nissi shalom elshaddai abba lamb king king's zion israel jerusalem calvary bethlehem nazareth galilee jordan judah egypt sinai canaan david abraham isaac jacob moses mary hallelujah alleluia hosanna holy ghost satan christmas easter africa nigeria".split(" "))
 
 function sentenceCase(line: string): string {
-    const lower = line.toLowerCase().replace(/[a-z']+/g, (word) => (PROPER.has(word) ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    // "I" keeps its capital in contractions too: I'm, I'll, I've, I'd
+    const lower = line.toLowerCase().replace(/[a-z']+/g, (word) => (PROPER.has(word) || /^i'/.test(word) ? word.charAt(0).toUpperCase() + word.slice(1) : word))
     return lower.replace(/^([^A-Za-z]*)([a-z])/, (_m, lead, first) => lead + first.toUpperCase())
 }
 
@@ -213,7 +214,8 @@ export function showToSong(show: ShowLike): CleanSong {
         const type: SectionType = named?.type || "verse"
         counts[type] = (counts[type] || 0) + 1
         let label = named?.number ? `${named.name} ${named.number}` : named && type !== "verse" ? named.name : `Verse ${counts[type]}`
-        while (sections.some((s) => s.label === label)) label = `${named?.name || "Verse"} ${++counts[type]!}`
+        // a second unnumbered "Chorus" becomes "Chorus 2", not "Chorus 3"
+        for (let n = 2; sections.some((s) => s.label === label); n++) label = `${named?.name || "Verse"} ${n}`
         sections.push({ label, type, lines })
         labelOf.set(id, label)
     }

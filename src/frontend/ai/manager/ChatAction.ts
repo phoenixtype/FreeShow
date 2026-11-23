@@ -14,7 +14,7 @@ import { translateText } from "../../utils/language"
 import { send } from "../../utils/request"
 
 export interface FreeShowAction {
-    type: "APPLY_TO_SLIDE" | "CREATE_SLIDE" | "CREATE_TEMPLATE" | "CREATE_OVERLAY" | "CREATE_OUTPUT" | "SHOW_SCRIPTURE" | "ADD_SONG" | "PRESENT_SONG"
+    type: "APPLY_TO_SLIDE" | "CREATE_SLIDE" | "CREATE_TEMPLATE" | "CREATE_OVERLAY" | "SHOW_SCRIPTURE" | "ADD_SONG" | "PRESENT_SONG"
     data: {
         name?: string
         reference?: string | null
@@ -42,8 +42,7 @@ export const chatActionLabels: Record<string, string> = {
     APPLY_TO_SLIDE: "timer.create",
     CREATE_SLIDE: "new.slide",
     CREATE_TEMPLATE: "new.template",
-    CREATE_OVERLAY: "new.overlay",
-    CREATE_OUTPUT: "settings.new_output"
+    CREATE_OVERLAY: "new.overlay"
 }
 
 export class ChatAction {
@@ -53,21 +52,36 @@ export class ChatAction {
         console.log("Chat action:", action)
 
         // scripture and songs: the same paths the app's own API uses
-        if (action.type === "SHOW_SCRIPTURE" && action.data?.reference) {
-            startScripture({ reference: action.data.reference })
+        if (action.type === "SHOW_SCRIPTURE") {
+            const reference = action.data?.reference?.trim()
+            if (!reference) return newToast("Say which passage to show, such as John 3:16.")
+            startScripture({ reference }).catch(() => newToast(`Could not find ${reference}.`))
             return
         }
-        if (action.type === "ADD_SONG" && action.data?.name && action.data.lyrics) {
-            convertText({ name: action.data.name, text: action.data.lyrics, category: "song", noFormatting: true, open: true })
+        if (action.type === "ADD_SONG") {
+            const name = action.data?.name?.trim()
+            if (!name || !action.data?.lyrics?.trim()) return newToast("A song needs a title and its words.")
+            convertText({ name, text: action.data.lyrics, category: "song", noFormatting: true, open: true })
             newToast(translateText("actions.done"))
             return
         }
-        if (action.type === "PRESENT_SONG" && action.data?.name) {
-            const wanted = action.data.name.trim().toLowerCase()
-            const list = Object.entries(get(shows))
-            const match = list.find(([, s]) => s.name?.toLowerCase() === wanted) || list.find(([, s]) => s.name?.toLowerCase().includes(wanted))
+        if (action.type === "PRESENT_SONG") {
+            const wanted = action.data?.name?.trim().toLowerCase()
+            // an empty name would match every song and put the first one on screen
+            if (!wanted) return newToast("Say which song to present.")
+            const list = Object.entries(get(shows)).filter(([, s]) => !s.private)
+            const exact = list.find(([, s]) => s.name?.trim().toLowerCase() === wanted)
+            const partial = list.filter(([, s]) => s.name?.toLowerCase().includes(wanted))
+            const match = exact || (partial.length === 1 ? partial[0] : null)
             if (match) startShowSync(match[0])
-            else newToast(`No song named "${action.data.name}"`)
+            else if (partial.length)
+                newToast(
+                    `Which one: ${partial
+                        .slice(0, 3)
+                        .map(([, s]) => s.name)
+                        .join(", ")}?`
+                )
+            else newToast(`No song named "${action.data!.name}"`)
             return
         }
 
@@ -161,6 +175,9 @@ export class ChatAction {
                 return
             }
 
+            const show = get(showsCache)[currentShowId]
+            if (!show) return newToast("Open the show first.")
+
             const slideId = uid()
             const newSlide: Slide = {
                 group: null,
@@ -170,12 +187,10 @@ export class ChatAction {
                 items: formattedItems
             }
 
-            showsCache.update((cache) => {
-                if (!cache[currentShowId]) return cache
-                if (!cache[currentShowId].slides) cache[currentShowId].slides = {}
-                cache[currentShowId].slides[slideId] = newSlide
-                return cache
-            })
+            // through history, like the editor: it joins the active layout (or it shows
+            // nowhere), can be undone, and marks the show as changed
+            const layout = show.settings?.activeLayout
+            history({ id: "SLIDES", newData: { index: getLayoutRef(currentShowId).length, data: [{ id: slideId, ...newSlide }] }, location: { page: "show", show: { id: currentShowId }, layout } })
 
             refreshEditSlide.set(true)
             newToast(translateText("new.slide"))
