@@ -5,7 +5,7 @@ import type { StageLayout } from "../../types/Stage"
 import type { Category } from "../../types/Tabs"
 import { history } from "../components/helpers/history"
 import { convertOldShowValues } from "../components/helpers/setShow"
-import { checkName } from "../components/helpers/show"
+import { checkName, formatToFileName } from "../components/helpers/show"
 import { actionTags, activeDrawerTab, activePopup, activeProject, activeRename, activeShow, alertMessage, categories, drawerTabsData, shows } from "../stores"
 import { newToast } from "../utils/common"
 import { convertText } from "./txt"
@@ -41,9 +41,10 @@ export function setTempShows(tempShows: { id: string; show: Show }[], options: {
     const taken = Object.entries(get(shows) || {})
         .filter(([id]) => !batchIds.has(id))
         .map(([, a]) => a.name || "")
+    // compared as the file names they will be saved under
     const names = uniqueNames(
-        tempShows.map((a) => a.show.name || ""),
-        taken
+        tempShows.map((a) => formatToFileName(a.show.name || "")),
+        taken.map((name) => formatToFileName(name))
     )
     tempShows.forEach((a, i) => (a.show.name = names[i]))
 

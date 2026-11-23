@@ -36,6 +36,7 @@ describe("tidyTitle", () => {
         expect(tidyTitle("GREAT IS THY FAITHFULNESS")).toBe("Great Is Thy Faithfulness")
         expect(tidyTitle("  I won't settle for less  ")).toBe("I won't settle for less")
         expect(tidyTitle("the god of the mountain")).toBe("The God of the Mountain")
+        expect(tidyTitle("Worthy is the Lamb Who is seated on the throne We worship and adore You We lift Your name on high")).toBe("Worthy is the Lamb Who is seated on the throne We worship")
     })
 })
 

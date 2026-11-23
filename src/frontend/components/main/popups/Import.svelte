@@ -147,7 +147,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./import-logos/freeshow.webp" alt="FreeShow-logo" draggable={false} />
+                    <img style="height: 18px;padding: 0;" src="./scriptural-logo.svg" alt="Scriptural" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}
@@ -221,6 +221,14 @@
         {translateText("formats.clipboard")}
     </MaterialButton>
 {:else}
+    <MaterialButton variant="outlined" style="min-height: 50px;padding: 10px 16px;gap: 15px;margin-bottom: 10px;justify-content: start;" on:click={() => activePopup.set("church_library")}>
+        <img style="height: 40px;width: 40px;border-radius: 22.27%;" src="./scriptural-logo.svg" alt="" draggable={false} />
+        <div style="display: flex;flex-direction: column;align-items: start;gap: 3px;">
+            <p style="font-size: 1.1em;">Church library</p>
+            <span style="opacity: 0.6;">Your church's songs, kept in sync on every computer</span>
+        </div>
+    </MaterialButton>
+
     <div style="display: flex;gap: 5px;">
         {#each freeshow_primary_formats as format}
             <MaterialButton
@@ -235,7 +243,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./import-logos/freeshow.webp" alt="FreeShow-logo" draggable={false} />
+                    <img style="height: 18px;padding: 0;" src="./scriptural-logo.svg" alt="Scriptural" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}

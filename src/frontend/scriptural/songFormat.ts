@@ -64,9 +64,15 @@ export function tidyLine(line: string): string {
 
 const SMALL_WORDS = new Set(["a", "an", "and", "as", "at", "but", "by", "for", "in", "of", "on", "or", "the", "to", "with"])
 
-/** Titles typed in all capitals or all lower case become title case; anything mixed is kept. */
+/** Titles typed in all capitals or all lower case become title case; anything mixed is kept; very long ones are shortened. */
 export function tidyTitle(title: string): string {
-    const text = title.replace(/\s+/g, " ").trim()
+    let text = title.replace(/\s+/g, " ").trim()
+    // some libraries keep a whole lyric in the title; keep its opening words
+    if (text.length > 70)
+        text = text
+            .slice(0, 61)
+            .replace(/\s+\S*$/, "")
+            .replace(/[\s,;:.!-]+$/, "")
     if (!text) return text
     if (text !== text.toUpperCase() && text !== text.toLowerCase()) return text
     return text

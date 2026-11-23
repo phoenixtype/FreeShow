@@ -49,6 +49,7 @@ import History from "../components/main/popups/History.svelte"
 import Import from "../components/main/popups/Import.svelte"
 import ImportCalendar from "../components/main/popups/ImportCalendar.svelte"
 import ImportScripture from "../components/main/popups/ImportScripture.svelte"
+import ChurchLibrary from "../components/main/popups/ChurchLibrary.svelte"
 import Initialize from "../components/main/popups/Initialize.svelte"
 import InteractionInput from "../components/main/popups/InteractionInput.svelte"
 import Translate from "../components/main/popups/localization/Translate.svelte"
@@ -137,6 +138,7 @@ export const popups: { [key in Popups]: ComponentType } = {
     media_fit: MediaFit,
     metadata_display: MetadataDisplay,
     import_scripture: ImportScripture,
+    church_library: ChurchLibrary,
     import_calendar: ImportCalendar,
     create_collection: CreateCollection,
     edit_event: EditEvent,
