@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Output } from "../../../../types/Output"
 import { RenderGroups } from "../../../../electron/output/helpers/RenderGroups"
-import { adjustRemaining, clockLabel, currentSegment, nextOccurrence, nextSegment, parseSegment, programTotalSeconds, segmentStartTimes, canShowSpeakerTimerOn, createSpeakerStageLayout, createSpeakerTimer, formatSpeakerTime, NEW_SPEAKER_SCREEN, SPEAKER_STAGE_ID, SPEAKER_TIMER_ID, speakerScreenChoices, speakerScreens, speakerState, speakerWarnSeconds } from "./speakerTimer"
+import { adjustRemaining, clockLabel, deleteSavedProgram, loadSavedProgram, repeatLabel, saveProgramAs, currentSegment, nextOccurrence, nextSegment, parseSegment, programTotalSeconds, segmentStartTimes, canShowSpeakerTimerOn, createSpeakerStageLayout, createSpeakerTimer, formatSpeakerTime, NEW_SPEAKER_SCREEN, SPEAKER_STAGE_ID, SPEAKER_TIMER_ID, speakerScreenChoices, speakerScreens, speakerState, speakerWarnSeconds } from "./speakerTimer"
 
 const bounds = { x: 0, y: 0, width: 1920, height: 1080 }
 function output(name: string, extra: Partial<Output> = {}): Output {
@@ -114,5 +114,55 @@ describe("program", () => {
         expect(nextOccurrence("10:00", now)).toEqual(new Date(2026, 10, 29, 10, 0))
         expect(nextOccurrence("09:00", now)).toEqual(new Date(2026, 10, 30, 9, 0))
         expect(nextOccurrence("", now)).toBeNull()
+    })
+})
+
+describe("reusing a program", () => {
+    // Sunday 29 November 2026
+    const sunday = new Date(2026, 10, 29, 9, 30)
+
+    it("repeats on chosen weekdays", () => {
+        expect(nextOccurrence("10:00", sunday, [0])).toEqual(new Date(2026, 10, 29, 10, 0))
+        // after this Sunday's start, the next is the following Sunday
+        expect(nextOccurrence("10:00", new Date(2026, 10, 29, 10, 0), [0])).toEqual(new Date(2026, 11, 6, 10, 0))
+        // Sunday and Wednesday: from Sunday noon the next is Wednesday
+        expect(nextOccurrence("19:00", new Date(2026, 10, 29, 20, 0), [0, 3])).toEqual(new Date(2026, 11, 2, 19, 0))
+    })
+
+    it("says when it repeats", () => {
+        const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        expect(repeatLabel([], names)).toBe("")
+        expect(repeatLabel([0], names)).toBe("Every Sunday")
+        expect(repeatLabel([3, 0], names)).toBe("Every Sunday and Wednesday")
+        expect(repeatLabel([0, 1, 2, 3, 4, 5, 6], names)).toBe("Every day")
+    })
+
+    const sundayService = [
+        { id: "a", name: "Worship", seconds: 1200 },
+        { id: "b", name: "Sermon", seconds: 2400 }
+    ]
+
+    it("saves a program by name and loads it back for next week", () => {
+        let program = saveProgramAs({ segments: sundayService, index: 1, auto: true }, "Sunday service", "s1")
+        expect(program.saved).toEqual([{ id: "s1", name: "Sunday service", segments: sundayService }])
+        expect(program.savedId).toBe("s1")
+
+        // saving under the same name replaces it rather than adding a second copy
+        program = saveProgramAs({ ...program, segments: [sundayService[1]] }, "sunday service ", "s2")
+        expect(program.saved?.length).toBe(1)
+        expect(program.saved?.[0].segments).toEqual([sundayService[1]])
+
+        program = loadSavedProgram({ ...program, segments: [], index: 0 }, "s1")
+        expect(program.segments).toEqual([sundayService[1]])
+        expect(program.index).toBe(-1)
+
+        expect(deleteSavedProgram(program, "s1").saved).toEqual([])
+        expect(deleteSavedProgram(program, "s1").savedId).toBeUndefined()
+    })
+
+    it("does not save an empty program or a blank name", () => {
+        const program = { segments: [], index: -1, auto: true }
+        expect(saveProgramAs(program, "Sunday", "x")).toBe(program)
+        expect(saveProgramAs({ ...program, segments: sundayService }, "  ", "x").saved).toBeUndefined()
     })
 })

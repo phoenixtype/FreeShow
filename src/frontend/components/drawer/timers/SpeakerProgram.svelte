@@ -1,21 +1,34 @@
 <script lang="ts">
     import { uid } from "uid"
-    import { timers } from "../../../stores"
+    import { dictionary, language, timers } from "../../../stores"
+    import { getWeekday } from "../../helpers/time"
+    import MaterialDropdown from "../../inputs/MaterialDropdown.svelte"
     import { translateText } from "../../../utils/language"
     import Icon from "../../helpers/Icon.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
     import MaterialTimePicker from "../../inputs/MaterialTimePicker.svelte"
     import MaterialToggleSwitch from "../../inputs/MaterialToggleSwitch.svelte"
-    import { clockLabel, emptyProgram, nextOccurrence, parseSegment, presetLabel, programTotalSeconds, segmentStartTimes, SPEAKER_TIMER_ID } from "./speakerTimer"
-    import { nextProgramSegment, playSegment, scheduleProgram, setProgramSegments, startProgram, updateProgram } from "./speakerTimerActions"
+    import { clockLabel, emptyProgram, nextOccurrence, repeatLabel, parseSegment, presetLabel, programTotalSeconds, segmentStartTimes, SPEAKER_TIMER_ID } from "./speakerTimer"
+    import { loadProgram, nextProgramSegment, playSegment, removeSavedProgram, saveProgram, scheduleProgram, setProgramDays, setProgramSegments, startProgram, updateProgram } from "./speakerTimerActions"
 
     export let readOnly = false
 
     $: program = $timers[SPEAKER_TIMER_ID]?.program || emptyProgram()
     $: segments = program.segments
     $: running = program.index >= 0
-    $: plannedStart = program.startsAt ? nextOccurrence(program.startsAt, new Date()) : null
+    $: days = program.days || []
+    $: plannedStart = program.startsAt ? nextOccurrence(program.startsAt, new Date(), days) : null
+
+    $: savedOptions = (program.saved || []).map((a) => ({ value: a.id, label: a.name }))
+
+    // weekdays, Sunday first, in the app's language
+    $: dayNames = [0, 1, 2, 3, 4, 5, 6].map((d) => getWeekday(d, $dictionary, true))
+    $: dayShort = [0, 1, 2, 3, 4, 5, 6].map((d) => new Date(2000, 0, 2 + d).toLocaleDateString(($language || "").replace("_", "-") || undefined, { weekday: "short" }))
+    function toggleDay(day: number) {
+        setProgramDays(days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort((a, b) => a - b))
+    }
+    $: repeats = repeatLabel(days, dayNames, { every: translateText("timer.every", $dictionary), everyDay: translateText("timer.every_day", $dictionary), and: translateText("timer.and", $dictionary) })
     $: startTimes = plannedStart ? segmentStartTimes(segments, plannedStart) : []
 
     // remount the box after each segment so it is empty and ready for the next one
@@ -56,6 +69,12 @@
         </span>
     </div>
 
+    {#if savedOptions.length || segments.length}
+        <div class="saved">
+            <MaterialDropdown label="timer.saved_programs" value={program.savedId || ""} options={savedOptions} addNew={segments.length ? "timer.save_program" : null} allowDeleting disabled={readOnly} on:change={(e) => loadProgram(e.detail)} on:new={(e) => saveProgram(e.detail)} on:delete={(e) => removeSavedProgram(e.detail)} />
+        </div>
+    {/if}
+
     {#if segments.length}
         <ol>
             {#each segments as segment, i (segment.id)}
@@ -82,6 +101,19 @@
         <div class="time">
             <MaterialTimePicker label="timer.starts_at" value={program.startsAt || ""} disabled={readOnly || !segments.length} on:change={(e) => scheduleProgram(e.detail || "")} />
         </div>
+    </div>
+
+    <div class="row days" role="group" aria-label={translateText("timer.repeat_on")}>
+        {#each dayShort as name, d}
+            <MaterialButton small isActive={days.includes(d)} disabled={readOnly} title={dayNames[d]} on:click={() => toggleDay(d)}>{name}</MaterialButton>
+        {/each}
+        <span class="repeats">
+            {#if program.startsAt && plannedStart}
+                {repeats || translateText("timer.once")}
+            {:else if days.length}
+                {repeats}
+            {/if}
+        </span>
     </div>
 
     <div class="row">
@@ -181,5 +213,17 @@
     }
     .time {
         width: 170px;
+    }
+    .saved {
+        max-width: 280px;
+    }
+    .days {
+        gap: 2px;
+    }
+    .repeats {
+        white-space: nowrap;
+        padding-left: 8px;
+        font-size: 0.85em;
+        color: var(--muted-text);
     }
 </style>

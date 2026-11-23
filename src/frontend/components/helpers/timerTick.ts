@@ -10,7 +10,7 @@ import { customActionActivation, runAction } from "../actions/actions"
 import { sortByClosestMatch } from "../actions/apiHelper"
 import { getCurrentTimerValue, getTimerDynamicValue, playPauseGlobal } from "../drawer/timers/timers"
 import { SPEAKER_TIMER_ID } from "../drawer/timers/speakerTimer"
-import { onSpeakerTimerEnd } from "../drawer/timers/speakerTimerActions"
+import { onSpeakerTimerEnd, rearmProgramSchedule } from "../drawer/timers/speakerTimerActions"
 import { getDynamicValue } from "../edit/scripts/itemHelpers"
 import { initPcoLiveSync } from "../../utils/pcoLiveSync"
 import { clone, keysToID, sortByTime } from "./array"
@@ -171,6 +171,7 @@ export function startEventTimer() {
     if (actionTimeout) return
 
     convertShowToAction()
+    rearmProgramSchedule()
 
     const currentTime: Date = new Date()
     let actionEvents: Event[] = Object.values(get(events)).filter((a) => {

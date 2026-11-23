@@ -1289,7 +1289,14 @@
         "auto_next": "Start the next segment at zero",
         "starts_at": "Starts by itself at",
         "program_total": "$1 in all",
-        "remove": "Remove"
+        "remove": "Remove",
+        "saved_programs": "Saved programs",
+        "save_program": "Save this program as",
+        "repeat_on": "Repeat on",
+        "every": "Every $1",
+        "every_day": "Every day",
+        "and": "and",
+        "once": "Once"
     },
     "clock": {
         "type": "Type",

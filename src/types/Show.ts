@@ -215,6 +215,14 @@ export interface SpeakerProgram {
     index: number // segment playing, -1 when the program is not running
     auto: boolean // start the next segment by itself when one reaches zero
     startsAt?: string // "HH:MM", the next time the program starts by itself
+    days?: number[] // weekdays it repeats on (0 = Sunday); empty starts once
+    savedId?: string // the saved program loaded last
+    saved?: SavedSpeakerProgram[] // programs a church reuses, like "Sunday service"
+}
+export interface SavedSpeakerProgram {
+    id: string
+    name: string
+    segments: SpeakerSegment[]
 }
 
 export interface Timer {

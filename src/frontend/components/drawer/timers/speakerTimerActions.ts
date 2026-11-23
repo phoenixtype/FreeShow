@@ -1,4 +1,5 @@
 import { get } from "svelte/store"
+import { uid } from "uid"
 import { OUTPUT } from "../../../../types/Channels"
 import type { Event } from "../../../../types/Calendar"
 import type { SpeakerProgram, SpeakerSegment } from "../../../../types/Show"
@@ -8,7 +9,7 @@ import { send } from "../../../utils/request"
 import { enableStageOutput } from "../../helpers/output"
 import { updateStageShow } from "../../stage/stage"
 import { playPauseGlobal, resetTimer } from "./timers"
-import { adjustRemaining, canShowSpeakerTimerOn, emptyProgram, nextOccurrence, SPEAKER_PROGRAM_EVENT_ID, createSpeakerStageLayout, createSpeakerTimer, NEW_SPEAKER_SCREEN, SPEAKER_STAGE_ID, SPEAKER_TIMER_ID, speakerWarnSeconds } from "./speakerTimer"
+import { adjustRemaining, canShowSpeakerTimerOn, deleteSavedProgram, emptyProgram, loadSavedProgram, saveProgramAs, nextOccurrence, SPEAKER_PROGRAM_EVENT_ID, createSpeakerStageLayout, createSpeakerTimer, NEW_SPEAKER_SCREEN, SPEAKER_STAGE_ID, SPEAKER_TIMER_ID, speakerWarnSeconds } from "./speakerTimer"
 
 export function ensureSpeakerTimer(seconds = 300) {
     if (get(timers)[SPEAKER_TIMER_ID]) return
@@ -132,10 +133,10 @@ export function playSegment(index: number) {
 }
 
 export function startProgram() {
-    // a scheduled start that has now happened is spent: the event stays in the calendar as a record
-    const scheduled = get(events)[SPEAKER_PROGRAM_EVENT_ID]
-    if (getProgram().startsAt && (!scheduled || new Date(scheduled.from).getTime() <= Date.now())) updateProgram((p) => ({ ...p, startsAt: undefined }))
-    return playSegment(0)
+    const started = playSegment(0)
+    // a scheduled start that has now happened: set up the next week's, or clear a one-off
+    rearmProgramSchedule(new Date(), 0)
+    return started
 }
 
 /** Next segment, or stop at the end of the program. */
@@ -153,12 +154,12 @@ export function onSpeakerTimerEnd() {
 }
 
 /**
- * Start the program by itself at "HH:MM" (the next time that comes round), through the calendar's action events,
+ * Start the program by itself at "HH:MM", on the chosen weekdays (none = once), through the calendar's action events,
  * so it shows in the calendar and runs with every other scheduled action. Empty time removes it.
  */
-export function scheduleProgram(time: string, now = new Date()) {
-    const at = time ? nextOccurrence(time, now) : null
-    updateProgram((p) => ({ ...p, startsAt: at ? time : undefined }))
+export function scheduleProgram(time: string, days = getProgram().days || [], now = new Date()) {
+    const at = time ? nextOccurrence(time, now, days) : null
+    updateProgram((p) => ({ ...p, startsAt: at ? time : undefined, days }))
 
     events.update((a) => {
         delete a[SPEAKER_PROGRAM_EVENT_ID]
@@ -177,4 +178,37 @@ export function scheduleProgram(time: string, now = new Date()) {
         return a
     })
     return at
+}
+
+/**
+ * Once the scheduled start has passed, move it to the next chosen weekday, or clear it if it was a one-off.
+ * The program starting calls this straight away; the calendar loop calls it with a minute's grace,
+ * so a start that is due is never moved before the calendar runs it (e.g. the app was closed that Sunday).
+ */
+const MISSED_GRACE = 60 * 1000
+export function rearmProgramSchedule(now = new Date(), grace = MISSED_GRACE) {
+    const program = get(timers)[SPEAKER_TIMER_ID]?.program
+    if (!program?.startsAt) return
+    const scheduled = get(events)[SPEAKER_PROGRAM_EVENT_ID]
+    if (scheduled && new Date(scheduled.from).getTime() > now.getTime() - grace) return
+    scheduleProgram(program.days?.length ? program.startsAt : "", program.days || [], now)
+}
+
+export function setProgramDays(days: number[]) {
+    const program = getProgram()
+    if (program.startsAt) scheduleProgram(program.startsAt, days)
+    else updateProgram((p) => ({ ...p, days }))
+}
+
+export function saveProgram(name: string) {
+    updateProgram((p) => saveProgramAs(p, name, uid(6)))
+}
+
+export function loadProgram(id: string) {
+    stopSpeaker()
+    updateProgram((p) => loadSavedProgram(p, id))
+}
+
+export function removeSavedProgram(id: string) {
+    updateProgram((p) => deleteSavedProgram(p, id))
 }

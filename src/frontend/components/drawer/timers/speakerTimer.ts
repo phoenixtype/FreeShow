@@ -177,13 +177,51 @@ export function segmentStartTimes(segments: SpeakerSegment[], start: Date) {
     })
 }
 
-/** The next moment "HH:MM" happens: later today, or tomorrow if that time has passed. */
-export function nextOccurrence(time: string, now: Date) {
+/**
+ * The next moment "HH:MM" happens: later today, or tomorrow if that time has passed.
+ * With weekdays (0 = Sunday) it is the next of those days instead, so a program can start every Sunday at 10:00.
+ */
+export function nextOccurrence(time: string, now: Date, days: number[] = []) {
     const [h, m] = time.split(":").map(Number)
     if (!Number.isFinite(h) || !Number.isFinite(m)) return null
-    const at = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0)
-    if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1)
-    return at
+    for (let ahead = 0; ahead <= 7; ahead++) {
+        const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ahead, h, m, 0, 0)
+        if (at.getTime() <= now.getTime()) continue
+        if (!days.length || days.includes(at.getDay())) return at
+    }
+    return null
+}
+
+const REPEAT_WORDS = { every: "Every $1", everyDay: "Every day", and: "and" }
+
+/** "Every Sunday", "Every Sunday and Wednesday", "Every day"; empty for a one-off start. Words come translated from the UI. */
+export function repeatLabel(days: number[] = [], dayNames: string[], words = REPEAT_WORDS) {
+    if (!days.length) return ""
+    if (days.length === 7) return words.everyDay
+    const names = [...days].sort((a, b) => a - b).map((d) => dayNames[d])
+    const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} ${words.and} ${names[names.length - 1]}` : names[0]
+    return words.every.replace("$1", list)
+}
+
+/** Save the program's segments under a name; the same name replaces the earlier copy. */
+export function saveProgramAs(program: SpeakerProgram, name: string, id: string): SpeakerProgram {
+    const trimmed = name.trim()
+    if (!trimmed || !program.segments.length) return program
+    const saved = program.saved || []
+    const existing = saved.find((a) => a.name.toLowerCase() === trimmed.toLowerCase())
+    const entry = { id: existing?.id || id, name: trimmed, segments: program.segments.map((a) => ({ ...a })) }
+    return { ...program, savedId: entry.id, saved: existing ? saved.map((a) => (a.id === entry.id ? entry : a)) : [...saved, entry] }
+}
+
+/** Load a saved program's segments, ready to start (the schedule stays as it is). */
+export function loadSavedProgram(program: SpeakerProgram, id: string): SpeakerProgram {
+    const entry = program.saved?.find((a) => a.id === id)
+    if (!entry) return program
+    return { ...program, segments: entry.segments.map((a) => ({ ...a })), index: -1, savedId: id }
+}
+
+export function deleteSavedProgram(program: SpeakerProgram, id: string): SpeakerProgram {
+    return { ...program, saved: (program.saved || []).filter((a) => a.id !== id), savedId: program.savedId === id ? undefined : program.savedId }
 }
 
 /** "10:30" in local time, for showing segment start times. */
