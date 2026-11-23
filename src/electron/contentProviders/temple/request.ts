@@ -105,11 +105,7 @@ export function upcomingPlans(plans: TemplePlan[], today = localDate(0), daysBac
 
 export function templeSongShow(song: TempleSong): Show & { id: string } {
     const sections = templeChartSections(song.chord_chart)
-    const show = getShow(
-        { attributes: { title: song.title, author: song.author || "", copyright: "", ccli_number: song.ccli_number || "" } },
-        { name: "", chord_chart_key: song.default_key || "", bpm: song.bpm || "", notes: song.notes || "", created_at: song.created_at, updated_at: song.updated_at },
-        sections
-    )
+    const show = getShow({ attributes: { title: song.title, author: song.author || "", copyright: "", ccli_number: song.ccli_number || "" } }, { name: "", chord_chart_key: song.default_key || "", bpm: song.bpm || "", notes: song.notes || "", created_at: song.created_at, updated_at: song.updated_at }, sections)
     show.category = "temple"
     return { id: `${SHOW_ID_PREFIX}${song.id}`, ...show }
 }
