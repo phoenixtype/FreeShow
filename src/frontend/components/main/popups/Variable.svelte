@@ -308,7 +308,7 @@
         {#each currentVariable.sets || [DEFAULT_SET] as set, i}
             {@const isDisabled = set.disabled ?? false}
 
-            <InputRow style="border-radius: 4px;overflow: hidden;">
+            <InputRow style="border-radius: var(--radius-sm);overflow: hidden;">
                 {#if (currentVariable.sets?.length || 0) > 1}
                     <span style="background-color: var(--primary-darker);font-weight: bold;font-size: 0.8em;display: flex;align-items: center;padding: 0 10px;{isDisabled ? 'opacity: 0.5;' : ''}"><span style="color: var(--secondary);display: flex;align-items: center;">#</span>{i + 1}</span>
                     <MaterialTextInput label="inputs.name" style="flex: 2;" value={set.name} disabled={isDisabled} on:change={(e) => updateSet(i, e.detail, "name")} autofocus={!!currentVariable.name && !set.name} />
@@ -346,7 +346,7 @@
 
             <div class="log" style="overflow: auto;max-height: 250px;">
                 {#each currentVariable.setLog as log}
-                    <InputRow style="border-radius: 4px;overflow: hidden;background-color: var(--primary-darker);border-bottom: 1px solid var(--primary-lighter);">
+                    <InputRow style="border-radius: var(--radius-sm);overflow: hidden;background-color: var(--primary-darker);border-bottom: 1px solid var(--primary-lighter);">
                         {#if (currentVariable.sets?.length || 0) > 1}<p style="width: 30%;min-width: initial;padding: 6px 10px;">{log.name}</p>{/if}
                         <p style="border-left: 1px solid var(--primary-lighter);padding: 6px 10px;">{log.number}</p>
                     </InputRow>
@@ -405,7 +405,7 @@
                     {/each}
 
                     {#if i === 0}
-                        <MaterialButton style="width: 100%;" icon="add" disabled={!currentVariable.textSetKeys?.length || currentVariable.textSetKeys.find((a) => !a) === ""} on:click={addTextSetVariable}>
+                        <MaterialButton icon="add" disabled={!currentVariable.textSetKeys?.length || currentVariable.textSetKeys.find((a) => !a) === ""} on:click={addTextSetVariable}>
                             <T id="new.variable" />
                         </MaterialButton>
                     {/if}
@@ -413,7 +413,7 @@
             </DragItemWrapper>
         {/each}
 
-        <MaterialButton variant="outlined" style="margin-top: 10px;width: 100%;" icon="add" disabled={!currentVariable.textSets?.length} on:click={addTextSet}>
+        <MaterialButton variant="outlined" style="margin-top: 10px;" icon="add" disabled={!currentVariable.textSets?.length} on:click={addTextSet}>
             <T id="variables.add_set" />
         </MaterialButton>
     {/if}
@@ -431,7 +431,7 @@
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
 
-        border-radius: 8px;
+        border-radius: var(--radius);
         overflow: hidden;
     }
     .text_set.active {

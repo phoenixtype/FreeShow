@@ -23,21 +23,21 @@
 <svelte:window on:keydown={keydown} />
 
 <div class="list">
-    <MaterialButton variant="outlined" style="width: 100%;" on:click={() => activePopup.set(null)}>
+    <MaterialButton variant="outlined" on:click={() => activePopup.set(null)}>
         <T id="popup.cancel" />
         <span>N</span>
     </MaterialButton>
     {#if $saved}
-        <MaterialButton variant="contained" style="margin-top: 8px;width: 100%;" on:click={() => saveComplete({ closeWhenFinished: true })}>
+        <MaterialButton variant="contained" style="margin-top: 8px;" on:click={() => saveComplete({ closeWhenFinished: true })}>
             <T id="main.quit" />
             <span>Y</span>
         </MaterialButton>
     {:else}
-        <MaterialButton variant="outlined" style="width: 100%;" on:click={closeApp}>
+        <MaterialButton variant="outlined" on:click={closeApp}>
             <div style="opacity: 0.7;"><T id="popup.quit" /></div>
             <span>Q</span>
         </MaterialButton>
-        <MaterialButton variant="contained" style="margin-top: 8px;width: 100%;" on:click={() => save(true)}>
+        <MaterialButton variant="contained" style="margin-top: 8px;" on:click={() => save(true)}>
             <T id="popup.save_quit" />
             <span>Y</span>
         </MaterialButton>

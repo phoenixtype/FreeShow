@@ -195,7 +195,7 @@
     .chat-message {
         max-width: 85%;
         padding: 10px 14px;
-        border-radius: 12px;
+        border-radius: var(--radius);
         font-size: 0.92rem;
         line-height: 1.45;
     }
@@ -238,7 +238,7 @@
         flex: 1;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         padding: 8px 12px;
         color: #fff;
         font-size: 0.92rem;

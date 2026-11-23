@@ -68,7 +68,7 @@
 <div class="main">
     <MaterialDropdown label="settings.language" options={languageList} value={$special.translationLanguage} on:change={updateLanguage} flags />
 
-    <MaterialButton variant="contained" style="margin-top: 20px;width: 100%;" disabled={!$special.translationLanguage} on:click={convert}>
+    <MaterialButton variant="contained" style="margin-top: 20px;" disabled={!$special.translationLanguage} on:click={convert}>
         <Icon size={1.1} id="translate" white />
 
         {#if translatedLangs.includes($special.translationLanguage)}
@@ -92,7 +92,7 @@
             {/each}
         </div>
 
-        <MaterialButton variant="outlined" style="width: 100%;" on:click={() => remove()}>
+        <MaterialButton variant="outlined" on:click={() => remove()}>
             <Icon size={1.1} id="close" />
             <T id="localization.remove" />
         </MaterialButton>
@@ -110,7 +110,7 @@
         display: flex;
         flex-direction: column;
 
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
 
         margin-top: 20px;

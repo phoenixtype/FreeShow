@@ -107,7 +107,7 @@
                                         {#if action.shows?.length}
                                             <Icon id="slide" size={showGrid ? 4 : 1} white />
                                         {:else if action.customIcon}
-                                            <img src={action.customIcon} style="width: {showGrid ? 4 : 1}rem; height: {showGrid ? 4 : 1}rem; object-fit: contain;border-radius: 2px;" />
+                                            <img src={action.customIcon} style="width: {showGrid ? 4 : 1}rem; height: {showGrid ? 4 : 1}rem; object-fit: contain;border-radius: var(--radius-sm);" />
                                         {:else if action.triggers?.length !== 1}
                                             <Icon id="actions" size={showGrid ? 4 : 1} />
                                         {:else}
@@ -273,7 +273,7 @@
     }
     .actions.grid :global(.action) {
         background-color: rgb(0 0 20 / 0.08);
-        border-radius: 10px;
+        border-radius: var(--radius);
         width: 130px;
         max-width: none;
         aspect-ratio: 1 / 1;

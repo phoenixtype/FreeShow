@@ -284,7 +284,7 @@ aria-label={fullscreen ? "Exit fullscreen preview" : "Toggle fullscreen preview"
 
                         {#if output.out?.scene?.name}
                             <div class="badge scene" style="background-color: var(--primary-darker);">
-                                <MaterialButton style="padding: 2px 4px;min-height: 0;gap: 3px;max-width: 100%;" on:click={() => openDrawer("scenes")} title={output.out.scene.name}>
+                                <MaterialButton style="padding: 2px 4px;min-height: 0;gap: 3px;max-" on:click={() => openDrawer("scenes")} title={output.out.scene.name}>
                                     <Icon id="scene" size={0.7} white />
                                     <p>{output.out.scene.name}</p>
                                 </MaterialButton>

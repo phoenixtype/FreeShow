@@ -75,7 +75,7 @@
                         id="#{index}"
                         variant="outlined"
                         class="item_button"
-                        style="width: 100%;justify-content: space-between;padding: 6px 8px;cursor: grab;"
+                        style="justify-content: space-between;padding: 6px 8px;cursor: grab;"
                         isActive={$activeEdit.items.includes(index)}
                         tab
                         on:click={(e) => {

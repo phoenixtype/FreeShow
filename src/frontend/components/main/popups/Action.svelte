@@ -418,7 +418,7 @@
                 {#each customActionActivations as activation}
                     {#if activation.common || showCommonActivate}
                         <MaterialButton
-                            style="width: 100%;font-weight: normal;justify-content: start;padding: 5px 20px;gap: 12px;"
+                            style="font-weight: normal;justify-content: start;padding: 5px 20px;gap: 12px;"
                             showOutline={customActivation === activation.id}
                             isActive={customActivation === activation.id}
                             on:click={() => {
@@ -555,7 +555,7 @@
                 {:else}
                     <MaterialButton
                         variant="outlined"
-                        style="margin-top: 10px;width: 100%;"
+                        style="margin-top: 10px;"
                         icon="add"
                         on:click={() => {
                             addTrigger = true
@@ -597,7 +597,7 @@
 
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
         overflow: hidden;
 
         padding: 10px 0;

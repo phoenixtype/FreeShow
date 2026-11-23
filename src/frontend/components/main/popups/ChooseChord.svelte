@@ -163,7 +163,7 @@
 
         background-color: var(--primary-darker);
 
-        border-radius: 8px;
+        border-radius: var(--radius);
         padding-bottom: 8px;
         overflow: hidden;
     }

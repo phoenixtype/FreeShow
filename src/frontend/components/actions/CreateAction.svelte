@@ -284,7 +284,7 @@
 
                     <!-- disabled={$popupData.existing.includes(action.id)} -->
                     <!-- bold={action.common} -->
-                    <MaterialButton style="width: 100%;font-weight: normal;justify-content: start;padding: 5px 20px;gap: 12px;{searchValue.length && i === 0 ? 'background-color: var(--primary-lighter);' : ''}" showOutline={getActionTriggerId(actionId) === action.id} isActive={(existingActionsFiltered || $popupData.existing || []).map(getActionTriggerId).includes(action.id)} on:click={() => changeAction({ ...action, index: full ? undefined : 0 })}>
+                    <MaterialButton style="font-weight: normal;justify-content: start;padding: 5px 20px;gap: 12px;{searchValue.length && i === 0 ? 'background-color: var(--primary-lighter);' : ''}" showOutline={getActionTriggerId(actionId) === action.id} isActive={(existingActionsFiltered || $popupData.existing || []).map(getActionTriggerId).includes(action.id)} on:click={() => changeAction({ ...action, index: full ? undefined : 0 })}>
                         <Icon id={action.icon} />
                         <p>{action.name}</p>
                     </MaterialButton>
@@ -364,7 +364,7 @@
         display: flex;
         flex-direction: column;
 
-        border-radius: 8px;
+        border-radius: var(--radius);
         overflow: hidden;
     }
 
@@ -388,7 +388,7 @@
 
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
         overflow: hidden;
 
         padding: 10px 0;

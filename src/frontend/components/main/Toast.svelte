@@ -62,7 +62,7 @@
         color: var(--text);
         border: 2px solid var(--secondary);
 
-        border-radius: 8px;
+        border-radius: var(--radius);
         /* border-top-left-radius: 8px;
         border-bottom-left-radius: 8px;
         border-inline-end: none; */

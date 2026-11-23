@@ -211,7 +211,7 @@
 {:else if inputId === "emitter"}
     <ChooseEmitter value={value || {}} on:change={(e) => updateValue("", e)} />
 {:else if inputId === "start_show"}
-    <MaterialButton variant="outlined" style="width: 100%;" on:click={openSelectShow}>
+    <MaterialButton variant="outlined" on:click={openSelectShow}>
         {#if value?.id}
             {$shows[value.id]?.name || "—"}
         {:else}

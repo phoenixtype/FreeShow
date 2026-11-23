@@ -89,7 +89,7 @@
             <!-- USED TO DELETE "BROKEN" SHOWS -->
             {#if allShowsInFolder.length > Object.keys($shows).length}
                 <InputRow>
-                    <MaterialButton style="width: 100%;" icon="delete" info={"" + (allShowsInFolder.length - Object.keys($shows).length)} on:click={deleteBrokenShows} red white>
+                    <MaterialButton icon="delete" info={"" + (allShowsInFolder.length - Object.keys($shows).length)} on:click={deleteBrokenShows} red white>
                         <T id="actions.delete_shows_not_indexed" />
                     </MaterialButton>
                 </InputRow>
@@ -98,7 +98,7 @@
             <!-- DELETE EMPTY SHOWS -->
             {#if emptyShows.length}
                 <InputRow arrow>
-                    <MaterialButton style="width: 100%;" icon="delete" info={"" + emptyShows.length} on:click={deleteEmptyShows} red white>
+                    <MaterialButton icon="delete" info={"" + emptyShows.length} on:click={deleteEmptyShows} red white>
                         <T id="actions.delete_empty_shows" />
                     </MaterialButton>
 
@@ -119,7 +119,7 @@
             <!-- REMOVE DUPLICATED SHOWS -->
             {#if duplicatedShows.length}
                 <InputRow>
-                    <MaterialButton style="width: 100%;" icon="launch" info={"" + duplicatedShows.length} on:click={deleteDuplicatedShows} white>
+                    <MaterialButton icon="launch" info={"" + duplicatedShows.length} on:click={deleteDuplicatedShows} white>
                         <T id="popup.delete_duplicated_shows" />
                     </MaterialButton>
                 </InputRow>

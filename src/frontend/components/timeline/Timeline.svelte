@@ -1175,10 +1175,10 @@
         font-weight: bold;
     }
     .action-marker.slide .action-head {
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
     }
     .action-marker.style .action-head {
-        border-radius: 2px;
+        border-radius: var(--radius-sm);
         transform: rotate(45deg);
         width: 12px;
         height: 12px;
@@ -1191,7 +1191,7 @@
         height: 8px;
         width: 100%;
 
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         background-color: var(--secondary);
         opacity: 0.3;
     }
@@ -1203,7 +1203,7 @@
         background-color: var(--secondary-opacity);
         color: var(--secondary-text);
         border: 2px solid var(--secondary);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         box-shadow: 0 0 4px rgb(0 0 0 / 0.4);
 
         z-index: 4;
@@ -1273,7 +1273,7 @@
         font-size: 0.8em;
         background: rgba(0, 0, 0, 0.5);
         padding: 2px 4px;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         white-space: nowrap;
     }
 
@@ -1314,7 +1314,7 @@
         background-color: var(--secondary-opacity);
         color: var(--secondary-text);
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         font-size: 0.9em;
         white-space: nowrap;
     } */

@@ -474,14 +474,14 @@
         position: absolute;
         inset: 0;
         background-color: var(--primary-darkest);
-        border-radius: 4px 4px 0 0;
+        border-radius: var(--radius-sm) 4px 0 0;
         z-index: 0;
     }
 
     .textfield.inline .background {
         background-color: rgb(0 0 0 / 0.4);
         /* background: red; */
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
     }
 
     .textfield:not(:has(.dropdown)):not(:has(.remove:hover)):not(:disabled):hover .input {
@@ -709,7 +709,7 @@
 
         opacity: 0.8;
         padding: 10px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
 
         z-index: 10;
     }

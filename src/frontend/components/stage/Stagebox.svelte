@@ -433,7 +433,7 @@
                     {/if}
 
                     {#if item.currentOutput?.showLabel}
-                        <div class="label" style="position: absolute;top: unset;bottom: 10px;left: 50%;transform: translateX(-50%);pointer-events: none;font-size: 28px;background-color: rgba(0, 0, 0, 0.5);padding: 2px 6px;border-radius: 12px;height: 46px;width: 180px;display: flex;justify-content: center;align-items: center;">
+                        <div class="label" style="position: absolute;top: unset;bottom: 10px;left: 50%;transform: translateX(-50%);pointer-events: none;font-size: 28px;background-color: rgba(0, 0, 0, 0.5);padding: 2px 6px;border-radius: var(--radius);height: 46px;width: 180px;display: flex;justify-content: center;align-items: center;">
                             <p>{$outputs[outputWindowId]?.name || $allOutputs[outputWindowId]?.name || ""}</p>
                         </div>
                     {/if}

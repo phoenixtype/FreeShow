@@ -73,7 +73,7 @@
         max-height: 35px;
 
         object-fit: cover;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
 
         /* hide alt text */
         color: transparent;

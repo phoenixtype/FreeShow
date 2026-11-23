@@ -49,6 +49,6 @@
 
         padding: 20px;
         background-color: var(--primary-darker);
-        border-radius: 8px;
+        border-radius: var(--radius);
     }
 </style>

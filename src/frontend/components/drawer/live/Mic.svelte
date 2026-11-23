@@ -130,7 +130,7 @@
     .signal-dot {
         width: 3px;
         height: 3px;
-        border-radius: 2px;
+        border-radius: var(--radius-sm);
         background-color: rgba(255, 255, 255, 0.2);
         transition:
             background-color 0.1s ease,

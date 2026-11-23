@@ -67,7 +67,7 @@
     <MaterialButton
         title="titlebar.edit"
         icon="edit"
-        style="width: 100%;"
+        
         on:click={() => {
             popupData.set({ mode: "transcription" })
             activePopup.set("ai_model_manager")

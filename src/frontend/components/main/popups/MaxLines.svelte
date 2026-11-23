@@ -105,7 +105,7 @@
 
         /* border: 3px solid black; */
         background: black;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
 
         /* padding-left: 0; */
         padding: 8px 4px;
@@ -116,7 +116,7 @@
         width: 100%;
 
         border-radius: 1px;
-        /* border-radius: 10px; */
+        /* border-radius: var(--radius); */
 
         background-color: white;
         /* border-radius: 1px; */

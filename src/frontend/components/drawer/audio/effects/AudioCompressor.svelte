@@ -191,7 +191,7 @@
 
 <style>
     .compressor-container {
-        border-radius: 8px;
+        border-radius: var(--radius);
         user-select: none;
     }
 
@@ -201,7 +201,7 @@
         align-items: flex-start;
         background: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
         transition: opacity 0.2s ease;
         font-family: monospace;
@@ -240,7 +240,7 @@
         transform: translateX(-50%);
         width: 14px;
         background: linear-gradient(to top, #ad6852, #e8a87c);
-        border-radius: 2px 2px 0 0;
+        border-radius: var(--radius-sm) 2px 0 0;
         transition: height 0.05s linear;
     }
 

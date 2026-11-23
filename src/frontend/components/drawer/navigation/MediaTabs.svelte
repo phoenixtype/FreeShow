@@ -102,14 +102,14 @@
 <NavigationSections {sections} active={activeSubTab} on:rename={updateName}>
     <div slot="section_2" style="{!curriculumProviders.length ? 'padding: 8px;' : ''}{foldersList.length && !curriculumProviders.length ? 'padding-top: 12px;' : ''}">
         {#if !curriculumProviders.length}
-            <MaterialButton style="width: 100%;" title="new.system_folder" variant="outlined" disabled={readOnly} on:click={addFolder} small>
+            <MaterialButton title="new.system_folder" variant="outlined" disabled={readOnly} on:click={addFolder} small>
                 <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
                 {#if !$labelsDisabled}<T id="new.system_folder" />{/if}
             </MaterialButton>
         {/if}
     </div>
     <div slot="section_3" style="padding: 8px;{foldersList.length ? 'padding-top: 12px;' : ''}">
-        <MaterialButton style="width: 100%;" title="new.system_folder" variant="outlined" disabled={readOnly} on:click={addFolder} small>
+        <MaterialButton title="new.system_folder" variant="outlined" disabled={readOnly} on:click={addFolder} small>
             <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
             {#if !$labelsDisabled}<T id="new.system_folder" />{/if}
         </MaterialButton>

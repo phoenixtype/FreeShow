@@ -90,7 +90,7 @@
     .tabs {
         display: flex;
         background-color: var(--primary-darker);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
     }
 
@@ -115,12 +115,12 @@
         overflow-y: auto;
 
         background-color: var(--primary-darker);
-        border-radius: 8px;
+        border-radius: var(--radius);
     }
 
     .devices :global(.main) {
         background-color: var(--primary-darkest);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
 
         overflow: hidden;
     }

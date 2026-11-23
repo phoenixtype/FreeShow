@@ -257,7 +257,7 @@
         <Tip value="settings.{currentScreen.boundsLocked ? 'output_locked' : 'select_display'}" bottom={20} />
     {/key}
 
-    <MaterialButton variant="outlined" style="width: 100%;" icon="edit" disabled={currentScreen.boundsLocked} on:click={() => activePopup.set("change_output_values")} title={activateOutput ? "popup.change_output_values" : "settings.manual_input_hint"}>
+    <MaterialButton variant="outlined" icon="edit" disabled={currentScreen.boundsLocked} on:click={() => activePopup.set("change_output_values")} title={activateOutput ? "popup.change_output_values" : "settings.manual_input_hint"}>
         <p><T id={activateOutput ? "settings.manual_input_hint" : "popup.change_output_values"} /></p>
     </MaterialButton>
 

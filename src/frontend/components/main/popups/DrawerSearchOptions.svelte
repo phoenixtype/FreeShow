@@ -36,7 +36,7 @@
         font-family: monospace;
 
         padding: 2px 6px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         border: 1px solid var(--primary-lighter);
     }
 

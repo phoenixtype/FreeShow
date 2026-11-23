@@ -67,6 +67,6 @@
     </InputRow>
 {/each}
 
-<MaterialButton icon="add" variant="outlined" style="width: 100%;" disabled={emptyEntry} on:click={addCustom}>
+<MaterialButton icon="add" variant="outlined" disabled={emptyEntry} on:click={addCustom}>
     <T id="settings.add" />
 </MaterialButton>

@@ -27,7 +27,7 @@
             const count = selectedIndices.includes(index) && selectedIndices.length > 1 ? selectedIndices.length : 1
             if (count > 1) {
                 const badge = document.createElement("span")
-                badge.style.cssText = "position:absolute;top:4px;right:8px;background:var(--focus,#4d90fe);color:#fff;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:bold;"
+                badge.style.cssText = "position:absolute;top:4px;right:8px;background:var(--focus,#4d90fe);color:#fff;border-radius: var(--radius);padding:2px 8px;font-size:12px;font-weight:bold;"
                 badge.innerText = `${count}`
                 clone.appendChild(badge)
             }
@@ -83,6 +83,6 @@
     .drag_item_wrapper.is_placeholder {
         opacity: 0.35;
         border: 1px dashed var(--focus, #4d90fe);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
     }
 </style>

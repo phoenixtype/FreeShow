@@ -398,11 +398,11 @@
     }
 
     .action-marker.slide .action-head {
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
     }
 
     .action-marker.style .action-head {
-        border-radius: 2px;
+        border-radius: var(--radius-sm);
         transform: rotate(45deg);
         width: 12px;
         height: 12px;
@@ -418,7 +418,7 @@
         font-size: 0.8em;
         background: rgba(0, 0, 0, 0.5);
         padding: 2px 4px;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         white-space: nowrap;
     }
 
@@ -426,7 +426,7 @@
         position: fixed;
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         z-index: 9999;
         min-width: 120px;
@@ -454,7 +454,7 @@
         opacity: 0.7;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background-color: var(--primary-darkest);
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         padding: 2px;
         box-sizing: content-box;
     }
@@ -469,7 +469,7 @@
     }
 
     .easing-context-menu-item:first-child {
-        border-radius: 3px 3px 0 0;
+        border-radius: var(--radius-sm) 3px 0 0;
     }
 
     .easing-context-menu-item:last-child {

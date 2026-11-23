@@ -85,7 +85,7 @@
 
 {#if skip}
     <CombinedInput style="margin: 6px;margin-top: 10px;width: initial;">
-        <MaterialButton style="width: 100%;" icon="arrow_forward" on:click={() => activePopup.set(null)}>
+        <MaterialButton icon="arrow_forward" on:click={() => activePopup.set(null)}>
             <T id="guide.skip" />
         </MaterialButton>
     </CombinedInput>

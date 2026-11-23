@@ -85,7 +85,7 @@
 <div class="list">
     {#each backupsList as backup}
         <InputRow>
-            <MaterialButton variant="outlined" title="settings.restore" style="width: 100%;" on:click={() => restore(backup)}>
+            <MaterialButton variant="outlined" title="settings.restore" on:click={() => restore(backup)}>
                 <div class="info">
                     <div class="name" class:deleted={backup.isDeleted || deletingPath === backup.path}>{backup.name.endsWith("_auto") ? translateText("settings.auto") : backup.name} <span style="opacity: 0.3;font-size: 0.7em;padding: 0 8px;">{sizeToString(backup.size)}</span></div>
                     <div class="date">{getDaysAgo(backup.date)} - {new Date(backup.date).toLocaleString()}</div>

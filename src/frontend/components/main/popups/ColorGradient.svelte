@@ -116,7 +116,6 @@
     <MaterialButton
         variant="outlined"
         icon="add"
-        style="width: 100%;"
         on:click={() => {
             parsedValue.colors.push({ color: "#ffffff", pos: 100 })
             parsedValue.colors = parsedValue.colors
@@ -127,7 +126,7 @@
     </MaterialButton>
 </div>
 
-<MaterialButton variant="contained" icon="save" on:click={change} style="width: 100%;margin-top: 20px;">
+<MaterialButton variant="contained" icon="save" on:click={change} style="margin-top: 20px;">
     <T id="actions.save" />
 </MaterialButton>
 
@@ -137,7 +136,7 @@
         height: 80px;
 
         margin-bottom: 20px;
-        border-radius: 5px;
+        border-radius: var(--radius-sm);
         border: 2px solid var(--text);
     }
 

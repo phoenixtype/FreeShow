@@ -109,7 +109,7 @@
     </div>
 
     <div class="previewBox">
-        <div style="flex: 1;display: flex;flex-direction: column;margin: 10px;border-radius: 4px;overflow: hidden;">
+        <div style="flex: 1;display: flex;flex-direction: column;margin: 10px;border-radius: var(--radius-sm);overflow: hidden;">
             <!-- <h4 style="text-align: center;"><T id="export.preview" /></h4> -->
             <!-- <div class="label">{translateText("export.preview")}</div> -->
 
@@ -129,7 +129,7 @@
     .previewBox {
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
         overflow: hidden;
 
         display: flex;

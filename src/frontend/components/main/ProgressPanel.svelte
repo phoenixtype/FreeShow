@@ -126,7 +126,7 @@
 
         box-shadow: 1px 1px 3px 2px rgb(0 0 0 / 0.2);
         border: 1px solid var(--primary-lighter);
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
 
         z-index: 5000;
         overflow: hidden;
@@ -177,7 +177,7 @@
         width: 100%;
         height: 6px;
         background-color: var(--primary-darkest);
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
     }
 
@@ -185,7 +185,7 @@
         height: 100%;
         background: linear-gradient(90deg, #8a8a8a 0%, var(--secondary) 100%);
         transition: width 0.3s ease;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
     }
 
     .progress-text {

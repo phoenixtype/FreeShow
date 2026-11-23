@@ -24,7 +24,7 @@
     // const debouncedColumnUpdate = debounce((newValue: number) => dispatch("change", newValue), { wait: 50 })
 
     const dispatch = createEventDispatcher()
-    function update(value: number, origin?: {x: number, y: number}) {
+    function update(value: number, origin?: { x: number; y: number }) {
         let newValue = Math.max(min, Math.min(max, value))
         if (Math.abs(newValue - 1) < 0.01) newValue = 1
 
@@ -79,7 +79,7 @@
 <svelte:window on:mousedown={mousedown} on:wheel={wheel} />
 
 <div id={currentId} class="zoom_container" class:hidden>
-    <MaterialButton style="width: 100%;height: 100%;" on:click={() => (zoomOpened = !zoomOpened)} title="actions.zoom">
+    <MaterialButton style="height: 100%;" on:click={() => (zoomOpened = !zoomOpened)} title="actions.zoom">
         <Icon size={1.3} id="zoomIn" white={!zoomOpened} />
     </MaterialButton>
 

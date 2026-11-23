@@ -237,7 +237,7 @@
         </List>
     {/if}
 
-    <MaterialButton on:click={textToShow} variant="contained" title="timer.create [Ctrl+Enter]" disabled={values.text.trim().length === 0} info={getName(values) || translateText("main.unnamed")} style="width: 100%;margin-top: 20px;" icon="add" data-testid="create.show.popup.new.show">
+    <MaterialButton on:click={textToShow} variant="contained" title="timer.create [Ctrl+Enter]" disabled={values.text.trim().length === 0} info={getName(values) || translateText("main.unnamed")} style="margin-top: 20px;" icon="add" data-testid="create.show.popup.new.show">
         <T id="timer.create" />
     </MaterialButton>
 {:else if selectedOption === "web"}

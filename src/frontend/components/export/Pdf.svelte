@@ -264,7 +264,7 @@
                 {#if show.type === "section"}
                     <div class="media-page" style="width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; page-break-after: always; background: {show.color || 'linear-gradient(135deg, #1e293b, #0f172a)'};">
                         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; padding: 40px; box-sizing: border-box; width: 100%; height: 100%;">
-                            <div class="section-accent" style="width: 120px; height: 6px; background-color: rgba(255, 255, 255, 0.8); margin-bottom: 40px; border-radius: 3px;"></div>
+                            <div class="section-accent" style="width: 120px; height: 6px; background-color: rgba(255, 255, 255, 0.8); margin-bottom: 40px; border-radius: var(--radius-sm);"></div>
                             <h1 style="font-size: 130px; font-weight: 800; text-transform: uppercase; letter-spacing: -3px; margin: 0 0 30px 0; text-shadow: 0 8px 24px rgba(0,0,0,0.4); color: white; font-family: sans-serif; line-height: 1.1;">{show.name}</h1>
                             {#if show.notes}
                                 <div style="width: 300px; height: 2px; background-color: rgba(255,255,255,0.25); margin: 30px 0;"></div>
@@ -306,7 +306,7 @@
                     {#if show.type === "section"}
                         <div class="section-chord-divider" style="max-width: 80%; width: 100%;">
                             {#if show.color}
-                                <div style="width: 80px; height: 6px; background-color: {show.color}; margin: 0 auto 30px auto; border-radius: 3px;"></div>
+                                <div style="width: 80px; height: 6px; background-color: {show.color}; margin: 0 auto 30px auto; border-radius: var(--radius-sm);"></div>
                             {/if}
                             <h1 style="font-size: 3.5em; font-weight: 800; margin: 0 0 15px 0; color: #111; letter-spacing: -1px; text-transform: uppercase;">{show.name}</h1>
                             <div style="width: 150px; height: 1px; background-color: #ddd; margin: 25px auto;"></div>
@@ -322,7 +322,7 @@
                             <h1 style="font-size: 2.5em; font-weight: 700; color: #222; margin-bottom: 10px; text-transform: uppercase; letter-spacing: -0.5px;">[ {show.name} ]</h1>
                             <div style="font-size: 0.95em; color: #777; margin-bottom: 30px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">Media Item ({show.type})</div>
                             {#if show.type === "image"}
-                                <div style="max-width: 100%; height: 180mm; display: flex; align-items: center; justify-content: center; border: 1px dashed #ccc; padding: 10px; border-radius: 8px; background: #fafafa; overflow: hidden; margin: 0 auto; box-sizing: border-box;">
+                                <div style="max-width: 100%; height: 180mm; display: flex; align-items: center; justify-content: center; border: 1px dashed #ccc; padding: 10px; border-radius: var(--radius); background: #fafafa; overflow: hidden; margin: 0 auto; box-sizing: border-box;">
                                     <img src={show.media[show.id].path} alt={show.name} style="max-width: 100%; max-height: 100%; object-fit: contain;" />
                                 </div>
                             {/if}
@@ -397,7 +397,7 @@
                     {#if show.type === "section"}
                         <div class="section-page" style="background: {show.color ? show.color : 'linear-gradient(135deg, #1e293b, #0f172a)'};">
                             <!-- Premium decorative elements -->
-                            <div class="section-accent" style="width: 80px; height: 4px; background-color: #ffffff; margin-bottom: 30px; border-radius: 2px; opacity: 0.8;"></div>
+                            <div class="section-accent" style="width: 80px; height: 4px; background-color: #ffffff; margin-bottom: 30px; border-radius: var(--radius-sm); opacity: 0.8;"></div>
                             <h1 style="font-size: 54pt; font-weight: 800; text-transform: uppercase; letter-spacing: -2px; margin: 0 0 20px 0; color: #ffffff; text-shadow: 0 4px 12px rgba(0,0,0,0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.1;">{show.name}</h1>
                             {#if show.notes}
                                 <div style="width: 200px; height: 1px; background-color: rgba(255,255,255,0.25); margin: 25px 0;"></div>
@@ -769,7 +769,7 @@
     .chord-name {
         background: #f0f0f0;
         padding: 3px 6px;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         font-weight: bold;
         font-size: 10px;
         border: 1px solid #ddd;

@@ -148,7 +148,6 @@
         <MaterialButton
             variant="outlined"
             icon="text"
-            style="width: 100%;"
             on:click={() => {
                 popupData.set({ templateId })
                 activePopup.set("template_style_overrides")

@@ -86,7 +86,7 @@
         background-color: rgb(0 0 0 / 0.15);
 
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
     }
 
     .output {

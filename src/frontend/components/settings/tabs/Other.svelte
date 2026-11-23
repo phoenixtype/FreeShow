@@ -68,7 +68,7 @@
     }
 </script>
 
-<MaterialButton variant="outlined" style="width: 100%;margin-bottom: 20px;" icon="loop" on:click={() => activePopup.set("update_manager")}>
+<MaterialButton variant="outlined" style="margin-bottom: 20px;" icon="loop" on:click={() => activePopup.set("update_manager")}>
     <T id="about.check_updates" />
     <!-- <T id="popup.update_manager" /> -->
 </MaterialButton>

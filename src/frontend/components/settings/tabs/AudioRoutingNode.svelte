@@ -285,7 +285,7 @@
         box-sizing: border-box;
         background: var(--primary-darker, rgba(30, 30, 40, 0.9));
         border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 8px;
+        border-radius: var(--radius);
         padding: 10px 14px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         display: flex;
@@ -393,7 +393,7 @@
     .port-sidechain {
         left: -7px;
         top: calc(50% + 5px);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         background: #f59e0b;
     }
 

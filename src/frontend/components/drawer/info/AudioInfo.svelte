@@ -57,7 +57,7 @@
 
         <MaterialFolderPicker label="settings.recordings_path" value={recordingsPath} allowEmpty={!!$special?.audioRecordingsPath} on:change={(e) => updateRecordingsPath(e.detail)} />
 
-        <MaterialButton variant="outlined" style="width: 100%;margin-top: 10px;" on:click={() => activePopup.set("now_playing")}>
+        <MaterialButton variant="outlined" style="margin-top: 10px;" on:click={() => activePopup.set("now_playing")}>
             <Icon id="document" />
             <T id="popup.now_playing" />
         </MaterialButton>

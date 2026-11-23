@@ -87,7 +87,7 @@
         </Center>
     {/if}
 
-    <MaterialButton variant="outlined" icon="add" style="margin-top: 20px;width: 100%;" disabled={emptyTag} on:click={createTag}>
+    <MaterialButton variant="outlined" icon="add" style="margin-top: 20px;" disabled={emptyTag} on:click={createTag}>
         <T id="meta.new_tag" />
     </MaterialButton>
 </div>

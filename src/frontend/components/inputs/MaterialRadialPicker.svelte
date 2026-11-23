@@ -207,7 +207,7 @@
         position: absolute;
         inset: 0;
         background-color: var(--primary-darkest);
-        border-radius: 4px 4px 0 0;
+        border-radius: var(--radius-sm) 4px 0 0;
         z-index: 0;
     }
     .input-wrapper {
@@ -279,7 +279,7 @@
         border: none;
         cursor: pointer;
         padding: 0.15rem;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -352,7 +352,7 @@
 
         background: var(--primary-darkest);
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
         /* padding: 8px 5px; */
         padding: 5px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);

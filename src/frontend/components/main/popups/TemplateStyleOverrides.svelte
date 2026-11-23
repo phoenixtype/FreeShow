@@ -146,7 +146,7 @@
         </Center>
     {/if}
 
-    <MaterialButton variant="outlined" icon="add" style="width: 100%;margin-top: 10px;" on:click={addOverride}>
+    <MaterialButton variant="outlined" icon="add" style="margin-top: 10px;" on:click={addOverride}>
         <T id="settings.add" />
     </MaterialButton>
 </section>

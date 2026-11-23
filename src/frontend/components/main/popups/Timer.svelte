@@ -317,7 +317,7 @@
         </div>
     {:else if timer.type === "event"}
         <div class="timerbox" style="width: 100%;margin: 20px 0;overflow: visible;">
-            <p style="border: none;min-height: unset;border-radius: 8px;" class="part">
+            <p style="border: none;min-height: unset;border-radius: var(--radius);" class="part">
                 <T id="timer.to_event" />
 
                 {#if Number(eventCountdown.m) > 0 || Number(eventCountdown.s) > 0}
@@ -338,7 +338,7 @@
         </div>
     {:else if timer.type === "pco_live"}
         <div class="timerbox" style="width: 100%;margin: 20px 0;overflow: visible;">
-            <p style="border: none;min-height: unset;border-radius: 8px;" class="part">
+            <p style="border: none;min-height: unset;border-radius: var(--radius);" class="part">
                 {translateText("PCO Live timer.counter")}
             </p>
 
@@ -383,7 +383,7 @@
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
 
-        border-radius: 8px;
+        border-radius: var(--radius);
         overflow: hidden;
     }
     .timerbox div {
@@ -427,7 +427,7 @@
     /* time input */
     input[type="time"] {
         background-color: var(--primary-darkest);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         color: inherit;
         font-family: inherit;
         border: 0;

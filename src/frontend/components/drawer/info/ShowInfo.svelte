@@ -113,7 +113,7 @@
             <MaterialToggleSwitch label="settings.log_song_usage" checked={$special.logSongUsage || false} defaultValue={false} on:change={(e) => updateSpecial(e.detail, "logSongUsage")} />
             {#if $special.logSongUsage && $usageLog.all?.length}
                 <InputRow>
-                    <MaterialButton disabled={exportingUsageLog} style="width: 100%;" icon={usageLogExported ? "reset" : "export"} on:click={() => (usageLogExported ? resetUsageLog() : exportUsageLog())}>
+                    <MaterialButton disabled={exportingUsageLog} icon={usageLogExported ? "reset" : "export"} on:click={() => (usageLogExported ? resetUsageLog() : exportUsageLog())}>
                         <T id="actions.{usageLogExported ? 'reset' : 'export'}_usage_log" />
                     </MaterialButton>
                 </InputRow>
@@ -122,7 +122,7 @@
             <MaterialButton
                 variant="outlined"
                 title="popup.cleaning_utility"
-                style="margin-top: 5px;width: 100%;"
+                style="margin-top: 5px;"
                 on:click={() => {
                     popupData.set({ type: "shows" })
                     activePopup.set("cleaning_utility")

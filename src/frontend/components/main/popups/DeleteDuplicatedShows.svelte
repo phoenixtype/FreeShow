@@ -236,7 +236,7 @@
         </MaterialButton>
 
         <InputRow arrow>
-            <MaterialButton disabled={!oldest.length} variant="outlined" icon="delete" info={"" + oldest.length} style="width: 100%;" on:click={deleteOldest} red white>
+            <MaterialButton disabled={!oldest.length} variant="outlined" icon="delete" info={"" + oldest.length} on:click={deleteOldest} red white>
                 <T id="show.delete_keep_last_modified" />
             </MaterialButton>
 
@@ -252,7 +252,7 @@
         </InputRow>
 
         <InputRow arrow>
-            <MaterialButton disabled={!newest.length} variant="outlined" icon="delete" info={"" + newest.length} style="width: 100%;" on:click={deleteNewest} red white>
+            <MaterialButton disabled={!newest.length} variant="outlined" icon="delete" info={"" + newest.length} on:click={deleteNewest} red white>
                 <T id="show.delete_keep_first_created" />
             </MaterialButton>
 

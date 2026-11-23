@@ -138,7 +138,7 @@
         margin-top: 15px;
         padding: 16px;
         background-color: var(--primary-darker);
-        border-radius: 8px;
+        border-radius: var(--radius);
         max-height: 300px;
         overflow-y: auto;
     }

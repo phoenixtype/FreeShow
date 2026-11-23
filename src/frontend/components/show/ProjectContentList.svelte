@@ -359,7 +359,7 @@
 
                         <MaterialButton
                             class="show"
-                            style="padding: 0.2em;border-radius: 2px;border-left: none;min-height: unset;"
+                            style="padding: 0.2em;border-radius: var(--radius-sm);border-left: none;min-height: unset;"
                             on:click={() => {
                                 recentFiles.update((a) => {
                                     a.cleared = [...a.cleared, ...recommended]
@@ -539,7 +539,7 @@
         border: 1px solid var(--border-color);
         border-left: 0;
 
-        border-radius: 10px;
+        border-radius: var(--radius);
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }

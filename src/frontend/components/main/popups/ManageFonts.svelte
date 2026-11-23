@@ -173,7 +173,7 @@
     </InputRow>
 {/if}
 
-<MaterialButton variant="outlined" style="width: 100%;margin-top: 10px;" icon="add" disabled={newFontInput} on:click={() => (newFontInput = true)}>
+<MaterialButton variant="outlined" style="margin-top: 10px;" icon="add" disabled={newFontInput} on:click={() => (newFontInput = true)}>
     <T id="settings.add" />
 </MaterialButton>
 
@@ -186,7 +186,7 @@
         flex: 1;
         max-width: 92%;
         padding: 10px 12px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
 
         background-color: var(--primary-darker);
         border-bottom: 1px solid var(--primary-lighter);

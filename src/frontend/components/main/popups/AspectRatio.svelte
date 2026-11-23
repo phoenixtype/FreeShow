@@ -121,7 +121,7 @@
         width: 100px;
         /* max-height: 500px; */
         background-color: black;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
     }
 
     .box p,

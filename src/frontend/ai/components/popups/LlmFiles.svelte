@@ -30,7 +30,7 @@
 {#if files.length}
     <div class="files">
         {#each files as file}
-            <InputRow style="display: flex;align-items: center;background-color: var(--primary-darker);border-radius: 6px;border-bottom: 2px solid var(--primary-lighter);">
+            <InputRow style="display: flex;align-items: center;background-color: var(--primary-darker);border-radius: var(--radius-sm);border-bottom: 2px solid var(--primary-lighter);">
                 <p style="display: flex;justify-content: space-between;padding: 0 14px;flex: 1;text-transform: capitalize;">
                     <span>{file.name}</span>
                     <span style="font-size: 0.9em;opacity: 0.6;">{formatBytes(file.size)}</span>

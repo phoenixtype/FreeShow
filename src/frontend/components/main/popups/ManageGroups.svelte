@@ -147,7 +147,7 @@
         </div>
     {/if}
 
-    <MaterialButton variant="outlined" style="width: 100%;" icon="add" on:click={addGroup}>
+    <MaterialButton variant="outlined" icon="add" on:click={addGroup}>
         <T id="settings.add" />
     </MaterialButton>
 </div>

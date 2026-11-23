@@ -2,16 +2,15 @@ import type { SettingsTabs } from "../../types/Tabs"
 
 export const settingsTabs: SettingsTabs[] = ["general", "display_settings", "styles", "audio", "connection", "files", "profiles", "theme", "ai", "other"]
 
+// Songs and scripture first: what a church meeting uses most.
 export const drawerTabs = {
     shows: { name: "tabs.shows", icon: "shows", title: "tabs.shows_info" },
+    scripture: { name: "tabs.scripture", icon: "scripture", title: "" },
     media: { name: "tabs.media", icon: "media", title: "" },
     audio: { name: "tabs.audio", icon: "audio", title: "" },
     overlays: { name: "tabs.overlays", icon: "overlays", title: "" },
     templates: { name: "tabs.templates", icon: "templates", title: "" },
-
-    scripture: { name: "tabs.scripture", icon: "scripture", title: "" },
     calendar: { name: "tabs.calendar", icon: "calendar", title: "" },
-
     functions: { name: "tabs.functions", icon: "functions", title: "" }
 }
 

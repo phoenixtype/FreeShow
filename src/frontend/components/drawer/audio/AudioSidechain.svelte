@@ -25,7 +25,7 @@
         width: 100%;
         height: 3px;
         background-color: rgba(255, 255, 255, 0.06);
-        border-radius: 2px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
 
         /* signal dot spacing */
@@ -50,7 +50,7 @@
         top: 0;
         bottom: 0;
         background-color: #f59e0b;
-        border-radius: 2px;
+        border-radius: var(--radius-sm);
         transition: width 0.08s ease-out;
     }
 

@@ -245,7 +245,7 @@
     {:else if showHistory && !$activeInteractions.includes(openedId)}
         <div class="history" style="display: flex;flex-direction: column;gap: 8px;padding: 10px;overflow: auto;">
             {#each clone(openedInteraction?.history || []).reverse() as entry}
-                <div style="background-color: var(--primary-darkest);padding: 10px;border-radius: 6px;">
+                <div style="background-color: var(--primary-darkest);padding: 10px;border-radius: var(--radius-sm);">
                     <div style="display: flex;justify-content: space-between;align-items: center;">
                         <p style="font-size: 0.8em;opacity: 0.7;margin-bottom: 8px;">{new Date(entry.time).toLocaleString()}</p>
 
@@ -255,7 +255,7 @@
                     </div>
 
                     {#if entry.leaderboard?.length}
-                        <div style="margin-bottom: 12px; padding: 8px; background-color: rgba(255, 255, 255, 0.05); border-radius: 4px;">
+                        <div style="margin-bottom: 12px; padding: 8px; background-color: rgba(255, 255, 255, 0.05); border-radius: var(--radius-sm);">
                             <p style="font-weight: bold; font-size: 0.9em; margin-bottom: 6px; opacity: 0.9;">Leaderboard:</p>
                             <ol style="margin: 0; padding-left: 20px;">
                                 {#each entry.leaderboard as player}
@@ -522,7 +522,7 @@
         margin: 10px;
         padding: 12px 16px;
         background-color: var(--primary-darkest);
-        border-radius: 12px;
+        border-radius: var(--radius);
         font-size: 1.1em;
         font-weight: bold;
     }

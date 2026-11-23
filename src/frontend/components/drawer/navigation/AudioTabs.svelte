@@ -122,13 +122,13 @@
 
 <NavigationSections {sections} active={activeSubTab} on:rename={updateName}>
     <div slot="section_3" style="padding: 8px;{playlists ? 'padding-top: 12px;' : ''}">
-        <MaterialButton style="width: 100%;" title="new.playlist" variant="outlined" disabled={readOnly} on:click={createPlaylist} small>
+        <MaterialButton title="new.playlist" variant="outlined" disabled={readOnly} on:click={createPlaylist} small>
             <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
             {#if !$labelsDisabled}<T id="new.playlist" />{/if}
         </MaterialButton>
     </div>
     <div slot="section_4" style="padding: 8px;{foldersList.length ? 'padding-top: 12px;' : ''}">
-        <MaterialButton style="width: 100%;" title="new.system_folder" variant="outlined" disabled={readOnly} on:click={addFolder} small>
+        <MaterialButton title="new.system_folder" variant="outlined" disabled={readOnly} on:click={addFolder} small>
             <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
             {#if !$labelsDisabled}<T id="new.system_folder" />{/if}
         </MaterialButton>

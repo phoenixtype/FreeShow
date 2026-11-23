@@ -91,7 +91,7 @@
             <MaterialTextInput label="Client ID" value={canvaClientId} on:change={(e) => (canvaClientId = e.detail)} style="margin-top: 20px;width: 100%;max-width: 250px;" pasteBtn />
             <MaterialTextInput label="Client secret" value={canvaClientSecret} disabled={!canvaClientId} type="password" on:change={(e) => (canvaClientSecret = e.detail)} style="width: 100%;max-width: 250px;" pasteBtn />
 
-            <MaterialButton variant="outlined" disabled={!canvaClientId || !canvaClientSecret} on:click={handleConnect} style="margin-top: 10px;width: 100%;max-width: 250px;">
+            <MaterialButton variant="outlined" disabled={!canvaClientId || !canvaClientSecret} on:click={handleConnect} style="margin-top: 10px;max-width: 250px;">
                 <CLogo />
                 <T id="settings.connect_to" replace={["Canva"]} />
             </MaterialButton>

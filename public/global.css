@@ -53,10 +53,16 @@
     --secondary-text: #171717;
     --transparent: #1c1c1c;
 
-    --accent: #90caf9;
+    /* Scriptural's tokens (the Scriptural app's src/index.css, dark theme) */
+    --accent: hsl(210 70% 55%);
+    --muted-text: #bdbdbd;
+    --border: rgb(255 255 255 / 0.08);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow-float: 0 10px 30px -10px rgb(0 0 0 / 0.5), 0 2px 8px -2px rgb(0 0 0 / 0.3);
 
-    --connected: #27a827;
-    --disconnected: #a82727;
+    --connected: hsl(142 60% 42%);
+    --disconnected: hsl(0 72% 56%);
 
     --red: rgb(255 0 0 / 0.25);
 
@@ -119,8 +125,10 @@ body[data-resizing] * {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgb(255 255 255 / 0.3);
-    border-radius: 6px;
+    background: rgb(255 255 255 / 0.14);
+    border-radius: var(--radius);
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -69,7 +69,7 @@
         </MaterialButton>
     {/each}
 
-    <MaterialButton variant="outlined" style="width: 100%;margin: 10px 0;" on:click={importSVG} center dark>
+    <MaterialButton variant="outlined" style="margin: 10px 0;" on:click={importSVG} center dark>
         <Icon id="copy" size={1.2} />
         <T id="actions.svg_clipboard" />
     </MaterialButton>

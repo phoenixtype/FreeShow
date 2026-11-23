@@ -96,7 +96,7 @@
 
 <!-- Add Effect Button -->
 <div class="add-section">
-    <MaterialButton variant="outlined" style="width: 100%;padding: 8px;" on:click={openAddPopup}>
+    <MaterialButton variant="outlined" style="padding: 8px;" on:click={openAddPopup}>
         <Icon id="add" size={0.9} />
         <span><T id="new.effect" /></span>
     </MaterialButton>
@@ -109,7 +109,7 @@
 
         padding: 10px;
         padding-bottom: 0;
-        /* border-radius: 8px; */
+        /* border-radius: var(--radius); */
     }
 
     .effect-card {
@@ -120,7 +120,7 @@
         background-color: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
         border-left: 4px solid var(--accent-color);
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         cursor: pointer;
         transition: all 0.15s ease;
         user-select: none;

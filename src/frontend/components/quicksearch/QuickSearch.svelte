@@ -257,7 +257,7 @@
         gap: 10px;
 
         background-color: var(--primary);
-        border-radius: 12px;
+        border-radius: var(--radius);
         padding: 12px;
 
         box-shadow:
@@ -289,7 +289,7 @@
         padding-left: 47px;
         font-size: 1.4em;
 
-        border-radius: 8px;
+        border-radius: var(--radius);
         background: rgba(255, 255, 255, 0.05);
         transition: background 0.2s ease;
     }
@@ -350,7 +350,7 @@
         background: var(--secondary-opacity);
         color: inherit;
         padding: 0 2px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
     }
 
     /* tags */

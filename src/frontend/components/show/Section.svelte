@@ -153,6 +153,6 @@
         /* flex: 1; */
         margin-block-end: auto;
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
     }
 </style>

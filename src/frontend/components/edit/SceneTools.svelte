@@ -186,7 +186,7 @@
                 {/each}
             </div>
 
-            <MaterialButton variant="outlined" icon="add" style="width: 100%;" on:click={openAddOverlay}>
+            <MaterialButton variant="outlined" icon="add" on:click={openAddOverlay}>
                 {translateText("edit.overlay_content")}
             </MaterialButton>
         </div>

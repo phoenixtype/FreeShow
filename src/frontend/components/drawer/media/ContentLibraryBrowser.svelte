@@ -254,7 +254,7 @@
         padding: 0;
         background-color: var(--primary);
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
         cursor: pointer;
         transition: all 0.2s;
         overflow: hidden;

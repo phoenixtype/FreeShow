@@ -50,7 +50,7 @@
 {#if importType === "url"}
     <div class="url-import">
         <MaterialTextInput label="inputs.url (.ics)" value={url} on:input={(e) => (url = e.detail)} autofocus />
-        <MaterialButton variant="contained" icon="import" style="margin-top: 20px;width: 100%;" disabled={!url.trim() || isSubmitting} on:click={handleUrlImport}>
+        <MaterialButton variant="contained" icon="import" style="margin-top: 20px;" disabled={!url.trim() || isSubmitting} on:click={handleUrlImport}>
             <T id="actions.import" />
         </MaterialButton>
     </div>
@@ -63,7 +63,7 @@
         </li>
     </ul>
 
-    <MaterialButton variant="outlined" icon="import" on:click={handleLocalImport} style="margin-top: 25px;width: 100%;">
+    <MaterialButton variant="outlined" icon="import" on:click={handleLocalImport} style="margin-top: 25px;">
         <T id="actions.import" />
     </MaterialButton>
 {:else}

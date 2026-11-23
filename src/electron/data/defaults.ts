@@ -49,7 +49,8 @@ export const defaultSettings: { [key in SaveListSettings]: any } = {
     },
     slidesOptions: { columns: 4, mode: "grid" },
     mediaOptions: { columns: 5, mode: "grid" },
-    drawerTabsData: {},
+    // calendar and functions are advanced: off until turned on in Settings, to keep the drawer calm
+    drawerTabsData: { calendar: { enabled: false, activeSubTab: null }, functions: { enabled: false, activeSubTab: null } },
     drawer: { height: 300, stored: null },
     language: null,
     customFonts: [],

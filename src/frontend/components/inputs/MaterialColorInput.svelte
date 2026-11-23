@@ -223,7 +223,7 @@
                     {/if}
 
                     <MaterialButton
-                        style="width: 100%;margin-top: 5px;background: {hexValue} !important;"
+                        style="margin-top: 5px;background: {hexValue} !important;"
                         on:click={() => {
                             popupData.set({
                                 value: hexValue,
@@ -324,12 +324,12 @@
         position: absolute;
         inset: 0;
         background-color: var(--primary-darkest);
-        border-radius: 4px 4px 0 0;
+        border-radius: var(--radius-sm) 4px 0 0;
     }
     .color-display {
         position: relative;
 
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
         border: 2px solid transparent;
 
         transition:
@@ -382,7 +382,7 @@
         left: 50%;
         background: var(--primary-darker);
         border: 1px solid var(--primary-lighter);
-        border-radius: 8px;
+        border-radius: var(--radius);
         /* display: flex;
         flex-wrap: wrap; */
         z-index: 10;
@@ -424,7 +424,7 @@
         height: var(--size);
         width: var(--size);
         cursor: pointer;
-        border-radius: 3px;
+        border-radius: var(--radius-sm);
 
         /* min-width: 30px; */
         /* width: 40px !important; */
@@ -465,7 +465,7 @@
     .color {
         transition: background-color 0.2s;
         position: relative;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
 
         margin-top: 5px;
         padding: 15px;

@@ -41,7 +41,7 @@
     </div>
 </div>
 
-<MaterialButton variant="contained" disabled={!localType && !networkType} style="margin-top: 20px;width: 100%;" on:click={confirm}>
+<MaterialButton variant="contained" disabled={!localType && !networkType} style="margin-top: 20px;" on:click={confirm}>
     {translateText("popup.confirm")}
 </MaterialButton>
 

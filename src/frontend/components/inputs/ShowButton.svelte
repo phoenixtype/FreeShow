@@ -441,7 +441,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
 
         /* hide alt text */
         text-indent: 100%;
@@ -458,7 +458,7 @@
         font-size: 0.85em;
 
         padding: 0px 5px;
-        border-radius: 2px;
+        border-radius: var(--radius-sm);
 
         background-color: rgb(0 0 0 / 0.5);
         color: white;
@@ -509,7 +509,7 @@
         background: var(--secondary-opacity);
         color: inherit;
         padding: 0 2px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
     }
 
     .match-indicator {
