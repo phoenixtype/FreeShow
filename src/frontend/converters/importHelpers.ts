@@ -9,6 +9,7 @@ import { checkName } from "../components/helpers/show"
 import { actionTags, activeDrawerTab, activePopup, activeProject, activeRename, activeShow, alertMessage, categories, drawerTabsData, shows } from "../stores"
 import { newToast } from "../utils/common"
 import { convertText } from "./txt"
+import { uniqueNames } from "./uniqueNames"
 
 export function createCategory(name: string, icon = "song", { isDefault, isArchive }: { isDefault?: boolean; isArchive?: boolean } = {}) {
     // return selected category if it is empty
@@ -36,6 +37,16 @@ export function createCategory(name: string, icon = "song", { isDefault, isArchi
 }
 
 export function setTempShows(tempShows: { id: string; show: Show }[], options: { suppressFinishedToast?: boolean } = {}) {
+    const batchIds = new Set(tempShows.map((a) => a.id))
+    const taken = Object.entries(get(shows) || {})
+        .filter(([id]) => !batchIds.has(id))
+        .map(([, a]) => a.name || "")
+    const names = uniqueNames(
+        tempShows.map((a) => a.show.name || ""),
+        taken
+    )
+    tempShows.forEach((a, i) => (a.show.name = names[i]))
+
     if (tempShows.length === 1) {
         const selectedIndex = get(activeShow)?.index === undefined ? undefined : get(activeShow)!.index! + 1
         history({ id: "UPDATE", newData: { data: tempShows[0].show, remember: { project: get(activeProject), index: selectedIndex } }, oldData: { id: tempShows[0].id }, location: { page: "show", id: "show" } })

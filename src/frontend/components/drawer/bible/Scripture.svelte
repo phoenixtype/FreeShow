@@ -3,6 +3,7 @@
     import { ApiBible } from "json-bible/lib/api"
     import type { Verse } from "json-bible/lib/Bible"
     import type { VerseReference } from "json-bible/lib/reference"
+    import { searchScriptural } from "../../../scriptural/search"
     import { onMount } from "svelte"
     import { defaultBibleBookNames } from "../../../converters/bebliaBible"
     import { activeEdit, activeScripture, activeTriggerFunction, customScriptureBooks, notFound, openScripture, outLocked, outputs, resized, scriptureHistory, scriptureMode, scriptures, scriptureSettings, selected } from "../../../stores"
@@ -832,14 +833,43 @@
             return
         }
 
+        const query = contentSearchValue
         try {
-            const result = await currentBibleData?.bibleData?.textSearch(contentSearchValue)
+            const result = await currentBibleData?.bibleData?.textSearch(query)
             if (!result) return
 
             contentSearchResults = result
         } catch (err) {
             console.error(err)
         }
+
+        // then passages found by meaning, in this Bible's own wording
+        clearTimeout(meaningSearchTimeout)
+        meaningSearchTimeout = setTimeout(() => addPassagesByMeaning(query), 400)
+    }
+
+    let meaningSearchTimeout: ReturnType<typeof setTimeout> | undefined
+    async function addPassagesByMeaning(query: string) {
+        const found = await searchScriptural(query)
+        if (query !== contentSearchValue || !found.length) return
+
+        const bible = currentBibleData?.bibleData
+        const known = new Set((contentSearchResults || []).map((r) => `${r.book}.${r.chapter}.${r.verse.number}`))
+        const extra: VerseReference[] = []
+        for (const passage of found) {
+            const id = `${passage.book}.${passage.chapter}.${passage.verse}`
+            if (known.has(id)) continue
+            let text = passage.text
+            try {
+                const chapter = await (await bible?.getBook(passage.book))?.getChapter(passage.chapter)
+                text = chapter?.data?.verses?.find((v: any) => Number(v.number) === passage.verse)?.text || text
+            } catch {
+                // keep the searched version's wording
+            }
+            extra.push({ book: passage.book, chapter: passage.chapter, verse: { number: passage.verse, text }, reference: passage.reference, id } as VerseReference)
+        }
+        if (query !== contentSearchValue || !extra.length) return
+        contentSearchResults = [...(contentSearchResults || []), ...extra]
     }
 
     // reset if another reference is loaded

@@ -23,3 +23,5 @@ test-results/
 *.ipr
 *.iws
 .serena
+mcp/node_modules
+
