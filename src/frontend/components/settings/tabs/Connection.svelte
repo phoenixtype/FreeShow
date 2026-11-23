@@ -96,13 +96,13 @@
     }
 
     const servers = [
-        { id: "remote", name: "RemoteShow", icon: "connection", enabledByDefault: true },
-        { id: "stage", name: "StageShow", icon: "stage", enabledByDefault: true },
-        { id: "controller", name: "ControlShow", icon: "connection", enabledByDefault: false },
+        { id: "remote", name: "Phone remote", icon: "connection", enabledByDefault: true },
+        { id: "stage", name: "Stage display", icon: "stage", enabledByDefault: true },
+        { id: "controller", name: "Controller", icon: "connection", enabledByDefault: false },
         // ...(($isOptimizedMode && $disabledServers.output_stream !== false) ? [] : [{ id: "output_stream", name: "OutputShow", icon: "stage", enabledByDefault: false }]),
-        { id: "output_stream", name: "OutputShow", icon: "stage", enabledByDefault: false },
+        { id: "output_stream", name: "Output in a browser", icon: "stage", enabledByDefault: false },
         // Bitfocus Companion (WebSocket/REST)
-        { id: "companion", name: "API", icon: "companion", enabledByDefault: false, url: "https://freeshow.app/docs/companion" }
+        { id: "companion", name: "API (agents, Companion, Stream Deck)", icon: "companion", enabledByDefault: false }
         // { id: "rest", name: "REST Listener", icon: "companion", enabledByDefault: false, url: "https://freeshow.app/docs/api" },
     ]
     // Camera

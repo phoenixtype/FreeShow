@@ -540,10 +540,10 @@ function translateAliases(options: any) {
 }
 
 const connectionsList = [
-    { id: "remote", name: "RemoteShow", aliases: ["-Remote"] },
-    { id: "stage", name: "StageShow", aliases: ["-Remote"] },
-    { id: "controller", name: "ControlShow", aliases: ["-Remote"] },
-    { id: "output_stream", name: "OutputShow", aliases: ["-Remote"] },
+    { id: "remote", name: "Phone remote", aliases: ["-Remote", "-RemoteShow"] },
+    { id: "stage", name: "Stage display", aliases: ["-Remote", "-StageShow"] },
+    { id: "controller", name: "Controller", aliases: ["-Remote", "-ControlShow"] },
+    { id: "output_stream", name: "Output in a browser", aliases: ["-Remote", "-OutputShow"] },
     { id: "companion", name: "API", aliases: ["Companion", "WebSocket", "REST", "OSC"] }
 ]
 
