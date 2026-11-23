@@ -2,6 +2,7 @@ import { get, writable, type Writable } from "svelte/store"
 import type { AIProviderId, MatchResult } from "../../../types/ai/Ai"
 import { Main } from "../../../types/IPC/Main"
 import { requestMain } from "../../IPC/main"
+import { completeWithScripturalAI } from "../../scriptural/ai"
 import { ai } from "../../stores"
 import { getEditItems } from "../../components/edit/scripts/itemHelpers"
 import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT, getSlideChatSystemPrompt, SLIDE_CHAT_RESPONSE_SCHEMA, STT_CONTROLLER_PROMPT, STT_CONTROLLER_SCHEMA } from "./prompts"
@@ -69,7 +70,7 @@ export class LLMManager {
 
         try {
             const data = { providerId: this.providerId, model: this.model, options }
-            const response = await requestMain(Main.AI_LLM_COMPLETE, data, undefined, 60000)
+            const response = this.providerId === "scriptural" ? await completeWithScripturalAI(options) : await requestMain(Main.AI_LLM_COMPLETE, data, undefined, 60000)
 
             if (response?.error || !response?.text) {
                 if (response?.error) console.error("LLM error:", response.error)
@@ -165,15 +166,7 @@ export class LLMManager {
             }
             return { role, content }
         })
-        const systemPrompt =
-            options.systemPrompt ||
-            (sessionKey.startsWith("overlay")
-                ? getSlideChatSystemPrompt("overlay", getEditItems())
-                : sessionKey.startsWith("template")
-                  ? getSlideChatSystemPrompt("template", getEditItems())
-                  : sessionKey.includes("slide")
-                    ? getSlideChatSystemPrompt("slide", getEditItems())
-                    : CHAT_SYSTEM_PROMPT)
+        const systemPrompt = options.systemPrompt || (sessionKey.startsWith("overlay") ? getSlideChatSystemPrompt("overlay", getEditItems()) : sessionKey.startsWith("template") ? getSlideChatSystemPrompt("template", getEditItems()) : sessionKey.includes("slide") ? getSlideChatSystemPrompt("slide", getEditItems()) : CHAT_SYSTEM_PROMPT)
 
         const isSlideTarget = sessionKey.startsWith("overlay") || sessionKey.startsWith("template") || sessionKey.includes("slide")
         const defaultSchema = isSlideTarget ? SLIDE_CHAT_RESPONSE_SCHEMA : CHAT_RESPONSE_SCHEMA

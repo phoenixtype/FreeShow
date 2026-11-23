@@ -1,4 +1,4 @@
-export type AIProviderId = "ollama" | "anthropic" | "openai" | "google"
+export type AIProviderId = "ollama" | "anthropic" | "openai" | "google" | "scriptural"
 export type AiFeatureState = "starting" | "listening" | "stopped" | "error" | "llm_paused"
 
 export interface AiFeatureStatus {

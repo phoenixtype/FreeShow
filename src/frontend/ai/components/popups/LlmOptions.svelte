@@ -23,6 +23,7 @@
 
     const providerOptions = [
         { value: "none", label: translateText("main.none") },
+        { value: "scriptural", label: "Scriptural AI (with a church plan)" },
         { value: "ollama", label: "Local - Ollama" },
         { value: "anthropic", label: "Anthropic (Claude)" },
         { value: "openai", label: "OpenAI (GPT)" },
@@ -35,7 +36,7 @@
     let fetchedModels: { id: string; name: string }[] = []
     let loadingModels = false
 
-    $: if (provider && provider !== "none") fetchModelsForProvider(provider)
+    $: if (provider && provider !== "none" && provider !== "scriptural") fetchModelsForProvider(provider)
     else fetchedModels = []
 
     async function fetchModelsForProvider(currentProvider: AIProviderId) {
@@ -72,7 +73,7 @@
     let status: { [key: string]: EngineStatus } | null = null
     $: if (provider) getStatus()
     async function getStatus() {
-        if (!provider || provider === "none") return
+        if (!provider || provider === "none" || provider === "scriptural") return
         if (!storedModel) return
 
         const result = await requestMain(Main.AI_GET_STATUS, { engineId: provider })
@@ -109,6 +110,8 @@
 
 {#if provider === "none"}
     <!-- explicitly no LLM - detection runs on speech-to-text alone -->
+{:else if provider === "scriptural"}
+    <p style="opacity: 0.8;margin: 10px 0;">Included with a Church or Multi-campus plan: no key needed. Sign in under Import &gt; Church library. Or choose Anthropic or Google to use your own key.</p>
 {:else if provider === "ollama"}
     <!-- no API key: everything runs on the local ollama server - just make sure the model is pulled -->
 {:else}
@@ -117,7 +120,7 @@
     <MaterialTextInput label="ai.api_key" value={keyInput} type="password" pasteBtn on:change={updateKey} />
 {/if}
 
-{#if provider !== "none"}
+{#if provider !== "none" && provider !== "scriptural"}
     <div class="modelSelectRow">
         <MaterialDropdown label="ai.model" options={modelOptions} value={selectedModel} defaultValue={defaultModel} disabled={loadingModels || !!status?.[provider]?.error} on:change={(e) => updateLlmOption("model", e.detail)} />
 

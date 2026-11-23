@@ -14,7 +14,7 @@ export const FUNCTIONS_URL = `${SCRIPTURAL_URL}/functions/v1`
 const CHURCH_URL = "https://gsrpimdgxepoydbrdlqx.supabase.co"
 const CHURCH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcnBpbWRneGVwb3lkYnJkbHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NTQxNzIsImV4cCI6MjEwNDAzMDE3Mn0.SFxJPiJaVUx9hM0BEx8BC6tKUbvAymtNTljN2bcvmTw"
 
-export interface ScripturalSession {
+interface ScripturalSession {
     access_token: string
     refresh_token: string
     expires_at: number // seconds since epoch
@@ -99,13 +99,19 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         return { data: (text ? JSON.parse(text) : null) as T, response }
     }
 
-    return { getSession, sendSignInCode, verifySignInCode, signOut, rest }
+    /** Calls one of the project's edge functions as the signed-in account. Answers with its JSON, errors included. */
+    async function invoke<T>(name: string, body: unknown): Promise<{ ok: boolean; status: number; data: T }> {
+        const token = (await accessToken()) || anonKey
+        const response = await fetch(`${projectUrl}/functions/v1/${name}`, { method: "POST", headers: { apikey: anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T }
+    }
+
+    return { getSession, sendSignInCode, verifySignInCode, signOut, rest, invoke }
 }
 
-/** Scriptural: existing accounts only; nothing here creates one. */
-export const scriptural = makeConnection(SCRIPTURAL_URL, ANON_KEY, "scriptural-session", false)
+/** Scriptural: read anonymously (public-domain text, search). */
+const scriptural = makeConnection(SCRIPTURAL_URL, ANON_KEY, "scriptural-session", false)
 /** The church library: a church's people sign up here. */
 export const churchLibrary = makeConnection(CHURCH_URL, CHURCH_ANON_KEY, "church-library-session", true)
 
-export const { getSession, sendSignInCode, verifySignInCode, signOut } = scriptural
 export const restGet = <T>(pathAndQuery: string, headers: Record<string, string> = {}) => scriptural.rest<T>(pathAndQuery, { headers })

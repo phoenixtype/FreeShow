@@ -33,6 +33,7 @@
     import MediaGrid from "./MediaGrid.svelte"
     import { loadFromPixabay } from "./pixabay"
     import { loadFromUnsplash } from "./unsplash"
+    import { loadScripturalBackgrounds } from "./scripturalBackgrounds"
 
     export let active: string | null
     export let searchValue = ""
@@ -84,13 +85,15 @@
     $: folderName = active === "all" ? "category.all" : active === "favourites" ? "category.favourites" : rootPath === path ? (active !== null ? $mediaFolders[active]?.name || "" : "") : splitPath(path).name
 
     async function loadFilesAsync() {
-        if ((onlineTab !== "pixabay" && onlineTab !== "unsplash") || activeView === "folder") return
+        if ((onlineTab !== "pixabay" && onlineTab !== "unsplash" && onlineTab !== "scriptural") || activeView === "folder") return
 
         let onlineFiles: any[] = []
         if (onlineTab === "pixabay") {
             onlineFiles = await loadFromPixabay(searchValue || "landscape", activeView === "video")
         } else if (onlineTab === "unsplash") {
             onlineFiles = await loadFromUnsplash(searchValue || "landscape")
+        } else if (onlineTab === "scriptural") {
+            onlineFiles = await loadScripturalBackgrounds(searchValue || "")
         }
 
         hightlightActive()
@@ -142,9 +145,10 @@
         else setOutput("background", { name: item.name, id: item.id, cameraGroup: item.group || item.cameraGroup, type })
     }
 
-    let onlineTab = $drawerTabsData.media?.openedSubSubTab?.online || "youtube"
+    let onlineTab = $drawerTabsData.media?.openedSubSubTab?.online || "scriptural"
     $: if (active === "online" && onlineTab === "pixabay" && (searchValue !== null || activeView)) loadFilesAsync()
     $: if (active === "online" && onlineTab === "unsplash" && (searchValue !== null || activeView)) loadFilesAsync()
+    $: if (active === "online" && onlineTab === "scriptural" && (searchValue !== null || activeView)) loadFilesAsync()
 
     let prevActive: null | string = null
     let prevTab = ""
@@ -535,6 +539,10 @@
     </div>
 {:else if active === "online"}
     <div class="tabs">
+        <MaterialButton style="flex: 1;" isActive={onlineTab === "scriptural"} on:click={() => setSubSubTab("scriptural")}>
+            <img style="height: 18px;width: 18px;border-radius: 22.27%;" src="./scriptural-logo.svg" alt="" draggable={false} />
+            <p>Scriptural</p>
+        </MaterialButton>
         <MaterialButton style="flex: 1;" isActive={onlineTab === "youtube"} on:click={() => setSubSubTab("youtube")}>
             <Icon style={onlineTab === "youtube" ? "fill: #ff0000" : ""} size={1.2} id="youtube" white />
             <p>YouTube</p>

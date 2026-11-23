@@ -6,7 +6,8 @@ import { defaultBibleBookNames } from "../converters/bebliaBible"
 import { scriptures, scripturesCache } from "../stores"
 import { save } from "../utils/save"
 import { get } from "svelte/store"
-import { restGet, ScripturalError } from "./connection"
+import { ACTIVE_CHURCH_KEY } from "./ai"
+import { churchLibrary, restGet, ScripturalError } from "./connection"
 import type { ScripturalVersion } from "./versions"
 
 // PostgREST returns at most 1000 rows a request, whatever range is asked for.
@@ -71,11 +72,23 @@ export function downloadedId(code: string): string | null {
     return Object.entries(get(scriptures)).find(([, s]: any) => s?.scripturalVersion === code)?.[0] || null
 }
 
+/** A licensed version, through the church library once Samuel has granted it to the church. */
+async function licensedRows(version: ScripturalVersion): Promise<VerseRow[]> {
+    const churchId = localStorage.getItem(ACTIVE_CHURCH_KEY)
+    if (!churchId || !churchLibrary.getSession()) throw new ScripturalError("Sign in to your church library first (Import > Church library).")
+    const { ok, data } = await churchLibrary.invoke<{ rows?: VerseRow[]; message?: string }>("bible-download", { churchId, version: version.code })
+    if (!ok || !data.rows) throw new ScripturalError(data.message || "This version could not be downloaded.")
+    return data.rows
+}
+
 export async function downloadVersion(version: ScripturalVersion, onProgress: (fraction: number) => void): Promise<void> {
-    const total = await countRows(version.code)
-    if (!total) {
-        throw new ScripturalError(version.licensed ? "Sign in to Scriptural to download this version." : "This version is not available right now.")
+    if (version.licensed) {
+        onProgress(0.1)
+        return storeBible(version, toBible(version, await licensedRows(version)))
     }
+
+    const total = await countRows(version.code)
+    if (!total) throw new ScripturalError("This version is not available right now.")
 
     const offsets = Array.from({ length: Math.ceil(total / PAGE_SIZE) }, (_, i) => i * PAGE_SIZE)
     const pages: VerseRow[][] = new Array(offsets.length)
@@ -90,7 +103,10 @@ export async function downloadVersion(version: ScripturalVersion, onProgress: (f
     }
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, offsets.length) }, worker))
 
-    const bible = toBible(version, pages.flat())
+    storeBible(version, toBible(version, pages.flat()))
+}
+
+function storeBible(version: ScripturalVersion, bible: ReturnType<typeof toBible>) {
     if (!bible.books.length) throw new ScripturalError("Nothing was downloaded. Try again.")
 
     // replace an earlier download of the same version in place

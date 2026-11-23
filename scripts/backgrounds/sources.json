@@ -1,0 +1,835 @@
+[
+ {
+  "id": "damascusgate",
+  "label": "The Damascus Gate",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Gate_of_Damascus,_Jerusalem_-_1927.88_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "jerusalemnorth",
+  "label": "Jerusalem from the north",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Jerusalem_from_the_North_-_1927.136_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "olivetwest",
+  "label": "Jerusalem from Olivet",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Jerusalem_from_the_Mount_of_Olives_-_1927.118_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "sepulchre",
+  "label": "The Church of the Holy Sepulchre",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Church_of_the_Holy_Sepulchre,_Jerusalem_-_1927.103_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "bethanyroad",
+  "label": "Bethany",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Bethany_-_1927.89_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "bethlehemhills",
+  "label": "Bethlehem",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Bethlehem_-_1927.131_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "hebron",
+  "label": "Hebron",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Hebron_-_1927.140_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "olivetview",
+  "label": "Jerusalem from the Mount of Olives",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Jerusalem_from_the_Mount_of_Olives_-_1927.124_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "jerusalemsouth",
+  "label": "Jerusalem from the south",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Jerusalem_from_the_South_-_1927.95_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "kidron",
+  "label": "The Kidron Valley",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Absalom%27s_Pillar,_Valley_of_Jehoshaphat_-_1927.110_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "siloampool",
+  "label": "The Pool of Siloam",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Lower_Pool_of_Siloam,_Valley_of_Jehoshaphat_-_1927.100_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "templemount",
+  "label": "The Temple Mount",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:Plate_16_,_Jerusalem._The_Church_of_the_Purification.jpg"
+ },
+ {
+  "id": "tombsofkings",
+  "label": "The Tombs of the Kings",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Entrance_to_the_Tombs_of_the_Kings,_Jerusalem_-_1927.123_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "royaltombs",
+  "label": "The Tombs of the Kings, Jerusalem",
+  "region": "jerusalem",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:Tombs_of_the_kings,_Jerusalem,_Holy_Land-LCCN2002725016.jpg"
+ },
+ {
+  "id": "towerofdavid",
+  "label": "The Tower of David",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Citadel_of_Jerusalem,_without_the_Walls,_Tower_of_David_-_1927.96_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "hinnom",
+  "label": "The Valley of Hinnom",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Fountain_of_Job,_Valley_of_Hinnom_-_1927.83_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "shephelah",
+  "label": "The lowland of Judah",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Eleutheropolis_or_the_modern_Beit-Jibrin_-_1927.113_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "siloamspring",
+  "label": "The spring of Siloam",
+  "region": "jerusalem",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Fountain_of_Siloam,_Valley_of_Jehoshaphat_-_1927.122_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "mizpahtower",
+  "label": "The tower at Nebi Samwil",
+  "region": "jerusalem",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Tower_of_the_Forty_Martyrs,_Nebi-Samuel,_Holy_Land,_(i.e.,_Israel)-LCCN2002725051.jpg"
+ },
+ {
+  "id": "siloamvillage",
+  "label": "The village of Siloam",
+  "region": "jerusalem",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:Village_of_Siloam,_Jerusalem,_Holy_Land-LCCN2002724997.jpg"
+ },
+ {
+  "id": "antonia",
+  "label": "Where the Antonia stood",
+  "region": "jerusalem",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Tower_of_Antonia,_Jerusalem,_Holy_Land-LCCN2002725006.jpg"
+ },
+ {
+  "id": "tabor",
+  "label": "Mount Tabor",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Mount_Tabor_from_the_Plain_of_Esdraelon_-_1927.114_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "cana",
+  "label": "The fountain at Cana",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Fountain_at_Cana_-_1927.121_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "nazarethspring",
+  "label": "The Virgin's fountain, Nazareth",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Fountain_of_the_Virgin,_Nazareth_-_1927.143_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "tiberiasshore",
+  "label": "Tiberias on the lake",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_(British,_1796-1864)_-_City_of_Tiberias_on_the_Sea_of_Galilee,_looking_towards_Hebron_-_1927.80_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "fishingboat",
+  "label": "A fishing boat on the lake",
+  "region": "galilee",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:Fisherman's_boat_on_the_lake,_Tiberias,_Holy_Land,_(i.e.,_Israel)-LCCN2002725060.jpg"
+ },
+ {
+  "id": "jeningarden",
+  "label": "Jenin",
+  "region": "galilee",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:General_view,_Jenin,_Holy_Land,_(i.e.,_West_Bank)-LCCN2002724992.jpg"
+ },
+ {
+  "id": "nazareth",
+  "label": "Nazareth",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Convent_of_the_Terra-Santa,_Nazareth_-_1927.94_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "jenin",
+  "label": "Palms at Jenin",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:Palm_trees_at_Jenin,_possibly_the_site_of_ancient_Jezreel._C_Wellcome_V0049488.jpg"
+ },
+ {
+  "id": "sebaste",
+  "label": "Samaria",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Ruins_of_the_Church_of_St._John_Sabaste_-_1927.92_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "shechem",
+  "label": "Shechem between Ebal and Gerizim",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Nablus_Ancient_Shechem_-_1927.139_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "samaria",
+  "label": "The colonnade of Samaria",
+  "region": "galilee",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:The_colonnade,_Samaria,_Holy_Land-LCCN2002725054.jpg"
+ },
+ {
+  "id": "nazarethhills",
+  "label": "The hills of Nazareth",
+  "region": "galilee",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:General_view,_Hadjar_en_Nasaroh,_Holy_Land-LCCN2002724986.jpg"
+ },
+ {
+  "id": "lakehermon",
+  "label": "The lake, looking to Hermon",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:The_lake_of_Tiberias,_looking_towards_Hermon._David_Roberts._1855.jpg"
+ },
+ {
+  "id": "shechemroad",
+  "label": "The road into Shechem",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Entrance_to_Nablus_-_1927.133_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "gennesaret",
+  "label": "The shore of Gennesaret",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Sea_of_Galilee_at_Genezareth_looking_Towards_Bashan_-_1927.85_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "tiberiastown",
+  "label": "Tiberias by the lake",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Town_of_Tiberias_Looking_Towards_Lebanon_-_1927.91_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "tiberiaswalls",
+  "label": "Tiberias from its walls",
+  "region": "galilee",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Tiberias,_from_the_Walls,_Safet_in_the_Distance_-_1927.132_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "simoom",
+  "label": "A sandstorm in the desert",
+  "region": "wilderness",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_III-_Approach_of_the_Simoon-Desert_at_Gizeh_-_2012.263_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "wadi",
+  "label": "A valley in the wilderness",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Semua_-_1927.99_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "graia",
+  "label": "An island in the Gulf of Aqaba",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:Isle_of_Graia,_Gulf_of_Akabah_LACMA_AC1997.145.1.jpg"
+ },
+ {
+  "id": "aqaba",
+  "label": "Aqaba on the Red Sea",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:Fortress_of_Akabah_Arabia_Petra_Feb._28th_1839_-_David_Roberts,_R.A._LCCN2002717552.jpg"
+ },
+ {
+  "id": "jordanvalley",
+  "label": "Down to the Jordan valley",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Descent_from_the_Valley_of_the_Jordan_-_1927.120_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "mounthor",
+  "label": "Mount Hor",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Gebil_Hor._Mount_Hor,_from_the_Cliffs_Encircling_Petra_-_1927.125_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "seir",
+  "label": "Mount Seir",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Mount_Seir_Wady_el_Chor_-_1927.101_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "petramonastery",
+  "label": "Petra",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_El_Deir_Petra_-_1927.141_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "moab",
+  "label": "The Dead Sea, looking to Moab",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_The_Dead_Sea_Looking_Towards_Moab_-_1927.111_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "marsaba",
+  "label": "The Kidron gorge at Mar Saba",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Convent_of_St._Saba_-_1927.81_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "petraapproach",
+  "label": "The approach to Petra",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Approach_to_Petra,_an_Ancient_Watch_Tower_Commanding_the_Valley_of_El_Chor_-_1927.128_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "jordanbanks",
+  "label": "The banks of the Jordan",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Banks_of_the_Jordan_-_1927.78_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "edom",
+  "label": "The cliffs of Edom",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Petra,_Lower_End_of_the_Valley,_Viewing_the_Acropolis_-_1927.79_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "stcatherine",
+  "label": "The convent under Horeb",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Convent_of_St._Catherine_with_Mount_Horeb_-_1927.90_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "sinaiascent",
+  "label": "The lower range of Sinai",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Ascent_of_the_Lower_Range_of_Sinai_-_1927.104_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "sinaiplain",
+  "label": "The plain below Sinai",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_The_Convent_of_St._Catherine,_Mount_Sinai,_Looking_towards_the_Plain_of_the_-_1927.116_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "petraarch",
+  "label": "The ravine to Petra",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Triumphal_Arch_Crossing_the_Ravine_Leading_to_Petra_-_1927.109_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "sinaitop",
+  "label": "The top of Sinai",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Christian_and_Mahomedan_Chapels_on_the_Summit_of_Sinai_-_1927.102_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "petraeast",
+  "label": "The valley of Petra",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Petra,_Eastern_End_of_the_Valley_-_1927.127_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "petratheatre",
+  "label": "The way into Petra",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Entrance_to_Petra,_the_Theatre_-_1927.117_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "marah",
+  "label": "The wells of Moses",
+  "region": "wilderness",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Wells_of_Moses,_Wilderness_of_Tyh_-_1927.107_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "zahle",
+  "label": "A town in Lebanon",
+  "region": "coast",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:General_view,_Zahleh,_Holy_Land,_(i.e.,_Zahlah,_Lebanon)-LCCN2002725064.jpg"
+ },
+ {
+  "id": "zabadani",
+  "label": "A valley of Syria",
+  "region": "coast",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:General_view,_Zebdany,_(i.e.,_Az-Zabdani),_Syria-LCCN2001699274.jpg"
+ },
+ {
+  "id": "baalbek",
+  "label": "Baalbek in the Bekaa",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:The_ancient_city_of_Baalbec._Coloured_lithograph_by_Louis_Ha_Wellcome_V0049487.jpg"
+ },
+ {
+  "id": "sidonboats",
+  "label": "Boats at Sidon",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:Boats_at_the_citadel_of_Sidon._Coloured_lithograph_by_Louis_Wellcome_V0049486.jpg"
+ },
+ {
+  "id": "gaza",
+  "label": "Gaza",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Gaza_-_1927.138_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "carmel",
+  "label": "Haifa under Mount Carmel",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Caiaphas_Looking_Towards_Mount_Carmel_-_1927.137_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "joppa",
+  "label": "Joppa",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Jaffa_-_1927.84_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "lydda",
+  "label": "Lydda",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Christian_Church_of_St._George_at_Ludd,_ancient_Lydda_-_1927.97_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "lebanon",
+  "label": "Mount Lebanon from Beirut",
+  "region": "coast",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:General_view,_with_Lebanon_in_the_distance,_Beyrout,_Holy_Land,_(i.e.,_Beirut,_Lebanon)-LCCN2002724972.jpg"
+ },
+ {
+  "id": "tyreruins",
+  "label": "Ruins near Tyre",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Ruins_Called_Om_El_Hamed_near_Tyre_-_1927.129_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "syriancoast",
+  "label": "The coast of Syria",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Coast_of_Syria_-_1927.77_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "baalbekcolumns",
+  "label": "The columns of Baalbek",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Baalbec_-_Ruins_of_the_Temple_of_Bacchus_-_Google_Art_Project.jpg"
+ },
+ {
+  "id": "sharon",
+  "label": "The plain of Sharon",
+  "region": "coast",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:Panoramic_view_taken_from_The_Tower_of_the_Forty_Martyrs,_Ramleh,_Holy_Land,_(i.e.,_Ramlah,_Israel)-LCCN2002725050.jpg"
+ },
+ {
+  "id": "tyreport",
+  "label": "The port of Tyre",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Port_of_Tyre_-_1927.75_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "baalbekportico",
+  "label": "The portico at Baalbek",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Ruins_of_the_Eastern_Portico_of_the_Temple_of_Baalbec_-_1927.82_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "baalbekround",
+  "label": "The round temple at Baalbek",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Circular_Temple_at_Baalbec_-_1927.130_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "sidon",
+  "label": "The sea castle of Sidon",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Citadel_of_Sidon_-_1927.105_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "tyreshore",
+  "label": "Tyre",
+  "region": "coast",
+  "credit": "Photochrom Print Collection, Library of Congress",
+  "source": "https://commons.wikimedia.org/wiki/File:General_view,_Tyre,_Holy_Land,_(i.e.,_Lebanon)-LCCN2002725061.jpg"
+ },
+ {
+  "id": "tyre",
+  "label": "Tyre from the isthmus",
+  "region": "coast",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Sur_or_Tsor,_Ancient_Tyre_from_the_Isthmus_-_1927.135_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "alexandriaport",
+  "label": "Alexandria",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_III-_Alexandria_-_2012.174_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "aswan",
+  "label": "Aswan",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_General_View_of_Esouan_and_the_Island_of_Elepha_-_2012.161_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "debod",
+  "label": "Debod in Nubia",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Wady_Dabod,_Nubia_-_2012.210_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "dendera",
+  "label": "Dendera",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:Dendera_Decr1838-David_Roberts_high.jpg"
+ },
+ {
+  "id": "edfuplain",
+  "label": "Edfu on its plain",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia-_Volume_I_-_No._34,_Temple_of_Edfou._Ancient_Appolinopoli_-_1953.512_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "karnakdusk",
+  "label": "Karnak at dusk",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia-_Volume_I_-_No._38,_Ruins_of_Karnak_-_1953.515_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "komombo",
+  "label": "Kom Ombo",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Kom-Ombo_-_2012.165_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "luxornile",
+  "label": "Luxor from the Nile",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_General_View_of_the_Ruins_of_Luxor,_From_the_Nil_-_2012.183_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "medinethabu",
+  "label": "Medinet Habu",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Medinet_abou,_Thebes_-_2012.150_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "philaeisland",
+  "label": "Philae on the Nile",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_General_View_of_the_Island_of_Philae,_Nubia_-_2012.259_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "ibrim",
+  "label": "Qasr Ibrim on the Nile",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Approach_to_the_Fortress_of_Ibrim,_Nubia_-_2012.158_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "silsila",
+  "label": "Sails at Gebel Silsila",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Hagar_Setsilis_-_2012.168_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "libyanhills",
+  "label": "The Libyan hills over the Nile",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Libyan_Chain_of_Mountains,_from_the_Temple_of_Lu_-_2012.166_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "philaeapproach",
+  "label": "The approach to Philae",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Grand_Approach_to_the_Temple_of_Philae,_Nubia_-_2012.182_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "ramesses",
+  "label": "The colossi of Abu Simbel",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_The_Great_Temple_of_Aboo-Simble,_Nubia_-_2012.256_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "memnon",
+  "label": "The colossi of Thebes",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Thebes_-_2012.159_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "hypostyle",
+  "label": "The columns of Karnak",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Great_Hall_at_Karnak)_by_David_Roberts,_RA.jpg"
+ },
+ {
+  "id": "edfucourt",
+  "label": "The court at Edfu",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Edfou_-_2012.152_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "philaecourt",
+  "label": "The court at Philae",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Grand_Portico_of_the_Temple_of_Philae,_Nubia_-_2012.177_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "ramesseum",
+  "label": "The fallen colossus at Thebes",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Fragments_of_the_Great_Colossi_at_the_Memnonium_-_2012.149_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "gizaferry",
+  "label": "The ferry to Giza",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_III-_View_on_the_Nile,_Ferry_to_Gizeh_-_2012.180_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "abusimbelfront",
+  "label": "The front of Abu Simbel",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Front_Elevation_of_the_Great_Temple_of_Aboo_Sim_-_2012.260_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "dendur",
+  "label": "The gate at Dendur",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Temple_at_Dendur,_Nubia_MET_DP804892.jpg"
+ },
+ {
+  "id": "luxorgate",
+  "label": "The gate at Luxor",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Grand_Entrance_to_the_Temple_of_Luxor_-_2012.156_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "karnakhall",
+  "label": "The great hall at Karnak",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Thebes,_Great_Hall_at_Karnac_-_2012.187_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "philae",
+  "label": "The island of Philae",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_Temple_Island_Philae.jpg"
+ },
+ {
+  "id": "roda",
+  "label": "The island of Roda",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_III-_The_Nileometer._Island_of_Rhoda_-_2012.231_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "kiosk",
+  "label": "The kiosk at Philae",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Roberts%26Haghe_The_hypaethral_Temple_at_Philae_called_the_bed_of_Pharoah.jpg"
+ },
+ {
+  "id": "thebesplain",
+  "label": "The plain of Thebes",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Ruins_of_Memnonium,_Thebes_-_2012.157_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "edfuportico",
+  "label": "The portico at Edfu",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_From_under_the_Portico_of_the_Temple_of_Edfu,_Upper_Egypt_-_Google_Art_Project.jpg"
+ },
+ {
+  "id": "pyramids",
+  "label": "The pyramids of Giza",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Pyramids_of_Geezeh_-_2012.155_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "suez",
+  "label": "The quay at Suez",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_-_Quay_at_Suez_-_1927.76_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "karnakruins",
+  "label": "The ruins of Karnak",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Ruins_of_Karnac_-_2012.160_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "abusimbel",
+  "label": "The temple at Abu Simbel",
+  "region": "egypt",
+  "credit": "David Roberts",
+  "source": "https://commons.wikimedia.org/wiki/File:David_Roberts_Great_Temple_Aboo_Simbel.jpg"
+ },
+ {
+  "id": "edfu",
+  "label": "The temple at Edfu",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Temple_at_Edfou,_Ancient_Apollinopolis,_Upper_Eg_-_2012.253_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "esna",
+  "label": "The temple at Esna",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Temple_at_Esneh_-_2012.145_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "kalabsha",
+  "label": "The temple at Kalabsha",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Portico_of_the_Temple_of_Kalabshe_-_2012.176_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "matariya",
+  "label": "The tree at Matariya",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_III-_The_Holy_Tree_of_Metereah_-_2012.153_-_Cleveland_Museum_of_Art.jpg"
+ },
+ {
+  "id": "inundation",
+  "label": "Thebes in the flood",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_II-_Statues_of_Memnon_at_Thebes,_during_the_Inundat_-_2012.252_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "philaeportico",
+  "label": "Under a portico at Philae",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_View_Under_the_Grand_Portico_of_the_Temple,_Phil_-_2012.196_-_Cleveland_Museum_of_Art.tif"
+ },
+ {
+  "id": "sebua",
+  "label": "Wadi es-Sebua",
+  "region": "egypt",
+  "credit": "David Roberts, lithograph by Louis Haghe",
+  "source": "https://commons.wikimedia.org/wiki/File:Louis_Haghe_-_Egypt_and_Nubia,_Volume_I-_Temple_of_Wady_Saboua,_Nubia_-_2012.199_-_Cleveland_Museum_of_Art.jpg"
+ }
+]

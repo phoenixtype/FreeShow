@@ -2,10 +2,11 @@
     import { onMount } from "svelte"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
     import { createChurch, joinChurch, myChurches, syncSongs, type Church } from "../../../scriptural/churchSync"
+    import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
 
-    const ACTIVE_KEY = "church-library-active"
+    const ACTIVE_KEY = ACTIVE_CHURCH_KEY
 
     let session = churchLibrary.getSession()
     let email = session?.email || ""

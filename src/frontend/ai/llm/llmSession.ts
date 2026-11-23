@@ -2,6 +2,7 @@ import { get } from "svelte/store"
 import type { AIProviderId } from "../../../types/ai/Ai"
 import { Main } from "../../../types/IPC/Main"
 import { requestMain } from "../../IPC/main"
+import { churchLibrary } from "../../scriptural/connection"
 import { ai, aiLlmStatus } from "../../stores"
 
 export type LLMSessionConfig = { provider: AIProviderId; model: string } | null
@@ -16,6 +17,9 @@ class LLMSession {
         const llmConfig = get(ai).llm
         const provider = (llmConfig?.provider || null) as AIProviderId | null
         if (!provider) return null
+
+        // Scriptural AI runs through the church library; no key or model to check here
+        if (provider === "scriptural") return churchLibrary.getSession() ? { provider, model: "scriptural" } : null
 
         const status = await requestMain(Main.AI_GET_STATUS, { engineId: provider })
         if (!status?.[provider]?.ready) return null
