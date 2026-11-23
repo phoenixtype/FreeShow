@@ -32,18 +32,14 @@
             }
 
             img {
-                height: calc(100% - var(--loader-height));
-                width: 42%;
-                object-fit: cover;
-                object-position: top left;
-
-                left: 0;
-                /* max-width: 40%; */
                 position: absolute;
-                top: var(--loader-height);
-
-                border-bottom-left-radius: var(--radius);
-                border-top-right-radius: var(--radius);
+                left: 21%;
+                top: 50%;
+                width: 96px;
+                height: 96px;
+                transform: translate(-50%, -50%);
+                border-radius: 22.27%;
+                box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
             }
 
             .text {
@@ -125,7 +121,7 @@
         </div>
 
         <main>
-            <img src="./scriptural-logo.png" alt="" draggable="false" />
+            <img src="./scriptural-logo.svg" alt="" draggable="false" />
 
             <div class="text">
                 <h1>Scriptural</h1>

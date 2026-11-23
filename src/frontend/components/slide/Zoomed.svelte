@@ -216,7 +216,7 @@
     }
 
     .slide:not(.disableStyle) :global(.item) {
-        font-family: "CMGSans";
+        font-family: "Inter", "CMGSans";
         text-shadow: 2px 2px 10px #000000;
     }
     .slide :global(.item) {

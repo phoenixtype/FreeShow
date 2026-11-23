@@ -194,7 +194,7 @@
     }
 
     .fontPreload {
-        font-family: "CMGSans";
+        font-family: "Inter", "CMGSans";
         position: absolute;
         opacity: 0;
     }

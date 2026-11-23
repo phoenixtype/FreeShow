@@ -12,7 +12,7 @@
 
     initSocket()
 
-    const freeshowLogo = new URL("../../../public/scriptural-logo.png", import.meta.url).href
+    const freeshowLogo = new URL("../../../public/scriptural-logo.svg", import.meta.url).href
 
     let inputPassword: string = ""
 

@@ -101,11 +101,10 @@
             <div class="unsaved" />
         {/if}
         <!-- logo -->
-        <h1 style="align-self: center;width: 100%;padding: 0px 10px;text-align: center;font-size: 1.8em;">Scriptural</h1>
-        <!-- <div class="logo">
-            <img style="height: 35px;" src="./scriptural-logo.png" alt="Scriptural" draggable={false} />
-            <h1 style="color: var(--text);font-size: 1.7em;">Scriptural</h1>
-        </div> -->
+        <h1 class="brand">
+            <img class="brand-mark" src="./scriptural-logo.svg" alt="" draggable={false} />
+            Scriptural
+        </h1>
     </span>
     <span>
         <TopButton id="show" />
@@ -211,15 +210,6 @@
         background-color: var(--red);
     }
 
-    /* .logo {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0px 10px;
-        width: 100%;
-        gap: 10px;
-    } */
-
     @media screen and (max-width: 580px) {
         .top span:first-child {
             display: none;
@@ -288,5 +278,23 @@
     }
     .user.isSameArea {
         box-shadow: 0 0 0 2px var(--secondary);
+    }
+
+    /* the Scriptural mark beside the name, as in the Scriptural app's header */
+    .brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 0 10px;
+        font-size: 1.25em;
+        font-weight: 600;
+    }
+    .brand-mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 22.27%;
+        box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
     }
 </style>

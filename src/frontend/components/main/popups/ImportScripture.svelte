@@ -10,13 +10,13 @@
     import { clone, sortByName } from "../../helpers/array"
     import T from "../../helpers/T.svelte"
     import HRule from "../../input/HRule.svelte"
-    import Link from "../../inputs/Link.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialCheckbox from "../../inputs/MaterialCheckbox.svelte"
     import MaterialMultiChoice from "../../inputs/MaterialMultiChoice.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
     import Center from "../../system/Center.svelte"
     import Loader from "../Loader.svelte"
+    import ScripturalBibles from "./ScripturalBibles.svelte"
 
     let bibles: CustomBibleListContent[] = []
     let recommended: CustomBibleListContent[] = []
@@ -94,6 +94,7 @@
 
     let importType = ""
     const importTypes = [
+        { id: "scriptural", name: "Scriptural", icon: "scripture" },
         { id: "api", name: "API", icon: "web" }, // translate | scripture_alt
         { id: "local", name: translateText("cloud.local"), icon: "folder" } // scripture
     ]
@@ -116,7 +117,9 @@
     <MaterialButton class="popup-back" icon="back" iconSize={1.3} title="actions.back" on:click={() => (importType = "")} />
 {/if}
 
-{#if importType === "api"}
+{#if importType === "scriptural"}
+    <ScripturalBibles />
+{:else if importType === "api"}
     {#if error}
         <T id="error.bible_api" />
     {:else}
@@ -175,11 +178,9 @@
         </li>
         <li>
             <span style="font-size: 0.9em;font-weight: bold;">JSON</span>
-            <span style="font-size: 0.8em;opacity: 0.8;margin-left: 10px;">FreeShow</span>
+            <span style="font-size: 0.8em;opacity: 0.8;margin-left: 10px;">FreeShow (.fsb)</span>
         </li>
     </ul>
-
-    <p style="margin: 20px 0;opacity: 0.9;">Find some available <Link url="https://freeshow.app/resources#scriptures">Bible versions</Link>.</p>
 
     <MaterialButton variant="outlined" icon="import" on:click={() => sendMain(Main.IMPORT, { channel: "BIBLE", format: { name: "Bible", extensions: ["xml", "xmm", "json", "fsb"] } })}>
         <T id="scripture.local" />

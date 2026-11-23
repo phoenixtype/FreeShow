@@ -8,10 +8,9 @@
 // on its own (confidence 50 or below never auto-plays in AiManager).
 
 import type { MatchResult } from "../../../types/ai/Ai"
+import { ANON_KEY, FUNCTIONS_URL } from "../../scriptural/connection"
 
-const ENDPOINT = "https://sdtusilsfchpryrbmplq.supabase.co/functions/v1/search-scripture"
-// Public anon key of the Scriptural project; it ships in every Scriptural client.
-const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdHVzaWxzZmNocHJ5cmJtcGxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNjU4NzcsImV4cCI6MjA3MTc0MTg3N30.tWnGvQlE2J-1bTmc_u3JDRyIQYJ7vR7jekk6oVtU4QM"
+const ENDPOINT = `${FUNCTIONS_URL}/search-scripture`
 
 const MIN_INTERVAL_MS = 5000
 const MIN_WORDS = 8

@@ -47,6 +47,7 @@
 </script>
 
 <Center class="context #splash">
+    <img src="./scriptural-logo.svg" alt="" draggable={false} style="width: 64px;height: 64px;border-radius: 22.27%;box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);" />
     <h1>Scriptural</h1>
     <p style="opacity: 0.7;">v{$version}</p>
     {#if $special.splashText}

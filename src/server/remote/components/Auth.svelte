@@ -5,7 +5,7 @@
     import { send } from "../util/socket"
     import { _get, _update, dictionary, password } from "../util/stores"
 
-    const freeshowLogo = new URL("../../../../public/scriptural-logo.png", import.meta.url).href
+    const freeshowLogo = new URL("../../../../public/scriptural-logo.svg", import.meta.url).href
 
     function submit() {
         const password = _get("password").stored

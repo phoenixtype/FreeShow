@@ -119,7 +119,7 @@ function getWeightFromStyle(style: string | undefined) {
 
 // web fonts
 const webFonts = ["Arial", "Verdana", "Tahoma", "Trebuchet MS", "Times New Roman", "Georgia", "Garamond", "Courier New", "Brush Script MT", "Helvetica", "Fantasy", "monospace"]
-export const defaultFonts = ["CMGSans", ...webFonts]
+export const defaultFonts = ["Inter", "CMGSans", ...webFonts]
 // does not work with ''
 const noQuotes = ["Fantasy", "monospace"]
 export function getFontName(value: string) {
