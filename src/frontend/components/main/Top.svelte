@@ -10,6 +10,8 @@
     import T from "../helpers/T.svelte"
     import Button from "../inputs/Button.svelte"
     import TopButton from "../inputs/TopButton.svelte"
+    import MaterialButton from "../inputs/MaterialButton.svelte"
+    import { openLiveCopilot } from "../../ai/liveCopilot"
 
     export let isWindows = false
 
@@ -112,6 +114,10 @@
         <TopButton id="stage" />
     </span>
     <span style="width: var(--navigation-width);justify-content: flex-end;">
+        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title={translateText("settings.ai", $dictionary)} on:click={openLiveCopilot}>
+            <Icon id="ai" size={1.5} white />
+            <span class="copilot-label"><T id="settings.ai" /></span>
+        </MaterialButton>
         <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel />
         {#if !settingsDisabled}
             <TopButton id="settings" hideLabel />
@@ -158,6 +164,12 @@
 </div>
 
 <style>
+    @media screen and (max-width: 750px) {
+        .copilot-label {
+            display: none;
+        }
+    }
+
     .top {
         position: relative;
         display: flex;

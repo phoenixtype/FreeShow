@@ -151,6 +151,9 @@
         if (state !== "inactive") SpeechToText.disable()
     })
 
+    // the top bar's Live Copilot button
+    $: if ($activeTriggerFunction === "open_live_copilot" && !isOpen) toggleExpand()
+
     // LISTEN TOGGLE
     $: if ($activeTriggerFunction.startsWith("toggle_stt_listening:")) {
         const action = $activeTriggerFunction.split(":")[1]

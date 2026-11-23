@@ -1,8 +1,9 @@
 <script lang="ts">
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import Tip from "../../../components/main/Tip.svelte"
-    import { activePopup, ai, popupData, sttTempDisabled } from "../../../stores"
+    import { ai } from "../../../stores"
     import { translateText } from "../../../utils/language"
+    import { enableLiveCopilot } from "../../liveCopilot"
     import AutoScriptureOptions from "./AutoScriptureOptions.svelte"
     import STTOptions from "./STTOptions.svelte"
 
@@ -14,11 +15,7 @@
             return a
         })
 
-        if (key === "enabled" && value) {
-            sttTempDisabled.set(false)
-            popupData.set({ mode: "setup" })
-            activePopup.set("ai_model_manager")
-        }
+        if (key === "enabled" && value) enableLiveCopilot()
     }
 </script>
 
