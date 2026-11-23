@@ -2236,8 +2236,15 @@ export async function resolveScriptureReference(referenceText: string, scripture
         if (!bookResult?.book) return null
 
         const book = bookResult.book
-        const chapter = bookResult.chapter ? Number(bookResult.chapter) : 1
+        // some Bibles (the online ones) find only the book: read chapter and verses from the text itself
+        const tail = referenceText.trim().match(/(\d+)(?:\s*[:.]\s*(\d+)(?:\s*[-–]\s*(\d+))?)?\s*$/)
+        const chapter = bookResult.chapter ? Number(bookResult.chapter) : tail ? Number(tail[1]) : 1
         let verses = bookResult.verses || []
+        if (!bookResult.chapter && tail?.[2]) {
+            const start = Number(tail[2])
+            const end = tail[3] ? Number(tail[3]) : start
+            verses = Array.from({ length: Math.max(1, end - start + 1) }, (_, i) => start + i)
+        }
         if (bookResult.chapter && !verses.length) {
             const verseMatch = referenceText.match(/[:.,]\s*(\d+)(?:-(\d+))?[^a-zA-Z]*$/)
             if (verseMatch) {

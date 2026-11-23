@@ -235,7 +235,7 @@ export const SLIDE_CHAT_RESPONSE_SCHEMA = {
                     type: { type: "string" },
                     style: {
                         type: "string",
-                        description: "CSS positioning string containing top/left/width/height and optional background CSS, e.g., 'top:35px;left:50.5px;height:220px;width:1820px;background: linear-gradient(180deg, #667eea, #4d6095);'"
+                        description: "CSS positioning string containing top/left/width/height and optional background CSS, e.g., 'top:35px;left:50.5px;height:220px;width:1820px;background: linear-gradient(180deg, #2b2b2b, #121212);'"
                     },
                     align: { type: "string" },
                     textFit: { type: ["string", "null"] },
@@ -326,7 +326,12 @@ You are an AI assistant integrated into FreeShow, an open-source presentation so
    - Text formatting accepts horizontal alignment (\`"left"\`, \`"center"\`, \`"right"\`, \`"justify"\`) and vertical alignment (\`"top"\`, \`"center"\`, \`"bottom"\`).
    - \`value\`: Provide context-aware default placeholder text when text strings are omitted in user commands.
 
-3. COMMAND EXECUTION & NULL ACTION RULE:
+3. SCRIPTURE AND SONGS:
+   - "Show John 3:16", "put up Psalm 23": \`SHOW_SCRIPTURE\` with \`data.reference\`.
+   - "Add the song ...": \`ADD_SONG\` with \`data.name\` and \`data.lyrics\`, only with words the user gave you or you are sure of; never invent lyrics.
+   - "Play / present the song ...": \`PRESENT_SONG\` with \`data.name\`.
+
+4. COMMAND EXECUTION & NULL ACTION RULE:
    - Generate an \`action\` payload ONLY when receiving explicit imperative creation or modification commands (e.g., "Add a lower third template", "Create a show", "Generate a welcome slide").
    - Set \`"action": null\` for all informational, explanatory, or definition queries (e.g., "What is...", "How do I...").
 `
@@ -344,7 +349,7 @@ export const CHAT_RESPONSE_SCHEMA = {
             properties: {
                 type: {
                     type: "string",
-                    enum: ["CREATE_SLIDE", "CREATE_TEMPLATE", "CREATE_OVERLAY", "CREATE_OUTPUT"],
+                    enum: ["CREATE_SLIDE", "CREATE_TEMPLATE", "CREATE_OVERLAY", "CREATE_OUTPUT", "SHOW_SCRIPTURE", "ADD_SONG", "PRESENT_SONG"],
                     description: "The action type to execute."
                 },
                 data: {
@@ -352,6 +357,8 @@ export const CHAT_RESPONSE_SCHEMA = {
                     description: "Payload parameters associated with the action.",
                     properties: {
                         name: { type: "string" },
+                        reference: { type: ["string", "null"], description: "SHOW_SCRIPTURE: a Bible reference such as 'John 3:16' or 'Romans 8:28-30'." },
+                        lyrics: { type: ["string", "null"], description: "ADD_SONG: the words, a blank line between slides, '[Verse 1]' / '[Chorus]' lines starting sections." },
                         color: { type: ["string", "null"] },
                         category: { type: "string" },
                         items: {
@@ -362,7 +369,7 @@ export const CHAT_RESPONSE_SCHEMA = {
                                     type: { type: "string" },
                                     style: {
                                         type: "string",
-                                        description: "CSS positioning string containing top/left/width/height and optional background CSS, e.g., 'top:35px;left:50.5px;height:220px;width:1820px;background: linear-gradient(180deg, #667eea, #4d6095);'"
+                                        description: "CSS positioning string containing top/left/width/height and optional background CSS, e.g., 'top:35px;left:50.5px;height:220px;width:1820px;background: linear-gradient(180deg, #2b2b2b, #121212);'"
                                     },
                                     align: { type: "string" },
                                     textFit: { type: ["string", "null"] },

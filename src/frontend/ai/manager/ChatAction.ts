@@ -5,15 +5,20 @@ import type { Item, Overlay, Slide } from "../../../types/Show"
 import { history } from "../../components/helpers/history"
 import { getLayoutRef } from "../../components/helpers/show"
 import { getStyles, removeText } from "../../components/helpers/style"
-import { activeEdit, activeShow, overlays, refreshEditSlide, showsCache, templates } from "../../stores"
+import { startScripture } from "../../components/actions/apiHelper"
+import { startShowSync } from "../../components/helpers/showActions"
+import { convertText } from "../../converters/txt"
+import { activeEdit, activeShow, overlays, refreshEditSlide, shows, showsCache, templates } from "../../stores"
 import { newToast } from "../../utils/common"
 import { translateText } from "../../utils/language"
 import { send } from "../../utils/request"
 
 export interface FreeShowAction {
-    type: "APPLY_TO_SLIDE" | "CREATE_SLIDE" | "CREATE_TEMPLATE" | "CREATE_OVERLAY" | "CREATE_OUTPUT"
+    type: "APPLY_TO_SLIDE" | "CREATE_SLIDE" | "CREATE_TEMPLATE" | "CREATE_OVERLAY" | "CREATE_OUTPUT" | "SHOW_SCRIPTURE" | "ADD_SONG" | "PRESENT_SONG"
     data: {
         name?: string
+        reference?: string | null
+        lyrics?: string | null
         color?: string | null
         category?: string
         items?: Array<{
@@ -46,6 +51,25 @@ export class ChatAction {
         if (!action) return
 
         console.log("Chat action:", action)
+
+        // scripture and songs: the same paths the app's own API uses
+        if (action.type === "SHOW_SCRIPTURE" && action.data?.reference) {
+            startScripture({ reference: action.data.reference })
+            return
+        }
+        if (action.type === "ADD_SONG" && action.data?.name && action.data.lyrics) {
+            convertText({ name: action.data.name, text: action.data.lyrics, category: "song", noFormatting: true, open: true })
+            newToast(translateText("actions.done"))
+            return
+        }
+        if (action.type === "PRESENT_SONG" && action.data?.name) {
+            const wanted = action.data.name.trim().toLowerCase()
+            const list = Object.entries(get(shows))
+            const match = list.find(([, s]) => s.name?.toLowerCase() === wanted) || list.find(([, s]) => s.name?.toLowerCase().includes(wanted))
+            if (match) startShowSync(match[0])
+            else newToast(`No song named "${action.data.name}"`)
+            return
+        }
 
         // Create "Generated" category
 
