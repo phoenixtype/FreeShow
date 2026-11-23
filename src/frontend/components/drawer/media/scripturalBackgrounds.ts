@@ -1,30 +1,52 @@
-// Scriptural's backgrounds: David Roberts' Holy Land drawings (1839) and
-// photochrom prints (about 1895), public domain, cropped to 16:9 for the
-// screen. The list lives on project.scriptural.online so new packs arrive
-// without an app update (scripts/backgrounds builds it).
+// Scriptural's backgrounds: motion loops, gradients and countdowns we render
+// ourselves, public-domain Holy Land pictures, and CC0 or public-domain photos
+// and film. The list lives on project.scriptural.online so new backgrounds
+// arrive without an app update (scripts/backgrounds builds it).
 
-const MANIFEST = "https://project.scriptural.online/backgrounds/manifest.json"
+const LIBRARY = "https://project.scriptural.online/backgrounds/library.json"
 
 interface Background {
     id: string
     label: string
-    region: string
+    categories: string[]
+    type: "image" | "video"
     credit: string
     url: string
     preview: string
 }
 
-let all: Background[] | null = null
+export interface BackgroundCategory {
+    id: string
+    label: string
+}
 
-export async function loadScripturalBackgrounds(search = ""): Promise<{ path: string; previewUrl: string; name: string; extension: string }[]> {
-    if (!all) {
-        try {
-            const response = await fetch(MANIFEST)
-            all = response.ok ? ((await response.json()).items as Background[]) : []
-        } catch {
-            return []
-        }
+let library: { categories: BackgroundCategory[]; items: Background[] } | null = null
+
+async function load() {
+    if (library) return library
+    try {
+        const response = await fetch(LIBRARY)
+        if (response.ok) library = await response.json()
+    } catch {
+        // offline: the tab shows nothing until the next try
     }
+    return library
+}
+
+export async function loadScripturalCategories(): Promise<BackgroundCategory[]> {
+    return (await load())?.categories || []
+}
+
+export async function loadScripturalBackgrounds(search = "", category = ""): Promise<{ path: string; previewUrl: string; name: string; extension: string }[]> {
+    const items = (await load())?.items || []
     const words = search.toLowerCase().split(/\s+/).filter(Boolean)
-    return all.filter((b) => words.every((w) => `${b.label} ${b.region} ${b.credit}`.toLowerCase().includes(w))).map((b) => ({ path: b.url, previewUrl: b.preview, name: `${b.label} (${b.credit})`, extension: "webp" }))
+    return items
+        .filter((b) => !category || b.categories.includes(category))
+        .filter((b) => words.every((w) => `${b.label} ${b.categories.join(" ")} ${b.credit}`.toLowerCase().includes(w)))
+        .map((b) => ({
+            path: b.url,
+            previewUrl: b.preview,
+            name: b.credit === "Scriptural" ? b.label : `${b.label} (${b.credit})`,
+            extension: b.type === "video" ? "mp4" : "webp"
+        }))
 }

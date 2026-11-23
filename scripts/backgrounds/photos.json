@@ -1,0 +1,682 @@
+[
+    {
+        "id": "photo-crepuscular-rays",
+        "label": "Rays over the plain",
+        "categories": ["nature"],
+        "credit": "Zolt Levay",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Crepuscular_Rays_(2020-58-4780).png"
+    },
+    {
+        "id": "photo-issac-levitan-before-the-storm",
+        "label": "Before the storm (Levitan)",
+        "categories": ["nature"],
+        "credit": "Isaac Levitan",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Issac_Levitan,_1890_-_Before_the_storm.jpg"
+    },
+    {
+        "id": "photo-john-constable-a-cloud-study-sunset-goog",
+        "label": "Cloud study at sunset (Constable)",
+        "categories": ["nature"],
+        "credit": "John Constable",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:John_Constable_-_A_Cloud_Study,_Sunset_-_Google_Art_Project.jpg"
+    },
+    {
+        "id": "photo-constable-study-of-clouds-over-a-landsca",
+        "label": "Clouds over a landscape (Constable)",
+        "categories": ["nature"],
+        "credit": "John Constable",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Constable_-_Study_of_clouds_over_a_landscape,_6104651.jpg"
+    },
+    {
+        "id": "photo-iss064e035870",
+        "label": "Earth's horizon at dusk",
+        "categories": ["nature"],
+        "credit": "NASA Johnson Space Center",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Iss064e035870.jpg"
+    },
+    {
+        "id": "photo-sunset-from-internation-space-station",
+        "label": "Sunset from the space station",
+        "categories": ["nature"],
+        "credit": "Credit: Expedition 15 Crew, NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunset_from_Internation_space_station.jpg"
+    },
+    {
+        "id": "photo-kennedy-space-center-at-sunset-october-1",
+        "label": "Kennedy Space Center at sunset, October 13",
+        "categories": ["nature"],
+        "credit": "NASA/Dimitri Gerondidakis",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Kennedy_Space_Center_at_sunset,_October_13,_2010.jpg"
+    },
+    {
+        "id": "photo-sunset-at-kennedy-space-center-october-1",
+        "label": "Sunset at Kennedy Space Center, October 13",
+        "categories": ["nature"],
+        "credit": "NASA/Dimitri Gerondidakis",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunset_at_Kennedy_Space_Center,_October_13,_2010.jpg"
+    },
+    {
+        "id": "photo-iss-36-sunset-over-the-aleutian-islands-",
+        "label": "Sunset over the Aleutian Islands with noctilucent clouds",
+        "categories": ["creation"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-36_Sunset_over_the_Aleutian_Islands_with_noctilucent_clouds.jpg"
+    },
+    {
+        "id": "photo-iss-43-sunset-from-orbit",
+        "label": "Sunset from orbit",
+        "categories": ["creation"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-43_Sunset_from_orbit.jpg"
+    },
+    {
+        "id": "photo-iss-47-islands-in-the-sky-indonesia",
+        "label": "Islands In The Sky, Indonesia",
+        "categories": ["creation"],
+        "credit": "NASA/Jeff Williams",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-47_Islands_In_The_Sky,_Indonesia.jpg"
+    },
+    {
+        "id": "photo-casting-the-net-in-a-quiet-lagoon-at-sun",
+        "label": "Casting the net at sunset",
+        "categories": ["nature"],
+        "credit": "David Burdick / NOAA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Casting_the_net_in_a_quiet_lagoon_at_sunset_on_Guam_(line380484854).jpg"
+    },
+    {
+        "id": "photo-on-the-sunset",
+        "label": "On the Sunset",
+        "categories": ["nature"],
+        "credit": "Dmitriy Protsenko from Dubna, Russia",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:On_the_Sunset_(35175431536).jpg"
+    },
+    {
+        "id": "photo-fuji-f660-exr-golden-sunset-apus-lake-of",
+        "label": "Golden sunset on the lake",
+        "categories": ["nature"],
+        "credit": "M. Cristian-Ioan",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Fuji_F660_EXR_golden_sunset_apus_Lake_of_the_Mill_25Mar_2014_(14).jpg"
+    },
+    {
+        "id": "photo-yellowstone-sunset",
+        "label": "Yellowstone Sunset",
+        "categories": ["nature"],
+        "credit": "USGS Communications and Publishing",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Yellowstone_Sunset_(121250).jpg"
+    },
+    {
+        "id": "photo-iss-43-rising-sun-spreads-across-the-ear",
+        "label": "Rising sun spreads across the Earth",
+        "categories": ["creation"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-43_Rising_sun_spreads_across_the_Earth.jpg"
+    },
+    {
+        "id": "photo-a-bright-orange-sunburst-illuminates-ear",
+        "label": "A bright orange sunburst illuminates Earth's atmosphere during an orbi",
+        "categories": ["creation"],
+        "credit": "NASA Johnson Space Center",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:A_bright_orange_sunburst_illuminates_Earth%27s_atmosphere_during_an_orbital_sunrise_(iss074e0779393).jpg"
+    },
+    {
+        "id": "photo-wetland-at-sunset-in-silhouette-dpla-78b",
+        "label": "Wetland at sunset",
+        "categories": ["nature"],
+        "credit": "Department of the Interior. U.S. Fish and Wildlife Service. National Conservatio",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Wetland_at_sunset_in_silhouette_-_DPLA_-_78b8cb7d6c13800c4fdfe9c048866be4.jpg"
+    },
+    {
+        "id": "photo-sunset-silhouette",
+        "label": "Sunset Silhouette",
+        "categories": ["nature"],
+        "credit": "Angelos @ Ottawa",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunset_Silhouette_(51847101259).jpg"
+    },
+    {
+        "id": "photo-wetland-at-sunset-dpla-5c4c3e2fdf268d883",
+        "label": "Wetland at dusk",
+        "categories": ["nature"],
+        "credit": "Department of the Interior. U.S. Fish and Wildlife Service. National Conservatio",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Wetland_at_sunset_-_DPLA_-_5c4c3e2fdf268d883d1d145ee37ad7cf.jpg"
+    },
+    {
+        "id": "photo-stormy-sunset-clouds-over-rome-italy",
+        "label": "Stormy sunset clouds over Rome, Italy",
+        "categories": ["nature"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Stormy_sunset_clouds_over_Rome,_Italy.jpg"
+    },
+    {
+        "id": "photo-quill-shaped-cirrus-cloud",
+        "label": "Quill-shaped cirrus cloud",
+        "categories": ["nature"],
+        "credit": "W.carter",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Quill-shaped_cirrus_cloud.jpg"
+    },
+    {
+        "id": "photo-small-sun-dog-in-cumulus",
+        "label": "Small sun dog in cumulus",
+        "categories": ["nature"],
+        "credit": "W.carter",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Small_sun_dog_in_cumulus.jpg"
+    },
+    {
+        "id": "photo-un-nuage-au-dessus-de-cr-voux-hautes-alp",
+        "label": "A cloud over the Alps",
+        "categories": ["nature"],
+        "credit": "Benoît Prieur",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Un_nuage_au-dessus_de_Cr%C3%A9voux_(Hautes-Alpes)_proche_cascades_(mai_2021).jpg"
+    },
+    {
+        "id": "photo-scuol-motta-naluns-15-09-actm-01",
+        "label": "Clouds on the mountainside",
+        "categories": ["nature"],
+        "credit": "Agnes Monkelbaan",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Scuol-Motta_Naluns,_15-09-2023._(actm.)_01.jpg"
+    },
+    {
+        "id": "photo-scuol-motta-naluns-15-09-actm-14",
+        "label": "Mist over the valley",
+        "categories": ["nature"],
+        "credit": "Agnes Monkelbaan",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Scuol-Motta_Naluns,_15-09-2023._(actm.)_14.jpg"
+    },
+    {
+        "id": "photo-wetterspitzen-stubaier-alpen",
+        "label": "Wetterspitzen (Stubaier Alpen)",
+        "categories": ["nature"],
+        "credit": "Jörg Braukmann",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Wetterspitzen_(Stubaier_Alpen).jpg"
+    },
+    {
+        "id": "photo-claire-birtz-wildlife-sanctuary-view-acr",
+        "label": "Claire Birtz Wildlife Sanctuary, view across Morse Pond-11-08",
+        "categories": ["nature"],
+        "credit": "Peter Cooper Jr.",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Claire_Birtz_Wildlife_Sanctuary,_view_across_Morse_Pond_2025-11-08.jpg"
+    },
+    {
+        "id": "photo-halloween-sundog",
+        "label": "Halloween Sundog",
+        "categories": ["nature"],
+        "credit": "W.carter",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Halloween_Sundog.jpg"
+    },
+    {
+        "id": "photo-sunrise-on-vereda-del-lago",
+        "label": "Sunrise on Vereda del Lago",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunrise_on_Vereda_del_Lago.jpg"
+    },
+    {
+        "id": "photo-lever-du-16-juillet",
+        "label": "July sunrise",
+        "categories": ["nature"],
+        "credit": "Smailtn Camera location36° 46′ 21.62″ N, 10° 17′ 31.74″ E View this and other ne",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Lever_du_16_Juillet_2025.jpg"
+    },
+    {
+        "id": "photo-el-guamache-bay-margarita-island",
+        "label": "El Guamache Bay, Margarita island",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:El_Guamache_Bay,_Margarita_island.jpg"
+    },
+    {
+        "id": "photo-sunset-backlight-of-dates",
+        "label": "Sunset backlight of dates",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunset_backlight_of_dates.jpg"
+    },
+    {
+        "id": "photo-juan-griego-sunset-from-fort-n-la-galera",
+        "label": "Juan Griego sunset from Fortín La Galera",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Juan_Griego_sunset_from_Fort%C3%ADn_La_Galera.jpg"
+    },
+    {
+        "id": "photo-sunset-in-juan-griego-bay",
+        "label": "Sunset in Juan Griego bay",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunset_in_Juan_Griego_bay.jpg"
+    },
+    {
+        "id": "photo-ned-point-light-sunset-1",
+        "label": "Ned Point Light Sunset 1",
+        "categories": ["nature"],
+        "credit": "Balon Greyjoy",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Ned_Point_Light_Sunset_1.jpg"
+    },
+    {
+        "id": "photo-sunset-from-dresser-hill-charlton-ma-05-",
+        "label": "Sunset from Dresser Hill, Charlton MA-05-10",
+        "categories": ["nature"],
+        "credit": "Peter Cooper Jr.",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Sunset_from_Dresser_Hill,_Charlton_MA_2026-05-10.jpg"
+    },
+    {
+        "id": "photo-san-juan-valley",
+        "label": "San Juan Valley",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:San_Juan_Valley.jpg"
+    },
+    {
+        "id": "photo-marmolada-italy",
+        "label": "Marmolada, Italy",
+        "categories": ["nature"],
+        "credit": "Marco Bonomo",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Marmolada,_Italy.jpg"
+    },
+    {
+        "id": "photo-alone-in-the-unspoilt-wilderness-unsplas",
+        "label": "Unspoilt wilderness",
+        "categories": ["nature"],
+        "credit": "David Marcu davidmarcu",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Alone_in_the_unspoilt_wilderness_(Unsplash).jpg"
+    },
+    {
+        "id": "photo-iss034e016601-stratocumulus-clouds-pacif",
+        "label": "Clouds over the Pacific",
+        "categories": ["nature"],
+        "credit": "ISS Expedition 34 Crew Image Science & Analysis Laboratory, NASA Johnson Space C",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS034E016601_-_Stratocumulus_Clouds_-_Pacific_Ocean.jpg"
+    },
+    {
+        "id": "photo-hendrik-voogd-italian-landscape-with-umb",
+        "label": "Hendrik Voogd - Italian landscape with Umbrella Pines",
+        "categories": ["nature"],
+        "credit": "Hendrik Voogd",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Hendrik_Voogd_-_Italian_landscape_with_Umbrella_Pines.jpg"
+    },
+    {
+        "id": "photo-iss-38-hawaiian-island-chain",
+        "label": "Hawaiian Island chain",
+        "categories": ["nature"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-38_Hawaiian_Island_chain.jpg"
+    },
+    {
+        "id": "photo-mount-ida-chain-messara-plain-from-phais",
+        "label": "Mount Ida chain Messara plain from Phaistos Crete Greece",
+        "categories": ["nature"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Mount_Ida_chain_Messara_plain_from_Phaistos_Crete_Greece.jpg"
+    },
+    {
+        "id": "photo-cloudscape-over-the-philippine-sea",
+        "label": "Cloudscape Over the Philippine Sea",
+        "categories": ["nature"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Cloudscape_Over_the_Philippine_Sea.jpg"
+    },
+    {
+        "id": "photo-spruce-forest-at-holma",
+        "label": "Spruce forest at Holma",
+        "categories": ["nature"],
+        "credit": "W.carter",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Spruce_forest_at_Holma.jpg"
+    },
+    {
+        "id": "photo-beech-and-ferns-in-gullmarsskogen",
+        "label": "Beech and ferns in Gullmarsskogen",
+        "categories": ["nature"],
+        "credit": "W.carter",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Beech_and_ferns_in_Gullmarsskogen.jpg"
+    },
+    {
+        "id": "photo-lofoten-norway-unsplash",
+        "label": "Lofoten, Norway",
+        "categories": ["nature"],
+        "credit": "Johannes Groll followhansi",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Lofoten,_Norway_(Unsplash).jpg"
+    },
+    {
+        "id": "photo-full-moon-partially-obscured-by-atmosphe",
+        "label": "Full moon partially obscured by atmosphere",
+        "categories": ["creation"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Full_moon_partially_obscured_by_atmosphere.jpg"
+    },
+    {
+        "id": "photo-top-of-atmosphere",
+        "label": "Top of Atmosphere",
+        "categories": ["creation"],
+        "credit": "NASA Earth Observatory",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Top_of_Atmosphere.jpg"
+    },
+    {
+        "id": "photo-endeavour-silhouette-sts-130",
+        "label": "Endeavour silhouette STS-130",
+        "categories": ["creation"],
+        "credit": "NASA/Crew of Expedition 22",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Endeavour_silhouette_STS-130.jpg"
+    },
+    {
+        "id": "photo-ngc-spiral-galaxy",
+        "label": "NGC Spiral galaxy",
+        "categories": ["creation"],
+        "credit": "NASA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:NGC_2683_Spiral_galaxy.jpg"
+    },
+    {
+        "id": "photo-iss-66-atmospheric-plume-from-hunga-tong",
+        "label": "Plume above the Pacific",
+        "categories": ["creation"],
+        "credit": "NASA / Kayla Barron",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-66_Atmospheric_plume_from_2022_Hunga_Tonga_eruption_-_edited.jpg"
+    },
+    {
+        "id": "photo-earth-s-city-lights-by-dmsp-large",
+        "label": "Earth's city lights",
+        "categories": ["creation"],
+        "credit": "Data: Marc Imhoff/NASA GSFC, Christopher Elvidge/NOAA NGDC; Image: Craig Mayhew ",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Earth%27s_City_Lights_by_DMSP,_1994-1995_(large).jpg"
+    },
+    {
+        "id": "photo-milky-way-ir-spitzer",
+        "label": "Milky Way IR Spitzer",
+        "categories": ["creation"],
+        "credit": "Credit: NASA/JPL-Caltech/S. Stolovy (Spitzer Science Center/Caltech)",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Milky_Way_IR_Spitzer.jpg"
+    },
+    {
+        "id": "photo-iss-20-thunderstorms-on-the-brazilian-ho",
+        "label": "Thunderstorms on the Brazilian Horizon",
+        "categories": ["creation"],
+        "credit": "NASA Expedition 20 crew",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-20_Thunderstorms_on_the_Brazilian_Horizon.jpg"
+    },
+    {
+        "id": "photo-heart-and-soul-nebulae",
+        "label": "Heart and Soul nebulae",
+        "categories": ["creation"],
+        "credit": "NASA/JPL-Caltech/UCLA",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Heart_and_Soul_nebulae.jpg"
+    },
+    {
+        "id": "photo-iss-43-northern-europe",
+        "label": "Northern Europe",
+        "categories": ["creation"],
+        "credit": "NASA/Scott Kelly",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS-43_Northern_Europe.jpg"
+    },
+    {
+        "id": "photo-iss046-e-3699",
+        "label": "Earth from orbit",
+        "categories": ["creation"],
+        "credit": "Image courtesy of the Earth Science and Remote Sensing Unit, NASA Johnson Space ",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:ISS046-E-3699.JPG"
+    },
+    {
+        "id": "photo-grand-canyon-south-rim-at-sunset",
+        "label": "Grand Canyon South Rim at Sunset",
+        "categories": ["nature"],
+        "credit": "Mgimelfarb",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg"
+    },
+    {
+        "id": "photo-utah-dunes-landscape-west-desert-distric",
+        "label": "Utah Dunes Landscape - West Desert District",
+        "categories": ["nature"],
+        "credit": "Bureau of Land Management - Utah/Bob Wick",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Utah_Dunes_Landscape_-_West_Desert_District.jpg"
+    },
+    {
+        "id": "photo-baum-in-k-rnten",
+        "label": "A tree in the mist",
+        "categories": ["nature"],
+        "credit": "zause01",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Baum_in_K%C3%A4rnten_037.jpg"
+    },
+    {
+        "id": "photo-aiguille-rousse-in-sea-of-clouds",
+        "label": "Aiguille Rousse in sea of clouds",
+        "categories": ["nature"],
+        "credit": "DimiTalen",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Aiguille_Rousse_in_sea_of_clouds,_2018.jpg"
+    },
+    {
+        "id": "photo-scuol-motta-naluns-15-09-actm-07",
+        "label": "Alpine meadow in cloud",
+        "categories": ["nature"],
+        "credit": "Agnes Monkelbaan",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Scuol-Motta_Naluns,_15-09-2023._(actm.)_07.jpg"
+    },
+    {
+        "id": "photo-altostratus-with-stratocumulus-under-2",
+        "label": "Altostratus with stratocumulus under 2",
+        "categories": ["nature"],
+        "credit": "W.carter",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Altostratus_with_stratocumulus_under_2.jpg"
+    },
+    {
+        "id": "photo-atardecer-en-selva-del-estado-anzoategui",
+        "label": "Evening over the forest",
+        "categories": ["nature"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Atardecer_en_Selva_del_Estado_Anzoategui_en_Chaguaramal.jpg"
+    },
+    {
+        "id": "photo-rainier20200906",
+        "label": "Mount Rainier at dawn",
+        "categories": ["nature"],
+        "credit": "Caleb Riston",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Rainier20200906.jpg"
+    },
+    {
+        "id": "photo-champ-sur-l-le-d-orl-ans",
+        "label": "Harvest field",
+        "categories": ["fall", "thanksgiving"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Champ_sur_l%27%C3%AEle_d%27Orl%C3%A9ans.jpg"
+    },
+    {
+        "id": "photo-trees-along-hald-s-denmark",
+        "label": "Trees along Hald Sø Denmark",
+        "categories": ["fall"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Trees_along_Hald_S%C3%B8_Denmark.jpg"
+    },
+    {
+        "id": "photo-trees-along-the-hald-s-viborg-commune-da",
+        "label": "Trees along the Hald Sø Viborg Commune Danemark",
+        "categories": ["fall"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Trees_along_the_Hald_S%C3%B8_Viborg_Commune_Danemark.jpg"
+    },
+    {
+        "id": "photo-forest-north-euboea-greece",
+        "label": "Forest north Euboea Greece",
+        "categories": ["nature", "spring"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Forest_north_Euboea_Greece.jpg"
+    },
+    {
+        "id": "photo-undergrowth-and-stream-drymona-euboea-gr",
+        "label": "Undergrowth and stream Drymona Euboea Greece",
+        "categories": ["nature", "spring"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Undergrowth_and_stream_Drymona_Euboea_Greece.jpg"
+    },
+    {
+        "id": "photo-shola-forest-silent-valley-np",
+        "label": "Shola Forest Silent valley NP",
+        "categories": ["nature", "spring"],
+        "credit": "Davidvraju",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Shola_Forest_Silent_valley_NP_(3).jpg"
+    },
+    {
+        "id": "photo-cha-ne-mont-ida-pha-stos",
+        "label": "Mount Ida",
+        "categories": ["nature"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Cha%C3%AEne_Mont_Ida_Pha%C3%AFstos.jpg"
+    },
+    {
+        "id": "photo-landscape-mountains-phaistos",
+        "label": "Mountains of Crete",
+        "categories": ["nature"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Landscape_mountains_Phaistos.jpg"
+    },
+    {
+        "id": "photo-main-range-track-kosciuszko-national-par",
+        "label": "Snow on the main range",
+        "categories": ["winter"],
+        "credit": "Dhx1",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Main_Range_Track,_Kosciuszko_National_Park_35.jpg"
+    },
+    {
+        "id": "photo-lac-du-lou-from-below-col-de-la-chambre-",
+        "label": "Lac du Lou from below Col de la Chambre, Les Menuires",
+        "categories": ["winter"],
+        "credit": "DimiTalen",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Lac_du_Lou_from_below_Col_de_la_Chambre,_Les_Menuires.jpg"
+    },
+    {
+        "id": "photo-mont-pourri-massif-from-la-plagne",
+        "label": "Mont Pourri massif from La Plagne",
+        "categories": ["winter"],
+        "credit": "DimiTalen",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Mont_Pourri_massif_from_La_Plagne,_2018.jpg"
+    },
+    {
+        "id": "photo-looking-down-the-ridge-towards-pic-de-l-",
+        "label": "Looking down the ridge towards Pic de l'Herpie from Pic Blanc, Oz",
+        "categories": ["winter"],
+        "credit": "DimiTalen",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Looking_down_the_ridge_towards_Pic_de_l%27Herpie_from_Pic_Blanc,_Oz,_2026.jpg"
+    },
+    {
+        "id": "photo-marianische-m-nnerkongregation-munich",
+        "label": "Baroque church, Munich",
+        "categories": ["churches"],
+        "credit": "Jebulon",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Marianische_M%C3%A4nnerkongregation_Munich.jpg"
+    },
+    {
+        "id": "photo-glise-saint-ignace-de-loyola",
+        "label": "Church interior, Quebec",
+        "categories": ["churches"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:%C3%89glise_Saint-Ignace-de-Loyola.jpg"
+    },
+    {
+        "id": "photo-glise-saint-charles-borrom-e-de-qu-bec",
+        "label": "Church nave, Quebec",
+        "categories": ["churches"],
+        "credit": "Wilfredor",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:%C3%89glise_Saint-Charles-Borrom%C3%A9e_de_Qu%C3%A9bec.jpg"
+    },
+    {
+        "id": "photo-lincoln-cathedral-chapter-house",
+        "label": "Lincoln Cathedral Chapter House",
+        "categories": ["churches"],
+        "credit": "Michael D Beckwith",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Lincoln_Cathedral_Chapter_House.jpg"
+    },
+    {
+        "id": "photo-st-marys-cathedral-nave-edinburgh",
+        "label": "St Marys Cathedral Nave Edinburgh",
+        "categories": ["churches"],
+        "credit": "Michael D Beckwith",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:St_Marys_Cathedral_Nave_Edinburgh.jpg"
+    },
+    {
+        "id": "photo-lancaster-priory-interior",
+        "label": "Lancaster Priory Interior",
+        "categories": ["churches"],
+        "credit": "Michael D Beckwith",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Lancaster_Priory_Interior.jpg"
+    }
+]

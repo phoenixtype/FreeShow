@@ -33,7 +33,7 @@
     import MediaGrid from "./MediaGrid.svelte"
     import { loadFromPixabay } from "./pixabay"
     import { loadFromUnsplash } from "./unsplash"
-    import { loadScripturalBackgrounds } from "./scripturalBackgrounds"
+    import { loadScripturalBackgrounds, loadScripturalCategories, type BackgroundCategory } from "./scripturalBackgrounds"
 
     export let active: string | null
     export let searchValue = ""
@@ -93,7 +93,7 @@
         } else if (onlineTab === "unsplash") {
             onlineFiles = await loadFromUnsplash(searchValue || "landscape")
         } else if (onlineTab === "scriptural") {
-            onlineFiles = await loadScripturalBackgrounds(searchValue || "")
+            onlineFiles = await loadScripturalBackgrounds(searchValue || "", scripturalCategory)
         }
 
         hightlightActive()
@@ -148,7 +148,12 @@
     let onlineTab = $drawerTabsData.media?.openedSubSubTab?.online || "scriptural"
     $: if (active === "online" && onlineTab === "pixabay" && (searchValue !== null || activeView)) loadFilesAsync()
     $: if (active === "online" && onlineTab === "unsplash" && (searchValue !== null || activeView)) loadFilesAsync()
-    $: if (active === "online" && onlineTab === "scriptural" && (searchValue !== null || activeView)) loadFilesAsync()
+    $: if (active === "online" && onlineTab === "scriptural" && (searchValue !== null || activeView || scripturalCategory !== null)) loadFilesAsync()
+
+    // Scriptural's library is sorted into categories (worship, the cross, seasons, LED wall...)
+    let scripturalCategory = ""
+    let scripturalCategories: BackgroundCategory[] = []
+    $: if (active === "online" && onlineTab === "scriptural" && !scripturalCategories.length) loadScripturalCategories().then((c) => (scripturalCategories = c))
 
     let prevActive: null | string = null
     let prevTab = ""
@@ -569,6 +574,18 @@
             <p>Canva</p>
         </MaterialButton>
     </div>
+    {#if onlineTab === "scriptural" && scripturalCategories.length}
+        <div class="categories">
+            <MaterialButton isActive={!scripturalCategory} on:click={() => (scripturalCategory = "")}>
+                <p>All</p>
+            </MaterialButton>
+            {#each scripturalCategories as category}
+                <MaterialButton isActive={scripturalCategory === category.id} on:click={() => (scripturalCategory = category.id)}>
+                    <p>{category.label}</p>
+                </MaterialButton>
+            {/each}
+        </div>
+    {/if}
 {/if}
 
 <!-- MAIN -->
@@ -762,6 +779,23 @@
     }
     .tabs :global(button.isActive) {
         border-bottom: 1px solid var(--secondary) !important;
+    }
+
+    .categories {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px;
+        background-color: var(--primary-darkest);
+        border-bottom: 1px solid var(--primary-lighter);
+    }
+    .categories :global(button) {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.85em;
+    }
+    .categories :global(button.isActive) {
+        background-color: var(--primary-lighter);
     }
 
     .grid {
