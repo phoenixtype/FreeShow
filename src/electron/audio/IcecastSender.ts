@@ -323,7 +323,7 @@ function parseArtistAndTitle(songTitle: string): { artist: string; title: string
 }
 
 function createOpusTagsPacket(artist: string, title: string): Buffer {
-    const vendor = Buffer.from("FreeShow")
+    const vendor = Buffer.from("Scriptural")
     const comments: Buffer[] = []
 
     if (title) comments.push(Buffer.from(`TITLE=${title}`))
