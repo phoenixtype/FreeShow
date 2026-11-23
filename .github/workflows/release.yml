@@ -135,9 +135,18 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLEID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
-          APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
-        run: npm run release
+          SECRET_CSC_LINK: ${{ secrets.CSC_LINK }}
+          SECRET_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          SECRET_APPLE_ID: ${{ secrets.APPLEID }}
+          SECRET_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
+          SECRET_APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
+        # electron-builder treats an empty CSC_LINK as a file path and aborts
+        # ("not a file"), so each signing variable is exported only when its
+        # secret exists. Unsigned builds still produce the dmg.
+        run: |
+          [ -n "$SECRET_CSC_LINK" ] && export CSC_LINK="$SECRET_CSC_LINK"
+          [ -n "$SECRET_CSC_KEY_PASSWORD" ] && export CSC_KEY_PASSWORD="$SECRET_CSC_KEY_PASSWORD"
+          [ -n "$SECRET_APPLE_ID" ] && export APPLE_ID="$SECRET_APPLE_ID"
+          [ -n "$SECRET_APPLE_APP_SPECIFIC_PASSWORD" ] && export APPLE_APP_SPECIFIC_PASSWORD="$SECRET_APPLE_APP_SPECIFIC_PASSWORD"
+          [ -n "$SECRET_APPLE_TEAM_ID" ] && export APPLE_TEAM_ID="$SECRET_APPLE_TEAM_ID"
+          npm run release
