@@ -65,7 +65,7 @@
             <Center size={1.2} faded><T id="empty.search" /></Center>
         {:else}
             <VirtualList items={searchedShows} let:item={show}>
-                <MaterialButton showOutline={active === show.id} style="font-weight: normal;justify-content: start;padding: 4px 12px;" on:click={() => selectShow(show)}>
+                <MaterialButton showOutline={active === show.id} style="width: 100%;font-weight: normal;justify-content: start;padding: 4px 12px;" on:click={() => selectShow(show)}>
                     {#if show.private}<Icon id="locked" right />{/if}
                     {show.name}
                 </MaterialButton>

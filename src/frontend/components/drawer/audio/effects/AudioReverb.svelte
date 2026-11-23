@@ -66,7 +66,7 @@
     $: wetPct = Math.round(config.wet * 100)
 </script>
 
-<div class="reverb-container" style="--accent: #9952ad;">
+<div class="reverb-container" style="--accent: #14b8a6;">
     <!-- Decay envelope visualisation -->
     <div class="viz-wrap">
         <div class="viz-svg-wrap" bind:clientWidth={canvasW}>

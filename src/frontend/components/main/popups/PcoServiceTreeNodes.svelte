@@ -35,7 +35,7 @@
         {/if}
     {:else if node.type === "plan"}
         <div class="row" style="margin-left: {depth * 16}px;padding: 2px;">
-            <MaterialButton style="justify-content: start;font-weight: normal;padding: 4px 8px;" on:click={() => dispatch("select", node)}>
+            <MaterialButton style="width: 100%;justify-content: start;font-weight: normal;padding: 4px 8px;" on:click={() => dispatch("select", node)}>
                 <Icon id="project" size={0.8} style="margin-right: 2px;" white />
                 <p>{node.name}</p>
             </MaterialButton>

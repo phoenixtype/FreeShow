@@ -351,7 +351,7 @@
         <div class="section" style={expanded ? "margin-bottom: 3px;" : ""}>
             {#if id !== "default"}
                 <div class="title">
-                    <MaterialButton style={hasChanged ? "padding: 4px 12px;" : "padding: 8px 12px;"} disabled={hasChanged || section.alwaysOpen} on:click={() => toggleSection(id)}>
+                    <MaterialButton style="width: 100%;{hasChanged ? 'padding: 4px 12px;' : 'padding: 8px 12px;'}" disabled={hasChanged || section.alwaysOpen} on:click={() => toggleSection(id)}>
                         <span style="display: flex;gap: 8px;align-items: center;">
                             {#if id === "CSS"}
                                 <Icon id="code" white />

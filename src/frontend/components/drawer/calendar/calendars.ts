@@ -50,8 +50,8 @@ export const CALENDAR_COLORS = [
     "#3B82F6", // Blue
     "#10B981", // Emerald
     "#F59E0B", // Amber
-    "#8B5CF6", // Purple
-    "#EC4899", // Pink
+    "#14B8A6", // Teal
+    "#F97316", // Orange
     "#06B6D4", // Cyan
     "#F43F5E", // Rose
     "#84CC16", // Lime

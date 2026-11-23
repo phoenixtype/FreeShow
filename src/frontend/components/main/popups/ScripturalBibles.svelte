@@ -62,7 +62,7 @@
     $: downloaded = Object.fromEntries(SCRIPTURAL_VERSIONS.map((v) => [v.code, !!Object.values($scriptures).find((s: any) => s?.scripturalVersion === v.code)]))
 </script>
 
-<p class="muted">Public-domain versions are free. Licensed versions such as the NIV and NKJV come with a Church plan: ask for one and it is added once approved.</p>
+<p class="muted">Download a version once and it works offline. Free versions download now; the NIV, NKJV and other licensed versions come with a Church plan, once approved.</p>
 
 <MaterialTextInput label="Search versions" value={search} on:input={(e) => (search = e.detail)} />
 
@@ -79,12 +79,10 @@
                 <span class="muted">{Math.round(progress[version.code] * 100)}%</span>
             {:else if !version.licensed || requests[version.code] === "granted"}
                 <MaterialButton variant="outlined" small on:click={() => download(version)}>{downloaded[version.code] ? "Update" : "Download"}</MaterialButton>
-            {:else if !signedIn}
-                <span class="muted">Church plan</span>
-            {:else if plan === "free"}
-                <span class="muted">Church plan</span>
+            {:else if !signedIn || plan === "free"}
+                <span class="muted">Needs a Church plan</span>
             {:else if requests[version.code] === "pending"}
-                <span class="muted">Requested</span>
+                <span class="muted">Asked, waiting for approval</span>
             {:else}
                 <MaterialButton variant="outlined" small on:click={() => ask(version)}>Ask for it</MaterialButton>
             {/if}

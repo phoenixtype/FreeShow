@@ -418,7 +418,7 @@
                 {#each customActionActivations as activation}
                     {#if activation.common || showCommonActivate}
                         <MaterialButton
-                            style="font-weight: normal;justify-content: start;padding: 5px 20px;gap: 12px;"
+                            style="width: 100%;font-weight: normal;justify-content: start;padding: 5px 20px;gap: 12px;"
                             showOutline={customActivation === activation.id}
                             isActive={customActivation === activation.id}
                             on:click={() => {

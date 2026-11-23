@@ -8,7 +8,6 @@
     import { requestMain } from "../../../IPC/main"
     import { ai } from "../../../stores"
     import { newToast } from "../../../utils/common"
-    import { translateText } from "../../../utils/language"
     import { llmSession } from "../../llm/llmSession"
     import LocalModels from "./LocalModels.svelte"
 
@@ -23,12 +22,12 @@
     }
 
     const providerOptions = [
-        { value: "none", label: translateText("main.none") },
-        { value: "scriptural", label: "Scriptural AI (with a church plan)" },
-        { value: "ollama", label: "Local - Ollama" },
-        { value: "anthropic", label: "Anthropic (Claude)" },
-        { value: "openai", label: "OpenAI (GPT)" },
-        { value: "google", label: "Google (Gemini)" }
+        { value: "none", label: "Off" },
+        { value: "scriptural", label: "Scriptural AI (Church plan)" },
+        { value: "anthropic", label: "Your Claude key" },
+        { value: "google", label: "Your Gemini key" },
+        { value: "openai", label: "Your OpenAI key" },
+        { value: "ollama", label: "Free, on this computer (Ollama)" }
     ]
 
     $: provider = (llmOptions.provider || "none") as AIProviderId | "none"
@@ -108,12 +107,12 @@
     }
 </script>
 
-<MaterialDropdown label="ai.provider" options={providerOptions} value={provider} on:change={(e) => setProvider(e.detail)} />
+<MaterialDropdown label="AI model" options={providerOptions} value={provider} on:change={(e) => setProvider(e.detail)} />
 
 {#if provider === "none"}
     <!-- explicitly no LLM - detection runs on speech-to-text alone -->
 {:else if provider === "scriptural"}
-    <p style="opacity: 0.8;margin: 10px 0;">Included with a Church or Multi-campus plan: no key needed. Sign in under Import &gt; Church library. Or choose Anthropic or Google to use your own key.</p>
+    <p style="opacity: 0.8;margin: 10px 0;">Included with a Church plan, no key needed. Sign in under Import, then Church library.</p>
 {:else if provider === "ollama"}
     <!-- no API key: everything runs on the local ollama server -->
     <LocalModels mode="main" on:changed={() => fetchModelsForProvider("ollama")} />
@@ -134,7 +133,7 @@
 {/if}
 
 {#if provider !== "none" && provider !== "ollama"}
-    <p class="backupTitle">Free backup on this computer</p>
+    <p class="backupTitle">If it can't be reached, use a free model on this computer</p>
     <LocalModels mode="fallback" />
 {/if}
 

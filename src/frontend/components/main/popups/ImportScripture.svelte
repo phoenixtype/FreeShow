@@ -3,7 +3,7 @@
     import { uid } from "uid"
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain, sendMain } from "../../../IPC/main"
-    import { scriptures } from "../../../stores"
+    import { scriptures, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { replace } from "../../../utils/languageData"
     import { customBibleData, getApiBiblesList } from "../../drawer/bible/scripture"
@@ -92,7 +92,8 @@
         searchedRecommendedBibles = clone(recommended).filter((a) => value.split(" ").find((value) => a.name.toLowerCase().includes(value)))
     }
 
-    let importType = ""
+    // the home checklist opens straight on Scriptural's versions
+    let importType = $popupData?.importType || ""
     const importTypes = [
         { id: "scriptural", name: "Scriptural", icon: "scripture" },
         { id: "api", name: "API", icon: "web" }, // translate | scripture_alt

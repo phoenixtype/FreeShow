@@ -216,7 +216,7 @@
         color: #888;
     }
     .regex-highlight :global(.rx-flag) {
-        color: #ce93d8;
+        color: #7dd3fc;
     }
     .regex-highlight :global(.rx-escape) {
         color: #4dd0e1;

@@ -24,7 +24,7 @@ export const EFFECTS_LIST: EffectMetaItem[] = [
     { id: "filter", label: "audio.filter", description: "Lowpass, Highpass & Notch filters", color: "#52ad7a" },
     { id: "noiseGate", label: "audio.gate", description: "Mute noise below threshold", color: "#ad9a52" },
     { id: "compressor", label: "audio.compressor", description: "Dynamic range compression", color: "#ad6852" },
-    { id: "reverb", label: "audio.reverb", description: "Room & hall reverberation", color: "#9152ad" },
+    { id: "reverb", label: "audio.reverb", description: "Room & hall reverberation", color: "#14b8a6" },
     { id: "delay", label: "audio.delay", description: "Echo & time delay", color: "#5273ad" },
     { id: "limiter", label: "audio.limiter", description: "Peak & clipping limiter", color: "#ad5252" },
     { id: "stereoShaper", label: "audio.stereo_shaper", description: "Stereo width & pan shaper", color: "#52adad" }

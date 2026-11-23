@@ -31,7 +31,7 @@
 
 <div class="section">
     <div class="title">
-        <MaterialButton style={hasChanged ? "padding: 4px 12px;" : "padding: 8px 12px;"} disabled={hasChanged} on:click={() => toggleSection()}>
+        <MaterialButton style="width: 100%;{hasChanged ? 'padding: 4px 12px;' : 'padding: 8px 12px;'}" disabled={hasChanged} on:click={() => toggleSection()}>
             <span style="display: flex;gap: 8px;align-items: center;">
                 <Icon id={icon} white />
                 <p>{translateText(label)}</p>

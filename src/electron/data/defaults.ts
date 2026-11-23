@@ -4,13 +4,13 @@ export const defaultConfig = { loaded: false, maximized: true, bounds: { width: 
 
 export const defaultGroups = {
     break: { name: "break", default: true, color: "#f5255e" },
-    bridge: { name: "bridge", default: true, color: "#f52598", shortcut: "B" },
-    chorus: { name: "chorus", default: true, color: "#f525d2", shortcut: "C" },
-    intro: { name: "intro", default: true, color: "#d525f5" },
-    outro: { name: "outro", default: true, color: "#a525f5" },
-    pre_chorus: { name: "pre_chorus", default: true, color: "#8825f5" },
-    tag: { name: "tag", default: true, color: "#7525f5" },
-    verse: { name: "verse", default: true, color: "#5825f5", shortcut: "V" }
+    bridge: { name: "bridge", default: true, color: "#f97316", shortcut: "B" },
+    chorus: { name: "chorus", default: true, color: "#14b8a6", shortcut: "C" },
+    intro: { name: "intro", default: true, color: "#64748b" },
+    outro: { name: "outro", default: true, color: "#94a3b8" },
+    pre_chorus: { name: "pre_chorus", default: true, color: "#0ea5e9" },
+    tag: { name: "tag", default: true, color: "#22c55e" },
+    verse: { name: "verse", default: true, color: "#3b82f6", shortcut: "V" }
 }
 
 export const defaultSettings: { [key in SaveListSettings]: any } = {

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte"
-    import { activePopup, activeProject, projects, projectView, quickSearchActive, showRecentlyUsedProjects, special, version } from "../../stores"
+    import { openLiveCopilot } from "../../ai/liveCopilot"
+    import { activePopup, activeProject, ai, popupData, projects, projectView, quickSearchActive, scriptures, shows, showRecentlyUsedProjects, special, version } from "../../stores"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
@@ -39,6 +40,30 @@
         return finalText.replaceAll("\n", "<br>").replace(/\s+/g, " ").trim()
     }
 
+    // GET READY: the four things a church does once, each ticked off from what
+    // the app already holds; the list steps aside when all are done or hidden
+    const HIDE_KEY = "home-get-ready-hidden"
+    let hidden = localStorage.getItem(HIDE_KEY) === "1"
+    $: steps = [
+        { label: "Add your songs", hint: "Import from EasyWorship, ProPresenter and others, or sync your church library", done: Object.keys($shows).length > 0, open: () => activePopup.set("import") },
+        {
+            label: "Download a Bible",
+            hint: "KJV, BSB and more, free and offline",
+            done: Object.keys($scriptures).length > 0,
+            open: () => {
+                popupData.set({ importType: "scriptural" })
+                activePopup.set("import_scripture")
+            }
+        },
+        { label: "Plan the service", hint: "A project holds the songs, scripture and media in order", done: Object.values($projects).some((p) => p?.shows?.length), open: createProject },
+        { label: "Turn on Live Copilot", hint: "It hears the scripture and songs and offers to put them up", done: !!($ai.enabled && $ai.stt?.micDeviceId), open: openLiveCopilot }
+    ]
+    $: showSteps = !hidden && steps.some((s) => !s.done)
+    function hideSteps() {
+        hidden = true
+        localStorage.setItem(HIDE_KEY, "1")
+    }
+
     let votd: string = ""
     onMount(async () => {
         if ($special.splashText) return
@@ -70,6 +95,24 @@
         </p>
     {/if}
 
+    {#if showSteps}
+        <div class="ready">
+            <h2>Get ready for Sunday</h2>
+            {#each steps as step, i}
+                <button class="step" class:done={step.done} on:click={step.open}>
+                    <span class="mark"
+                        >{#if step.done}<Icon id="check" white size={0.9} />{:else}{i + 1}{/if}</span
+                    >
+                    <span class="words">
+                        <span class="label">{step.label}</span>
+                        <span class="hint">{step.hint}</span>
+                    </span>
+                </button>
+            {/each}
+            <MaterialButton variant="text" small on:click={hideSteps}>Hide these steps</MaterialButton>
+        </div>
+    {/if}
+
     <span style="padding-top: 30px" class="buttons">
         <MaterialButton icon="search" title="main.quick_search" on:click={() => quickSearchActive.set(true)}>
             <T id="main.quick_search" />
@@ -99,6 +142,66 @@
 
     p {
         overflow: initial;
+    }
+
+    .ready {
+        margin-top: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        width: min(460px, 90%);
+        text-align: left;
+    }
+    .ready h2 {
+        font-size: 1.1em;
+        margin: 0 0 6px;
+    }
+    .ready :global(button:last-child) {
+        align-self: flex-end;
+    }
+    .step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--primary-lighter);
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+    .step:hover {
+        background: var(--hover);
+    }
+    .step.done {
+        opacity: 0.55;
+    }
+    .mark {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--primary-lighter);
+        border-radius: 50%;
+        font-size: 0.85em;
+    }
+    .words {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .label {
+        font-weight: 600;
+    }
+    .hint {
+        opacity: 0.7;
+        font-size: 0.9em;
+        white-space: normal;
     }
 
     .buttons {

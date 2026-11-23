@@ -517,7 +517,7 @@
                 {@const isVisible = profile[rootParentId] !== "none"}
 
                 {#if isVisible}
-                    <MaterialButton style="padding: 0.08rem 0.65rem;font-weight: normal;" title="actions.id_select_project: <b>{project.name}</b>" on:click={(e) => openRecentlyUsed(e, project.id)} isActive={$activeProject === project.id} tab>
+                    <MaterialButton style="width: 100%;padding: 0.08rem 0.65rem;font-weight: normal;" title="actions.id_select_project: <b>{project.name}</b>" on:click={(e) => openRecentlyUsed(e, project.id)} isActive={$activeProject === project.id} tab>
                         <Icon id={isProjectLinked($projects[project.id], project.id, $contentProviderData) ? "cloud" : "project"} white={$projects[project.id]?.archived} />
                         <HiddenInput value={project.name} id={"project_" + project.id} allowEdit={false} />
                     </MaterialButton>
@@ -592,7 +592,7 @@
                 <div class="title">{translateText("tabs.templates", $dictionary)}</div>
                 <div class="scroll">
                     {#each templates as project}
-                        <MaterialButton id={project.id} style="padding: 0.1rem 0.65rem;font-weight: normal;" on:click={(e) => createFromTemplate(e, project.id)} class="context #project_template{readOnly ? '_readonly' : ''}" isActive={$activeProject === project.id} tab>
+                        <MaterialButton id={project.id} style="width: 100%;padding: 0.1rem 0.65rem;font-weight: normal;" on:click={(e) => createFromTemplate(e, project.id)} class="context #project_template{readOnly ? '_readonly' : ''}" isActive={$activeProject === project.id} tab>
                             <Icon id="templates" white={$projects[project.id]?.archived} />
                             <HiddenInput value={project.name} id={"project_" + project.id} on:edit={(e) => rename(e.detail.value, project.id)} bind:edit={editActive} />
                         </MaterialButton>

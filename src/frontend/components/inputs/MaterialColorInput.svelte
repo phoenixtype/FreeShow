@@ -223,7 +223,7 @@
                     {/if}
 
                     <MaterialButton
-                        style="margin-top: 5px;background: {hexValue} !important;"
+                        style="width: 100%;margin-top: 5px;background: {hexValue} !important;"
                         on:click={() => {
                             popupData.set({
                                 value: hexValue,

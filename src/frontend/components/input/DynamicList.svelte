@@ -33,7 +33,7 @@
     {#each items as item}
         <InputRow>
             {#if allowOpen}
-                <MaterialButton style="font-weight: normal;" title={translateText("titlebar.edit")} on:click={() => openItem(item.id)}>
+                <MaterialButton style="width: 100%;font-weight: normal;" title={translateText("titlebar.edit")} on:click={() => openItem(item.id)}>
                     <slot {item} />
                 </MaterialButton>
             {:else}

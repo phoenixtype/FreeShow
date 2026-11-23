@@ -145,7 +145,7 @@
     {#if $editHistory.length}
         <div class="edited">
             {#each clonedHistory as edited}
-                <MaterialButton style="padding: 0.15rem 0.65rem;font-weight: normal;justify-content: left;" on:click={() => openRecent(edited)} isActive={$activeEdit.id ? $activeEdit.id === edited.id : currentShowId === edited.id} tab>
+                <MaterialButton style="width: 100%;padding: 0.15rem 0.65rem;font-weight: normal;justify-content: left;" on:click={() => openRecent(edited)} isActive={$activeEdit.id ? $activeEdit.id === edited.id : currentShowId === edited.id} tab>
                     <Icon id={edited.icon} />
                     <p style="margin: 3px 5px;">{edited.name || "—"}</p>
                 </MaterialButton>

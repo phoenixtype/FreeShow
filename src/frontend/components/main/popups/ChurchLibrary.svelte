@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
-    import { createChurch, joinChurch, myChurches, pushSongs, syncSongs, type Church } from "../../../scriptural/churchSync"
+    import { createChurch, createInvite, joinChurch, myChurches, pushSongs, syncSongs, type Church } from "../../../scriptural/churchSync"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import { Main } from "../../../../types/IPC/Main"
     import { sendMain } from "../../../IPC/main"
@@ -113,6 +113,27 @@
     }
 
     $: if (activeId) localStorage.setItem(ACTIVE_KEY, activeId)
+    $: active = churches.find((c) => c.id === activeId)
+    $: canInvite = active?.role === "owner" || active?.role === "admin"
+
+    // INVITE //
+    let invite: { code: string; expiresAt: string } | null = null
+    $: if (activeId) invite = null
+    async function makeInvite() {
+        message = ""
+        try {
+            invite = await createInvite(activeId)
+        } catch (err) {
+            message = errorText(err, "The invite could not be made. Try again.")
+        }
+    }
+    function copyInvite() {
+        if (invite) navigator.clipboard.writeText(invite.code)
+        message = "Copied."
+    }
+
+    // starting or joining another church is tucked away once you are in one
+    let showOther = false
 
     // PLAN //
     const PLAN_NAMES = { free: "Free", church: "Church", multi_campus: "Multi-campus" }
@@ -136,64 +157,88 @@
 </script>
 
 {#if !session}
-    <p class="muted">Sign in to keep your church's songs on this computer and in step with everyone else's.</p>
+    <p class="muted">Keep your church's songs in one place, on every computer. Sign in with your email; we send a code, no password.</p>
     <div class="row">
         <MaterialTextInput label="Email" type="email" value={email} on:input={(e) => (email = e.detail)} />
         {#if codeSent}
-            <MaterialTextInput label="Code" value={code} on:input={(e) => (code = e.detail)} autofocus />
+            <MaterialTextInput label="Code from the email" value={code} on:input={(e) => (code = e.detail)} autofocus />
             <MaterialButton variant="contained" disabled={busy || code.trim().length < 6} on:click={signIn}>Sign in</MaterialButton>
         {:else}
-            <MaterialButton variant="outlined" disabled={busy} on:click={sendCode}>Send code</MaterialButton>
+            <MaterialButton variant="contained" disabled={busy} on:click={sendCode}>Send code</MaterialButton>
         {/if}
     </div>
 {:else}
-    <div class="row spaced">
-        <p>Signed in as {session.email}</p>
-        <MaterialButton variant="text" small on:click={leave}>Sign out</MaterialButton>
-    </div>
-
     {#if churches.length}
-        <ul>
-            {#each churches as church (church.id)}
-                <li>
-                    <label>
-                        <input type="radio" bind:group={activeId} value={church.id} />
-                        {church.name}
-                    </label>
-                </li>
-            {/each}
-        </ul>
+        {#if churches.length > 1}
+            <ul>
+                {#each churches as church (church.id)}
+                    <li>
+                        <label>
+                            <input type="radio" bind:group={activeId} value={church.id} />
+                            {church.name}
+                        </label>
+                    </li>
+                {/each}
+            </ul>
+        {:else}
+            <h3>{active?.name}</h3>
+        {/if}
 
-        <div class="row end">
-            {#if syncing}<span class="muted">{received} songs received</span>{/if}
-            <MaterialButton variant="contained" disabled={syncing || !activeId} on:click={sync}>Sync songs</MaterialButton>
+        <div class="row spaced">
+            <p class="muted">{syncing ? `${received} songs received` : "Sends your changes and brings in everyone else's."}</p>
+            <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync songs</MaterialButton>
         </div>
+
+        {#if canInvite}
+            <div class="row spaced">
+                {#if invite}
+                    <p>Invite code <b class="code">{invite.code}</b>. They enter it under Join. It works for 14 days.</p>
+                    <MaterialButton variant="outlined" small icon="copy" on:click={copyInvite}>Copy</MaterialButton>
+                {:else}
+                    <p class="muted">Bring in your worship team and media volunteers.</p>
+                    <MaterialButton variant="outlined" small icon="add" on:click={makeInvite}>Invite someone</MaterialButton>
+                {/if}
+            </div>
+        {/if}
 
         {#if plan}
             <div class="row spaced">
-                <p>{PLAN_NAMES[plan] || plan} plan</p>
+                <p class="muted">{PLAN_NAMES[plan] || plan} plan</p>
                 <div class="row">
-                    {#if plan === "free"}
+                    <!-- only owners and admins can pay; billing-checkout refuses anyone else -->
+                    {#if plan === "free" && canInvite}
                         <MaterialButton variant="outlined" small on:click={() => openBilling("billing-checkout", "church_monthly")}>Church, $19 a month</MaterialButton>
                         <MaterialButton variant="outlined" small on:click={() => openBilling("billing-checkout", "church_yearly")}>$190 a year</MaterialButton>
-                    {:else}
+                    {:else if canInvite}
                         <MaterialButton variant="text" small on:click={() => openBilling("billing-portal")}>Manage billing</MaterialButton>
                     {/if}
                 </div>
             </div>
         {/if}
     {:else}
-        <p class="muted">You are not in a church library yet. Start one, or join with a code someone in your church shared.</p>
+        <p class="muted">Start your church's library, or join one with the invite code someone sent you.</p>
     {/if}
 
-    <hr />
-    <div class="row">
-        <MaterialTextInput label="New church name" value={newChurchName} on:input={(e) => (newChurchName = e.detail)} />
-        <MaterialButton variant="outlined" disabled={busy || newChurchName.trim().length < 2} on:click={startChurch}>Start</MaterialButton>
-    </div>
-    <div class="row">
-        <MaterialTextInput label="Invite code" value={inviteCode} on:input={(e) => (inviteCode = e.detail)} />
-        <MaterialButton variant="outlined" disabled={busy || inviteCode.trim().length < 6} on:click={join}>Join</MaterialButton>
+    {#if !churches.length || showOther}
+        <hr />
+        <div class="row">
+            <MaterialTextInput label="Church name" value={newChurchName} on:input={(e) => (newChurchName = e.detail)} />
+            <MaterialButton variant="outlined" disabled={busy || newChurchName.trim().length < 2} on:click={startChurch}>Start</MaterialButton>
+        </div>
+        <div class="row">
+            <MaterialTextInput label="Invite code" value={inviteCode} on:input={(e) => (inviteCode = e.detail)} />
+            <MaterialButton variant="outlined" disabled={busy || inviteCode.trim().length < 6} on:click={join}>Join</MaterialButton>
+        </div>
+    {/if}
+
+    <div class="row spaced footer">
+        <p class="muted">Signed in as {session.email}</p>
+        <div class="row">
+            {#if churches.length && !showOther}
+                <MaterialButton variant="text" small on:click={() => (showOther = true)}>Start or join another</MaterialButton>
+            {/if}
+            <MaterialButton variant="text" small on:click={leave}>Sign out</MaterialButton>
+        </div>
     </div>
 {/if}
 
@@ -232,6 +277,16 @@
         gap: 10px;
         align-items: center;
         cursor: pointer;
+    }
+    h3 {
+        margin: 0 0 12px;
+    }
+    .code {
+        font-family: monospace;
+        letter-spacing: 0.05em;
+    }
+    .footer {
+        margin-top: 12px;
     }
     hr {
         border: none;

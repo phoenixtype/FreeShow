@@ -79,7 +79,7 @@
 <svelte:window on:mousedown={mousedown} on:wheel={wheel} />
 
 <div id={currentId} class="zoom_container" class:hidden>
-    <MaterialButton style="height: 100%;" on:click={() => (zoomOpened = !zoomOpened)} title="actions.zoom">
+    <MaterialButton style="width: 100%;height: 100%;" on:click={() => (zoomOpened = !zoomOpened)} title="actions.zoom">
         <Icon size={1.3} id="zoomIn" white={!zoomOpened} />
     </MaterialButton>
 

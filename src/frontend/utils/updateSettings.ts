@@ -1,4 +1,5 @@
 import { get } from "svelte/store"
+import { recolorDefaultGroups } from "./groupColors"
 import { uid } from "uid"
 import { OUTPUT } from "../../types/Channels"
 import { Main } from "../../types/IPC/Main"
@@ -379,7 +380,7 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     groupNumbers: (v: any) => groupNumbers.set(v),
     fullColors: (v: any) => fullColors.set(v),
     formatNewShow: (v: any) => formatNewShow.set(v),
-    groups: (v: any) => groups.set(v),
+    groups: (v: any) => groups.set(recolorDefaultGroups(v)),
     labelsDisabled: (v: any) => labelsDisabled.set(v),
     mediaFolders: (v: any) => mediaFolders.set(v),
     mediaOptions: (v: any) => mediaOptions.set(v),

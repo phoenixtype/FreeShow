@@ -16,6 +16,17 @@ import { showToSong, type SongSection } from "./songFormat"
 export interface Church {
     id: string
     name: string
+    role: "owner" | "admin" | "editor" | "viewer"
+}
+
+// the signed-in account's id, read from its token
+function myUserId(): string {
+    const token = churchLibrary.getSession()?.access_token || ""
+    try {
+        return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub || ""
+    } catch {
+        return ""
+    }
 }
 
 interface LibrarySong {
@@ -36,8 +47,23 @@ const PAGE_SIZE = 1000
 const cursorKey = (churchId: string) => `church-library-synced:${churchId}`
 
 export async function myChurches(): Promise<Church[]> {
-    const { data } = await churchLibrary.rest<Church[]>("churches?select=id,name&order=name", { signedIn: true })
-    return data || []
+    const { data } = await churchLibrary.rest<{ role: Church["role"]; church: { id: string; name: string } }[]>(`church_members?select=role,church:churches(id,name)&user_id=eq.${myUserId()}`, { signedIn: true })
+    return (data || [])
+        .filter((row) => row.church)
+        .map((row) => ({ id: row.church.id, name: row.church.name, role: row.role }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** A code someone types under Join to become an editor of this church. Owners and admins only. */
+export async function createInvite(churchId: string): Promise<{ code: string; expiresAt: string }> {
+    const { data } = await churchLibrary.rest<{ code: string; expires_at: string }[]>("church_invites?select=code,expires_at", {
+        method: "POST",
+        body: { church_id: churchId, created_by: myUserId(), role: "editor" },
+        headers: { Prefer: "return=representation" },
+        signedIn: true
+    })
+    if (!data?.[0]) throw new ScripturalError("The invite could not be made. Try again.")
+    return { code: data[0].code, expiresAt: data[0].expires_at }
 }
 
 export async function createChurch(name: string): Promise<string> {

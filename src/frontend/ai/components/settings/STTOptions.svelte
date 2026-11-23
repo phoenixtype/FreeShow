@@ -5,8 +5,8 @@
     import { AudioMicrophone } from "../../../audio/audioMicrophone"
     import Title from "../../../components/input/Title.svelte"
     import MaterialDropdown from "../../../components/inputs/MaterialDropdown.svelte"
-    import Tip from "../../../components/main/Tip.svelte"
-    import { ai, mediaDownloads } from "../../../stores"
+    import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
+    import { activePopup, ai, mediaDownloads, popupData } from "../../../stores"
     import { resolveSttEngine, SpeechToText } from "../../stt/stt"
 
     $: options = $ai.stt || {}
@@ -18,6 +18,11 @@
 
             return a
         })
+    }
+
+    function getSpeechModel() {
+        popupData.set({ mode: "setup" })
+        activePopup.set("ai_model_manager")
     }
 
     // STATUS
@@ -60,7 +65,7 @@
     $: selectedEngine = $ai.stt?.engine || resolveSttEngine()
 </script>
 
-<Title label="ai.transcription" icon="microphone" />
+<Title label="Listening" icon="microphone" />
 
 <!-- Currently not needed as there's just one engine -->
 <!-- <InputRow>
@@ -78,7 +83,27 @@
 </InputRow> -->
 
 {#if status?.ready}
-    <MaterialDropdown label="midi.input" options={microphones} value={options.micDeviceId || ""} on:change={(e) => updateValue("micDeviceId", e.detail)} />
+    <MaterialDropdown label="Microphone" options={microphones} value={options.micDeviceId || ""} on:change={(e) => updateValue("micDeviceId", e.detail)} />
+{:else if currentlyDownloading?.size}
+    <p class="note">Getting the speech model ready. This happens once.</p>
 {:else}
-    <Tip type="warning" value={status?.error || "No model available."} />
+    <!-- the speech model runs on this computer; it has to be downloaded once before listening -->
+    <div class="setup">
+        <p class="note">{status?.error || "Listening needs the speech model on this computer first."}</p>
+        <MaterialButton variant="contained" icon="download" on:click={getSpeechModel}>Get the speech model</MaterialButton>
+    </div>
 {/if}
+
+<style>
+    .note {
+        opacity: 0.8;
+        margin: 6px 0;
+    }
+    .setup {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+</style>

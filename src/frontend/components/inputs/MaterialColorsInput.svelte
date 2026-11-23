@@ -100,7 +100,7 @@
             {/each}
 
             {#if colors.length < maxColors}
-                <MaterialButton variant="outlined" icon="add" style="border-radius: 0; padding: 8px; justify-content: center; background-color: var(--primary-darkest);" title="actions.add" on:click={addColor}>
+                <MaterialButton variant="outlined" icon="add" style="width: 100%; border-radius: 0; padding: 8px; justify-content: center; background-color: var(--primary-darkest);" title="actions.add" on:click={addColor}>
                     <span style="font-size: 0.8rem;">{translateText("actions.add_color")}</span>
                 </MaterialButton>
             {/if}
