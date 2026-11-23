@@ -3,6 +3,8 @@
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
     import { createChurch, joinChurch, myChurches, syncSongs, type Church } from "../../../scriptural/churchSync"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
+    import { Main } from "../../../../types/IPC/Main"
+    import { sendMain } from "../../../IPC/main"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
 
@@ -110,6 +112,26 @@
     }
 
     $: if (activeId) localStorage.setItem(ACTIVE_KEY, activeId)
+
+    // PLAN //
+    const PLAN_NAMES = { free: "Free", church: "Church", multi_campus: "Multi-campus" }
+    let plan = ""
+    $: if (activeId && session) loadPlan(activeId)
+    async function loadPlan(id: string) {
+        try {
+            const { data } = await churchLibrary.rest<{ plan: string }[]>("rpc/church_limits", { method: "POST", body: { target: id } })
+            plan = data?.[0]?.plan || "free"
+        } catch {
+            plan = ""
+        }
+    }
+
+    async function openBilling(fn: "billing-checkout" | "billing-portal", price?: string) {
+        message = ""
+        const { ok, data } = await churchLibrary.invoke<{ url?: string; message?: string }>(fn, { churchId: activeId, price })
+        if (ok && data.url) sendMain(Main.URL, data.url)
+        else message = data.message || "Billing is not available right now."
+    }
 </script>
 
 {#if !session}
@@ -145,6 +167,20 @@
             {#if syncing}<span class="muted">{received} songs received</span>{/if}
             <MaterialButton variant="contained" disabled={syncing || !activeId} on:click={sync}>Sync songs</MaterialButton>
         </div>
+
+        {#if plan}
+            <div class="row spaced">
+                <p>{PLAN_NAMES[plan] || plan} plan</p>
+                <div class="row">
+                    {#if plan === "free"}
+                        <MaterialButton variant="outlined" small on:click={() => openBilling("billing-checkout", "church_monthly")}>Church, $19 a month</MaterialButton>
+                        <MaterialButton variant="outlined" small on:click={() => openBilling("billing-checkout", "church_yearly")}>$190 a year</MaterialButton>
+                    {:else}
+                        <MaterialButton variant="text" small on:click={() => openBilling("billing-portal")}>Manage billing</MaterialButton>
+                    {/if}
+                </div>
+            </div>
+        {/if}
     {:else}
         <p class="muted">You are not in a church library yet. Start one, or join with a code someone in your church shared.</p>
     {/if}
