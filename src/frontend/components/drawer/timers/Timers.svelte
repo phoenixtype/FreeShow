@@ -15,6 +15,7 @@
     import Center from "../../system/Center.svelte"
     import SelectElem from "../../system/SelectElem.svelte"
     import { getCurrentTimerValue, getTimerDynamicValue, playPauseGlobal, resetTimer } from "./timers"
+    import SpeakerTimer from "./SpeakerTimer.svelte"
     import { openDrawer } from "../../edit/scripts/edit"
 
     export let searchValue
@@ -103,6 +104,10 @@
 </script>
 
 <svelte:window on:keydown={keydown} on:mouseup={() => disableDragging.set(false)} />
+
+{#if !onlyPlaying && !searchValue}
+    <SpeakerTimer {readOnly} />
+{/if}
 
 {#if filteredTimers.length}
     <div class="timers context #timers{readOnly ? '_readonly' : ''}" style={onlyPlaying ? "" : "padding-bottom: 60px;"}>

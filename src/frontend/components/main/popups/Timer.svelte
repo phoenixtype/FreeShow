@@ -179,7 +179,7 @@
         if (timer.overflow) {
             newTimer.overflow = true
             newTimer.overflowColor = timer.overflowColor || "#FF4136"
-            // newTimer.overflowFlash = timer.overflowFlash
+            newTimer.overflowFlash = !!timer.overflowFlash
         }
 
         return newTimer
@@ -369,7 +369,7 @@
 
         <div slot="menu">
             <MaterialColorInput label="edit.color" value={timer.overflowColor || "#FF4136"} defaultValue="#FF4136" on:input={(e) => updateTimerValue("overflowColor", e.detail)} />
-            <!-- <MaterialToggleSwitch label="timer.flash" checked={timer.overflowFlash} defaultValue={false} on:change={(e) => updateTimerValue("overflowFlash", e.detail)} /> -->
+            <MaterialToggleSwitch label="timer.flash" checked={timer.overflowFlash} defaultValue={false} on:change={(e) => updateTimerValue("overflowFlash", e.detail)} />
         </div>
     </InputRow>
 {/if}

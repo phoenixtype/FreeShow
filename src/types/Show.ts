@@ -205,6 +205,18 @@ export interface ShowGroup {
     shortcut?: string
 }
 
+export interface SpeakerSegment {
+    id: string
+    name: string
+    seconds: number
+}
+export interface SpeakerProgram {
+    segments: SpeakerSegment[]
+    index: number // segment playing, -1 when the program is not running
+    auto: boolean // start the next segment by itself when one reaches zero
+    startsAt?: string // "HH:MM", the next time the program starts by itself
+}
+
 export interface Timer {
     id?: string
     name: string
@@ -234,6 +246,9 @@ export interface Timer {
     overflow?: boolean
     overflowColor?: string
     overflowFlash?: boolean
+
+    // speaker timer run sheet
+    program?: SpeakerProgram
 
     tags?: string[]
 

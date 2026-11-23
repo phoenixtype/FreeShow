@@ -18,6 +18,7 @@ import { updateTransition } from "../../utils/transitions"
 import { startMetronome } from "../drawer/audio/metronome"
 import { getInteraction, startInteraction, stopInteraction } from "../drawer/pages/interactions"
 import { pauseAllTimers } from "../drawer/timers/timers"
+import { nextProgramSegment, playPauseSpeaker, startProgram } from "../drawer/timers/speakerTimerActions"
 import { getSlideThumbnail, getThumbnail } from "../helpers/media"
 import { changeStageOutputLayout, setOutput, startCamera, startRtmpStreaming, startScene, startScreen, startStreaming, stopRtmpStreaming, stopStreaming, toggleOutputs } from "../helpers/output"
 import { OutputHelper } from "../helpers/OutputHelper"
@@ -327,6 +328,9 @@ export const API_ACTIONS = {
     start_slide_timers: (data: API_slide) => playSlideTimers(data),
     pause_timers: () => pauseAllTimers(), // BC
     stop_timers: () => stopTimers(), // BC
+    speaker_program_start: () => startProgram(),
+    speaker_next_segment: () => nextProgramSegment(),
+    speaker_play_pause: () => playPauseSpeaker(),
     timer_seekto: (data: API_seek) => timerSeekTo(data), // BC
     timer_seek_add: (data: API_seek) => timerSeekAdd(data),
     edit_timer: (data: API_edit_timer) => editTimer(data),

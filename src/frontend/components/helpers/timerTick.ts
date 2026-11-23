@@ -9,6 +9,8 @@ import { actionData } from "../actions/actionData"
 import { customActionActivation, runAction } from "../actions/actions"
 import { sortByClosestMatch } from "../actions/apiHelper"
 import { getCurrentTimerValue, getTimerDynamicValue, playPauseGlobal } from "../drawer/timers/timers"
+import { SPEAKER_TIMER_ID } from "../drawer/timers/speakerTimer"
+import { onSpeakerTimerEnd } from "../drawer/timers/speakerTimerActions"
 import { getDynamicValue } from "../edit/scripts/itemHelpers"
 import { initPcoLiveSync } from "../../utils/pcoLiveSync"
 import { clone, keysToID, sortByTime } from "./array"
@@ -86,6 +88,8 @@ function increment(timer: { id: string; start: number; end: number; [key: string
         // ended
         checkNextAfterMedia(timer.id, "timer")
         customActionActivation("timer_end", timer.id)
+        // speaker program: move on to the next segment (after this tick has been stored)
+        if (timer.id === SPEAKER_TIMER_ID) setTimeout(onSpeakerTimerEnd)
     }
 
     if (timer.currentTime === endTime && !timer.overflow) return timer

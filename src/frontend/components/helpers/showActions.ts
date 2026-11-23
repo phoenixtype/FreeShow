@@ -19,6 +19,8 @@ import { runAction, slideHasAction } from "../actions/actions"
 import type { API_output_style } from "../actions/api"
 import { getInteraction } from "../drawer/pages/interactions"
 import { getCurrentTimerValue, getTimeUntilClock, playPauseGlobal } from "../drawer/timers/timers"
+import { translateText } from "../../utils/language"
+import { currentSegment, nextSegment, SPEAKER_TIMER_ID } from "../drawer/timers/speakerTimer"
 import { getDynamicValue } from "../edit/scripts/itemHelpers"
 import { getTextLines } from "../edit/scripts/textStyle"
 import { clearBackground, clearOverlays, clearTimers } from "../output/clear"
@@ -1185,6 +1187,13 @@ const dynamicValues = {
 
     time_str_day: ({ offset }) => getWeekday(getOffsetDate(offset, "date").getDay(), get(dictionary), true),
     time_str_month: ({ offset }) => getMonthName(getOffsetDate(offset, "month").getMonth(), get(dictionary), true),
+
+    // speaker timer program
+    speaker_segment: () => currentSegment(get(timers)[SPEAKER_TIMER_ID]?.program)?.name || "",
+    speaker_next: () => {
+        const next = nextSegment(get(timers)[SPEAKER_TIMER_ID]?.program)
+        return next ? translateText("timer.next", get(dictionary), [next.name]) : ""
+    },
 
     // project
     project_section: ({ outSlide, offset }) => {

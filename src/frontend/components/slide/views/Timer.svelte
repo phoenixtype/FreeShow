@@ -98,7 +98,7 @@
 
     // don't blink if paused?
     let blinkingInterval: NodeJS.Timeout | null = null
-    $: if (shouldWarn && !overflow && timer.warnFlash) startBlinking()
+    $: if ((shouldWarn && !overflow && timer.warnFlash) || (overflow && timer.overflowFlash)) startBlinking()
     else stopBlinking()
     onDestroy(stopBlinking)
 
@@ -154,7 +154,7 @@
 {:else}
     <div class="align autoFontSize" style="{style}{item?.alignX ? '' : (item?.align || 'justify-content: center;').replaceAll('text-align', 'justify-content')}" on:dblclick={openInDrawer}>
         <div style="display: flex;white-space: nowrap;{overflow ? 'color: ' + (timer.overflowColor || '#FF4136') + ';' : shouldWarn ? 'color: ' + (timer.warnColor || '#FF8000') + ';' : ''}">
-            {#if !shouldWarn || isPaused || !blinkingOff}
+            {#if !(shouldWarn || overflow) || isPaused || !blinkingOff}
                 {#if overflow && negative}
                     <span>-</span>
                 {/if}

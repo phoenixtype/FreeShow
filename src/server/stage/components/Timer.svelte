@@ -48,7 +48,7 @@
 
     // don't blink if paused?
     let blinkingInterval: NodeJS.Timeout | null = null
-    $: if (shouldWarn && !overflow && timer.warnFlash) startBlinking()
+    $: if ((shouldWarn && !overflow && timer.warnFlash) || (overflow && timer.overflowFlash)) startBlinking()
     else stopBlinking()
     onDestroy(stopBlinking)
 

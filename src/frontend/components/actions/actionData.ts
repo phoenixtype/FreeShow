@@ -93,6 +93,9 @@ export const actionData = {
     start_slide_timers: { slideId: "startTimer", common: true, name: "actions.start_slide_timers", icon: "timer", incompatible: ["pause_timers", "stop_timers"] },
     pause_timers: { common: true, name: "actions.pause_timers", icon: "pause", incompatible: ["id_start_timer", "start_slide_timers", "stop_timers"] },
     stop_timers: { slideId: "stopTimers", common: true, name: "actions.stop_timers", icon: "stop", red: true, incompatible: ["id_start_timer", "start_slide_timers", "pause_timers"] },
+    speaker_program_start: { name: "actions.speaker_program_start", icon: "timer" },
+    speaker_next_segment: { name: "actions.speaker_next_segment", icon: "next" },
+    speaker_play_pause: { name: "actions.speaker_play_pause", icon: "play" },
     // only API action:
     // id_pause_timer: { canAddMultiple: true, name: "actions.id_pause_timer", icon: "pause", input: "id", incompatible: ["id_start_timer", "start_slide_timers", "stop_timers"] },
     // id_stop_timer: { canAddMultiple: true, name: "actions.id_stop_timer", icon: "stop", input: "id", red: true, incompatible: ["id_start_timer", "start_slide_timers", "pause_timers"] },
