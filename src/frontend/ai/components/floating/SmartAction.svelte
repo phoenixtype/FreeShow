@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { bubbleBottom } from "./bubblePosition"
     import { fly } from "svelte/transition"
     import { getShortBibleName } from "../../../components/drawer/bible/scripture"
     import Icon from "../../../components/helpers/Icon.svelte"
@@ -23,7 +24,7 @@
 {/if} -->
 
 {#if smartAction}
-    <div class="ticker-wrap" transition:fly={{ x: 45 + 62 / 2, duration: 200 }}>
+    <div class="ticker-wrap" style="bottom: calc({$bubbleBottom}px + (62px / 2));" transition:fly={{ x: 45 + 62 / 2, duration: 200 }}>
         <!-- border-radius: 50px 10px 10px 50px; -->
         <MaterialButton
             style="padding: 0;border-radius: 50px;"

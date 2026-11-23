@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { bubbleBottom } from "./bubblePosition"
     import { onDestroy } from "svelte"
     import { fade } from "svelte/transition"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
@@ -209,7 +210,7 @@
     <SmartAction />
 {/if}
 
-<div class="speech-widget {isOpen ? 'is-open' : 'is-closed'}">
+<div class="speech-widget {isOpen ? 'is-open' : 'is-closed'}" style={isOpen ? "" : `bottom: ${$bubbleBottom}px;`}>
     <AiRing {state} {audioLevel} borderRadius={isOpen ? "20px" : "50%"} opacity={state === "inactive" || isOpen ? 0.8 : 0.4} fill {wordConfirmTick} {wordConfirmDurationMs}>
         {#if !isOpen}
             <AiVisual {state} on:click={toggleExpand} />
