@@ -5,13 +5,18 @@ import type { ConfidenceLevels } from "../../../types/ai/AiSettings"
 import { startScripture } from "../../components/actions/apiHelper"
 import { keysToID } from "../../components/helpers/array"
 import { getFirstActiveOutput } from "../../components/helpers/output"
+import { loadJsonBible } from "../../components/drawer/bible/scripture"
 import { setActiveScripture } from "../../converters/bible"
-import { ai, aiSmartAction, aiSuggestions, drawerTabsData, outputs, scriptures } from "../../stores"
+import { activeScripture, ai, aiSmartAction, aiSuggestions, drawerTabsData, outputs, scriptures } from "../../stores"
 import { newToast } from "../../utils/common"
 import { getLLMManager } from "../llm/llmManager"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleVersion } from "../scripture/BibleVersionDetector"
+import { detectBibleEvents } from "../scripture/bibleEvents"
+import { searchByMeaning } from "../scripture/meaningSearch"
 import { isReferenceWithin } from "../scripture/references"
+import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
+import { resolveNavigation } from "../scripture/voiceNavigation"
 
 export class AiManager {
     private static lastMatch: number = 0
@@ -24,7 +29,15 @@ export class AiManager {
         const searchId = ++this.latestSearchId
         const isCancelled = () => searchId !== this.latestSearchId
 
-        const stringMatch = await this.stringDetection(chunk.chunkWithOverlap, isCancelled)
+        // a spoken command ("next verse") moves the screen and is not searched for
+        const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
+        const command = parseCopilotCommand(newWords)
+        if (command) {
+            await this.navigate(command)
+            return
+        }
+
+        const stringMatch = (await this.stringDetection(chunk.chunkWithOverlap, isCancelled)) || this.eventDetection(chunk.chunkWithOverlap)
         if (isCancelled()) return
 
         if (stringMatch) {
@@ -34,6 +47,14 @@ export class AiManager {
         }
 
         if (this.lastMatch && Date.now() - this.lastMatch < this.MAX_LLM_REQUEST_AFTER_MATCH) return
+
+        const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, isCancelled)
+        if (isCancelled()) return
+        if (meaningMatch) {
+            this.newMatch(meaningMatch)
+            this.lastMatch = Date.now()
+            return
+        }
 
         const llmManager = getLLMManager()
         if (!llmManager) return
@@ -54,6 +75,52 @@ export class AiManager {
         if (scriptureVersionMatch) return scriptureVersionMatch
 
         return null
+    }
+
+    // famous events and parables said in passing: "when Jesus walked on water"
+    // (capped below "high" so they are offered, not presented, by default)
+    private static eventDetection(textChunk: string): MatchResult | null {
+        const event = detectBibleEvents(textChunk)[0]
+        if (!event) return null
+        return { type: "scripture", content: event.reference, confidence: event.confidence >= 0.88 ? 74 : 65 }
+    }
+
+    private static lastCommand = 0
+    private static COMMAND_COOLDOWN = 1500
+    private static async navigate(command: CopilotCommand) {
+        if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return
+
+        const { id, reference } = get(activeScripture)
+        if (!id || !reference?.book || !reference.chapters?.length) return
+
+        const chapter = Number(reference.chapters[reference.chapters.length - 1])
+        const verses = (reference.verses?.[reference.verses.length - 1] || []).map((v) => parseInt(String(v), 10)).filter((v) => !isNaN(v))
+        const verse = verses.length ? Math.max(...verses) : 1
+
+        const bible = (await loadJsonBible(id))?.data
+        const book = bible?.books?.find((b) => Number(b.number) === Number(reference.book))
+        if (!book) return
+
+        const chapterOf = (n: number) => book.chapters.find((c) => Number(c.number) === n)
+        const target = resolveNavigation(command, { chapter, verse }, { chapterCount: book.chapters.length, verseCount: (n) => chapterOf(n)?.verses.length || 0 })
+        if (!target) return
+
+        this.lastCommand = Date.now()
+        const content = `${book.name} ${target.chapter}:${target.verse}`
+        const trigger = () => {
+            startScripture({ id, reference: `${reference.book}.${target.chapter}.${target.verse}` })
+            this.outputUpdate(content)
+        }
+
+        // commands follow the scripture setting: presented directly, or offered when set to "ask"
+        const draft = { id: uid(5), timestamp: Date.now(), content, confidence: 100 }
+        if ((get(ai).scripture?.confidence || "ask") === "ask") {
+            this.addSuggestion({ ...draft, action: "present", trigger })
+            return
+        }
+
+        this.addSuggestion({ ...draft, action: "presented" })
+        trigger()
     }
 
     private static isPreloadStarted: boolean = false
