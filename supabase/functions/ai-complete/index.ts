@@ -8,14 +8,19 @@ import { callerRole, cors, failure, json } from "../_shared/church.ts"
 const CLAUDE_MODEL = "claude-sonnet-5-5"
 const GEMINI_MODEL = "gemini-2.5-flash"
 const MAX_TOKENS = 4096
+// Claude thinks before it answers, and its thinking comes out of max_tokens: short answers
+// need room for it, and these are short, quick requests
+const CLAUDE_MAX_TOKENS = 8192
+const CLAUDE_EFFORT = "low"
 const MAX_PROMPT_CHARS = 60_000
 
 async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?: unknown; maxTokens?: number }): Promise<string> {
     const key = Deno.env.get("ANTHROPIC_API_KEY")
     if (!key) throw new Error("no Anthropic key")
-    const request: Record<string, unknown> = { model: CLAUDE_MODEL, max_tokens: Math.min(body.maxTokens || MAX_TOKENS, MAX_TOKENS), messages: [{ role: "user", content: body.prompt }] }
-    if (body.systemPrompt) request.system = body.systemPrompt
-    if (body.jsonSchema) request.output_config = { format: { type: "json_schema", schema: body.jsonSchema } }
+    const outputConfig = { effort: CLAUDE_EFFORT, ...(body.jsonSchema ? { format: { type: "json_schema", schema: body.jsonSchema } } : {}) }
+    const request: Record<string, unknown> = { model: CLAUDE_MODEL, max_tokens: CLAUDE_MAX_TOKENS, output_config: outputConfig, messages: [{ role: "user", content: body.prompt }] }
+    // the same for every step of an agent turn, so it is paid for in full only once
+    if (body.systemPrompt) request.system = [{ type: "text", text: body.systemPrompt, cache_control: { type: "ephemeral" } }]
     const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -24,6 +29,7 @@ async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?
     })
     if (!response.ok) throw new Error(`Claude ${response.status}`)
     const data = await response.json()
+    console.log("Claude usage", JSON.stringify(data.usage || {}))
     if (data.stop_reason === "refusal" || data.stop_reason === "max_tokens") throw new Error(`Claude stopped: ${data.stop_reason}`)
     return data.content?.find((b: { type: string }) => b.type === "text")?.text || ""
 }

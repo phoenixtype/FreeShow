@@ -9,6 +9,7 @@ import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT, getSlideChatSystemPrompt, SLI
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { readPassage } from "../scripture/passage"
 import { closeSchema, parseReply } from "./schema"
+import { fitsSchema, listenWords, modelSteps, type ModelStep } from "./routing"
 import type { FreeShowAction } from "../manager/ChatAction"
 
 export interface ChatMessage {
@@ -33,7 +34,14 @@ interface LLMRequestOptions {
     jsonSchema?: any
     temperature?: number
     maxTokens?: number
+    /** the model on this computer already got this request wrong: ask the stronger one first */
+    struggling?: boolean
+    /** skips a model this request should not be spent on */
+    allow?: (step: ModelStep) => boolean
 }
+
+// someone is waiting: past this, the next model is asked
+const FIRST_ANSWER_MS = 25000
 
 let llmManager: LLMManager | null = null
 
@@ -68,26 +76,28 @@ export class LLMManager {
             this.retryTimeout = null
         }
 
-        try {
-            const data = { providerId: this.providerId, model: this.model, options }
-            let response = this.providerId === "scriptural" ? await completeWithScripturalAI(options) : await requestMain(Main.AI_LLM_COMPLETE, data, undefined, 60000)
+        const { struggling, allow, ...completion } = options
+        const steps = modelSteps({ provider: this.providerId, model: this.model, local: get(ai).llm?.localFallback, struggling })
 
-            // the paid or cloud model could not answer (offline, no key, plan used up): ask the local one
-            const localFallback = get(ai).llm?.localFallback
-            if ((response?.error || !response?.text) && localFallback && this.providerId !== "ollama") {
-                response = await requestMain(Main.AI_LLM_COMPLETE, { providerId: "ollama", model: localFallback, options }, undefined, 60000)
+        for (const [index, step] of steps.entries()) {
+            if (allow && !allow(step)) continue
+            try {
+                const isLast = index === steps.length - 1
+                const response = step.providerId === "scriptural" ? await completeWithScripturalAI(completion) : await requestMain(Main.AI_LLM_COMPLETE, { ...step, options: completion }, undefined, isLast ? 60000 : FIRST_ANSWER_MS)
+
+                if (response?.error || !response?.text) {
+                    if (response?.error) console.error("LLM error:", response.error)
+                    continue
+                }
+
+                const reply = parseReply<T>(response.text)
+                if (fitsSchema(reply, completion.jsonSchema)) return reply
+                console.error("LLM error: the answer is missing fields")
+            } catch (error: any) {
+                console.error("LLM request failed:", error?.message || error)
             }
-
-            if (response?.error || !response?.text) {
-                if (response?.error) console.error("LLM error:", response.error)
-                return null
-            }
-
-            return parseReply<T>(response.text)
-        } catch (error: any) {
-            console.error("LLM request failed:", error?.message || error)
-            return null
         }
+        return null
     }
 
     stop() {
@@ -97,25 +107,36 @@ export class LLMManager {
 
     // --- STT Match Detection ---
 
-    private readonly MIN_NEW_WORDS = 15
-    private accumulatedNewWords = 0
+    private newWords = 0
+    private newPlanWords = 0
     private requestInProgress: boolean = false
     async detectMatch(chunk: { chunkWithOverlap: string; newWordsCount: number }): Promise<MatchResult | null> {
         const { chunkWithOverlap, newWordsCount } = chunk
         if (!chunkWithOverlap) return null
 
-        this.accumulatedNewWords += newWordsCount
+        this.newWords += newWordsCount
+        this.newPlanWords += newWordsCount
         if (this.requestInProgress) return null
-        if (this.accumulatedNewWords < this.MIN_NEW_WORDS) return null
 
-        this.accumulatedNewWords = 0
+        // asked of this step only after it has heard enough new words
+        const heard = (step: ModelStep) => (step.providerId === "scriptural" ? this.newPlanWords : this.newWords) >= listenWords(step)
+        const steps = modelSteps({ provider: this.providerId, model: this.model, local: get(ai).llm?.localFallback }).filter(heard)
+        if (!steps.length) return null
+
+        this.newWords = 0
         this.requestInProgress = true
+        const allow = (step: ModelStep) => {
+            if (!steps.some((s) => s.providerId === step.providerId)) return false
+            if (step.providerId === "scriptural") this.newPlanWords = 0
+            return true
+        }
 
         try {
             const result = await this.request<MatchResult>({
                 systemPrompt: STT_CONTROLLER_PROMPT,
                 jsonSchema: STT_CONTROLLER_SCHEMA,
-                prompt: chunkWithOverlap
+                prompt: chunkWithOverlap,
+                allow
             })
             if (!result?.content) return null
             if (result.type !== "scripture") return result
@@ -183,7 +204,7 @@ export class LLMManager {
         } else {
             const systemPrompt = (options.systemPrompt || CHAT_SYSTEM_PROMPT) + agentInstructions()
             rawResponse = await runAgentChat(history, {
-                ask: (agentPrompt) => this.request<any>({ systemPrompt, jsonSchema: options.jsonSchema || CHAT_RESPONSE_SCHEMA, prompt: agentPrompt }),
+                ask: (agentPrompt, struggling) => this.request<any>({ systemPrompt, jsonSchema: options.jsonSchema || CHAT_RESPONSE_SCHEMA, prompt: agentPrompt, struggling }),
                 onStep: options.onStep
             })
         }

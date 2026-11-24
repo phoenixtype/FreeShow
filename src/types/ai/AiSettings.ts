@@ -42,7 +42,7 @@ export interface SttEngineOptions {
 interface LlmSettings {
     provider?: string
     model?: string
-    // a local Ollama model that answers when the main provider cannot (offline, no key, plan used up)
+    // a local Ollama model: first with Scriptural AI, the backup with any other provider (see routing.ts)
     localFallback?: string
 }
 

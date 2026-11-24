@@ -133,7 +133,7 @@
 {/if}
 
 {#if provider !== "none" && provider !== "ollama"}
-    <p class="backupTitle">If it can't be reached, use a free model on this computer</p>
+    <p class="backupTitle">{provider === "scriptural" ? "Use a free model on this computer first" : "If it can't be reached, use a free model on this computer"}</p>
     <LocalModels mode="fallback" />
 {/if}
 

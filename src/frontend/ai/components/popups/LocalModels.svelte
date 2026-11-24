@@ -21,6 +21,9 @@
     }
     onMount(refresh)
 
+    // with a Church plan this computer is asked first, and Claude when it can't answer
+    $: goesFirst = mode === "fallback" && $ai.llm?.provider === "scriptural"
+
     $: chosen = mode === "main" ? $ai.llm?.model || "" : $ai.llm?.localFallback || ""
 
     function choose(model: string) {
@@ -54,7 +57,13 @@
     </div>
 {:else if running}
     {#if mode === "fallback"}
-        <p class="lead">A free model on this computer answers when this one can't: offline, no key, or the plan's allowance used up.</p>
+        <p class="lead">
+            {#if goesFirst}
+                A free model on this computer answers first. Claude is asked only when it can't, so your plan's monthly allowance lasts.
+            {:else}
+                A free model on this computer answers when this one can't: offline, no key, or the plan's allowance used up.
+            {/if}
+        </p>
     {/if}
 
     {#each RECOMMENDED_LOCAL_MODELS as model}
@@ -71,9 +80,9 @@
             {:else if !have}
                 <MaterialButton variant="outlined" icon="download" on:click={() => download(model.id)} small>Download</MaterialButton>
             {:else if chosen === model.id}
-                <MaterialButton icon="check" on:click={() => mode === "fallback" && choose("")} small>{mode === "main" ? "In use" : "Backup"}</MaterialButton>
+                <MaterialButton icon="check" on:click={() => mode === "fallback" && choose("")} small>{mode === "main" || goesFirst ? "In use" : "Backup"}</MaterialButton>
             {:else}
-                <MaterialButton variant="outlined" on:click={() => choose(model.id)} small>{mode === "main" ? "Use" : "Use as backup"}</MaterialButton>
+                <MaterialButton variant="outlined" on:click={() => choose(model.id)} small>{mode === "main" || goesFirst ? "Use" : "Use as backup"}</MaterialButton>
             {/if}
         </div>
     {/each}

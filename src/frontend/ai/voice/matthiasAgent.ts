@@ -259,7 +259,7 @@ export class Matthias {
             return null
         }
         const systemPrompt = `${CHAT_SYSTEM_PROMPT}${agentInstructions()}\n\nYour name is ${NAME}. This request was spoken aloud in the room and may be misheard. If it is not clearly a request to you, do nothing and answer with an empty content.`
-        const answer = await runAgentChat([{ role: "user", content: words }], { ask: (prompt) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt }) })
+        const answer = await runAgentChat([{ role: "user", content: words }], { ask: (prompt, struggling) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt, struggling }) })
         if (!answer) throw new ToolError("I could not get an answer")
         return answer.content?.trim() || null
     }

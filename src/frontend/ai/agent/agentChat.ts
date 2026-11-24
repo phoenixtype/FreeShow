@@ -6,6 +6,7 @@ import { listAgentTools, runAgentTool } from "./agentTools"
 export const MAX_STEPS = 8
 const MAX_RESULT_CHARS = 6000
 const MAX_HISTORY = 12
+const MANY_STEPS = 4
 
 export interface AgentTurn {
     content?: string
@@ -36,7 +37,8 @@ RULES
 }
 
 export interface AgentDeps {
-    ask: (prompt: string) => Promise<AgentTurn | null>
+    /** struggling: a step of this turn has failed, or it is taking many */
+    ask: (prompt: string, struggling: boolean) => Promise<AgentTurn | null>
     run?: typeof runAgentTool
     onStep?: (tool: string, ok: boolean) => void
 }
@@ -49,9 +51,10 @@ export async function runAgentChat(history: { role: string; content: string }[],
         .map(({ role, content }) => `${role === "user" ? "Operator" : "You"}: ${content}`)
         .join("\n")
     const steps: string[] = []
+    let struggling = false
 
     for (let step = 0; step < MAX_STEPS; step++) {
-        const turn = await deps.ask(steps.length ? `${conversation}\n\nWhat you have done for this message:\n${steps.join("\n")}` : conversation)
+        const turn = await deps.ask(steps.length ? `${conversation}\n\nWhat you have done for this message:\n${steps.join("\n")}` : conversation, struggling || step >= MANY_STEPS)
         if (!turn) return null
         if (!turn.tool) return turn
 
@@ -63,6 +66,7 @@ export async function runAgentChat(history: { role: string; content: string }[],
         } catch {
             answer = { ok: false, error: "The arguments were not a JSON object." }
         }
+        if (!answer.ok) struggling = true
         deps.onStep?.(turn.tool, answer.ok)
         const said = JSON.stringify(answer.ok ? answer.result : { error: answer.error }) || ""
         steps.push(`${step + 1}. ${turn.tool}(${JSON.stringify(args)}) -> ${said.slice(0, MAX_RESULT_CHARS)}`)
