@@ -137,7 +137,7 @@ const EVENTS: EventRow[] = [
     ["Road to Damascus", "Acts 9:1-19", "road to damascus", "saul saul why do you persecute me", "sauls conversion", "scales fell from his eyes"],
     ["Philip and the Ethiopian", "Acts 8:26-40", "ethiopian eunuch", "philip and the ethiopian"],
     ["Peter freed from prison", "Acts 12:1-19", "peter freed from prison", "angel freed peter"],
-    ["Paul and Matthias in prison", "Acts 16:16-40", "paul and matthias", "singing hymns at midnight", "what must i do to be saved"],
+    ["Paul and Silas in prison", "Acts 16:16-40", "paul and silas", "singing hymns at midnight", "what must i do to be saved"],
     ["Paul's shipwreck", "Acts 27:13-44", "pauls shipwreck", "shipwrecked on malta"],
     ["The armor of God", "Ephesians 6:10-18", "armor of god", "sword of the spirit", "shield of faith", "belt of truth"],
     ["The love chapter", "1 Corinthians 13:1-13", "love is patient love is kind", "love chapter", "faith hope and love"],
