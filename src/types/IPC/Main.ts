@@ -198,6 +198,8 @@ export enum Main {
     AI_GET_STATUS = "AI_GET_STATUS",
     AI_SETUP = "AI_SETUP",
     AI_SET_KEY = "AI_SET_KEY",
+    BROWSER_SIGN_IN = "BROWSER_SIGN_IN",
+    BROWSER_SIGN_IN_CANCEL = "BROWSER_SIGN_IN_CANCEL",
     AI_LLM_COMPLETE = "AI_LLM_COMPLETE",
     AI_OLLAMA_STATUS = "AI_OLLAMA_STATUS",
     AI_OLLAMA_PULL = "AI_OLLAMA_PULL"
@@ -319,6 +321,7 @@ export interface MainSendPayloads {
     [Main.AI_GET_STATUS]: { engineId?: string; modelId?: string; customPath?: string } | undefined
     [Main.AI_SETUP]: AiSetupOptions
     [Main.AI_SET_KEY]: { providerId: AIProviderId; key: string }
+    [Main.BROWSER_SIGN_IN]: { projectUrl: string }
     [Main.AI_LLM_COMPLETE]: { providerId: AIProviderId; model: string; options: { systemPrompt?: string; prompt: string; jsonSchema?: any; temperature?: number; maxTokens?: number } }
     [Main.AI_OLLAMA_PULL]: { model: string }
 }
@@ -436,6 +439,8 @@ export interface MainReturnPayloads {
     [Main.AI_GET_STATUS]: Promise<{ [key: string]: EngineStatus }>
     [Main.AI_SETUP]: Promise<boolean>
     [Main.AI_SET_KEY]: Promise<boolean>
+    [Main.BROWSER_SIGN_IN]: Promise<{ code?: string; verifier?: string; error?: "cancelled" | "failed" }>
+    [Main.BROWSER_SIGN_IN_CANCEL]: void
     [Main.AI_LLM_COMPLETE]: Promise<{ text: string; error?: string; code?: string; retryAfter?: number }>
     [Main.AI_OLLAMA_STATUS]: Promise<{ running: boolean; models: string[] }>
     [Main.AI_OLLAMA_PULL]: Promise<{ ok: boolean; error?: string }>

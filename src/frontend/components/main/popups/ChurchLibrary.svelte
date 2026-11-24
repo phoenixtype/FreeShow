@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte"
+    import { onDestroy, onMount } from "svelte"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
     import { createChurch, createInvite, joinChurch, myChurches, pushSongs, syncSongs, type Church } from "../../../scriptural/churchSync"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
@@ -51,6 +51,20 @@
         }
         busy = false
     }
+
+    let withGoogle = false
+    async function continueWithGoogle() {
+        withGoogle = true
+        message = ""
+        try {
+            session = (await churchLibrary.signInWithGoogle()) || session
+            if (session) await loadChurches()
+        } catch (err) {
+            message = errorText(err, "Google could not sign you in. Try again.")
+        }
+        withGoogle = false
+    }
+    onDestroy(() => withGoogle && sendMain(Main.BROWSER_SIGN_IN_CANCEL))
 
     async function signIn() {
         busy = true
@@ -157,7 +171,24 @@
 </script>
 
 {#if !session}
-    <p class="muted">Keep your church's songs in one place, on every computer. Sign in with your email; we send a code, no password.</p>
+    <p class="muted">Your church's songs, plan and Scriptural AI, on every computer. No password.</p>
+    <div class="google">
+        {#if withGoogle}
+            <p class="muted">Finish in your browser, then come back here.</p>
+            <MaterialButton variant="text" small on:click={() => sendMain(Main.BROWSER_SIGN_IN_CANCEL)}>Cancel</MaterialButton>
+        {:else}
+            <MaterialButton variant="contained" on:click={continueWithGoogle}>
+                <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"
+                    ><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path
+                        fill="#34A853"
+                        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+                    /></svg
+                >
+                Continue with Google
+            </MaterialButton>
+        {/if}
+    </div>
+    <p class="muted">Or we email you a code.</p>
     <div class="row">
         <MaterialTextInput label="Email" type="email" value={email} on:input={(e) => (email = e.detail)} />
         {#if codeSent}
@@ -256,6 +287,12 @@
         gap: 8px;
         align-items: center;
         margin-bottom: 8px;
+    }
+    .google {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0;
     }
     .spaced {
         justify-content: space-between;

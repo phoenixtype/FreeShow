@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex" />
+        <meta name="referrer" content="no-referrer" />
+        <title>Signing in to Scriptural Project</title>
+        <link rel="icon" href="/favicon.ico" />
+        <style>
+            @font-face {
+                font-family: "Inter";
+                src: url("/inter.woff2") format("woff2");
+                font-weight: 100 900;
+            }
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: #080808;
+                color: #f7f7f7;
+                font-family: "Inter", -apple-system, "Segoe UI", sans-serif;
+                text-align: center;
+            }
+            main {
+                padding: 24px;
+                max-width: 420px;
+            }
+            img {
+                width: 56px;
+                height: 56px;
+                border-radius: 14px;
+            }
+            h1 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin: 20px 0 8px;
+            }
+            p {
+                color: #bdbdbd;
+                line-height: 1.55;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <img src="/icon.png" alt="" />
+            <h1 id="title">Signing you in</h1>
+            <p id="text">This takes a second.</p>
+        </main>
+        <script>
+            // Hands the one-time code to the app on this computer. It only ever goes to
+            // 127.0.0.1, and is worthless without the verifier the app kept.
+            const query = new URLSearchParams(location.search)
+            const say = (title, text) => {
+                document.getElementById("title").textContent = title
+                document.getElementById("text").textContent = text
+            }
+            const port = Number(query.get("port"))
+            const key = query.get("key") || ""
+            const code = query.get("code") || ""
+            history.replaceState(null, "", location.pathname)
+
+            if (query.get("done") === "1") say("You're signed in", "Go back to Scriptural Project. You can close this tab.")
+            else if (Number.isInteger(port) && port > 1023 && port < 65536 && /^[\w-]{20,64}$/.test(key)) {
+                location.replace(`http://127.0.0.1:${port}/${key}${code ? `?code=${encodeURIComponent(code)}` : ""}`)
+                setTimeout(() => say("Go back to the app", "If you are not signed in there, press Continue with Google again."), 4000)
+            } else say("You're not signed in", "Go back to Scriptural Project and press Continue with Google again.")
+        </script>
+    </body>
+</html>

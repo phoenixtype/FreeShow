@@ -1,6 +1,6 @@
 <script lang="ts">
     import { slide } from "svelte/transition"
-    import { activeEdit, activePage, activeProfile, activeProject, activeShow, cloudUsers, dictionary, drawSettings, drawTool, os, outputDisplay, outputs, paintCache, profiles, saved, settingsTab, shows } from "../../stores"
+    import { activeEdit, activePage, activePopup, activeProfile, activeProject, activeShow, cloudUsers, dictionary, drawSettings, drawTool, os, outputDisplay, outputs, paintCache, profiles, saved, settingsTab, shows } from "../../stores"
     import { getCloudUsers } from "../../utils/cloudSync"
     import { translateText } from "../../utils/language"
     import { DEFAULT_DISPLAY_NAME } from "../../utils/SocketHelper"
@@ -119,6 +119,7 @@
             <span class="copilot-label"><T id="settings.ai" /></span>
         </MaterialButton>
         <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel />
+        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1em;" title="Account" icon="profiles" iconSize={1.4} on:click={() => activePopup.set("church_library")} />
         {#if !settingsDisabled}
             <TopButton id="settings" hideLabel />
         {/if}

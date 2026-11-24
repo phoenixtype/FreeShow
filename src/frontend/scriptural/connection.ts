@@ -3,9 +3,15 @@
 // keeps its songs, media and plans. Both are Supabase projects reached with
 // their public (anon) keys, which ship in every client.
 //
-// Sign-in is by a code emailed to the account. The session is kept on this
+// Sign-in is with Google, in the browser, or by a code emailed to the account. The session is kept on this
 // computer only and refreshed when it expires. What an account may read or
 // change is decided by each database (row-level security), never by this app.
+
+import { Main } from "../../types/IPC/Main"
+import { requestMain } from "../IPC/main"
+
+// a little longer than the app waits for the browser
+const GOOGLE_WAIT_MS = 5 * 60 * 1000 + 5000
 
 const SCRIPTURAL_URL = "https://sdtusilsfchpryrbmplq.supabase.co"
 export const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdHVzaWxzZmNocHJ5cmJtcGxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNjU4NzcsImV4cCI6MjA3MTc0MTg3N30.tWnGvQlE2J-1bTmc_u3JDRyIQYJ7vR7jekk6oVtU4QM"
@@ -69,6 +75,17 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         return session
     }
 
+    /** Opens Google's sign-in in the browser; null when the person backs out. */
+    async function signInWithGoogle(): Promise<ScripturalSession | null> {
+        const answer = await requestMain(Main.BROWSER_SIGN_IN, { projectUrl }, undefined, GOOGLE_WAIT_MS)
+        if (answer?.error === "cancelled") return null
+        if (!answer?.code || !answer.verifier) throw new ScripturalError("The browser could not be opened. Sign in with your email instead.")
+        const data = await authRequest("/token?grant_type=pkce", { auth_code: answer.code, code_verifier: answer.verifier })
+        const session = toSession(data, data.user?.email || "")
+        storeSession(session)
+        return session
+    }
+
     async function signOut() {
         const session = getSession()
         storeSession(null)
@@ -122,7 +139,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T }
     }
 
-    return { getSession, sendSignInCode, verifySignInCode, signOut, rest, invoke }
+    return { getSession, sendSignInCode, verifySignInCode, signInWithGoogle, signOut, rest, invoke }
 }
 
 /** Scriptural: read anonymously (public-domain text, search). */
