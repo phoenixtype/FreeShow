@@ -35,6 +35,20 @@ function getAuthToken(...sources: any[]): string | undefined {
     return undefined
 }
 
+// Without a password, a page on any website could reach this port through the visitor's
+// browser. Programs (Companion, Stream Deck, scripts) send no Origin, and pages served on
+// this network are let in.
+export function isForeignPage(headers: { origin?: string; "sec-fetch-site"?: string | string[] }): boolean {
+    const site = headers["sec-fetch-site"]
+    if (!headers.origin) return site === "cross-site"
+    try {
+        const host = new URL(headers.origin).hostname.replace(/^\[|\]$/g, "")
+        return !(host === "localhost" || host === "::1" || host.endsWith(".local") || /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)[\d.]+$/.test(host))
+    } catch {
+        return true
+    }
+}
+
 const checkAuth = (token?: string) => !apiPassword || token === apiPassword
 
 // WebSocket on 5506, REST on +1 (5506), but works with 5505 as well!
@@ -67,6 +81,11 @@ function startWebSocket(PORT: number) {
 }
 
 function connected(socket: Socket) {
+    if (!apiPassword && isForeignPage(socket.handshake.headers)) {
+        socket.disconnect(true)
+        return
+    }
+
     log("Client connected.")
     sendToMain(ToMain.WEBSOCKET, "connected")
 
@@ -132,6 +151,10 @@ function startRestListener(PORT: number) {
     app.use(express.json())
     // app.use(cors()) // if a browser should send body data (https://stackoverflow.com/a/63547498/10803046)
     app.all("/", async (req, res) => {
+        if (!apiPassword && isForeignPage(req.headers)) {
+            res.status(403).json({ status: 403, error: "Set an API password to use it from a website." })
+            return
+        }
         if (!checkAuth(getAuthToken(req.headers.authorization, req.headers, req.query, req.body))) {
             res.status(401).json({ status: 401, error: "Unauthorized" })
             return

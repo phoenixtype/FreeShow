@@ -12,6 +12,9 @@
     import AiRing from "./AiRing.svelte"
     import AiTranscription from "./AiTranscription.svelte"
     import AiVisual from "./AiVisual.svelte"
+    import SilasStatus from "./SilasStatus.svelte"
+    import { NAME } from "../../voice/silas"
+    import { setAgentMode } from "../../voice/silasAgent"
     import SmartAction from "./SmartAction.svelte"
 
     let state: "loading" | "inactive" | "error" | "listening" | "processing" = "loading"
@@ -22,7 +25,7 @@
     $: hasModel = !!$ai.llm?.provider && $ai.llm.provider !== "none"
     $: tabs = {
         transcription: { name: "ai.transcription", icon: "microphone" },
-        ...(hasModel ? { chat: { name: "Chat", icon: "chat" } } : {})
+        ...(hasModel ? { chat: { name: `Ask ${NAME}`, icon: "chat" } } : {})
     }
     $: if (!hasModel && activeTab === "chat") activeTab = "transcription"
 
@@ -232,6 +235,8 @@
 
                     <div class="headerActions">
                         {#if activeTab === "transcription"}
+                            <span class="listening">Agent mode</span>
+                            <MaterialToggleSwitch label="" title="Lead the screen by itself" checked={!!$ai.silas?.agentMode} style="margin-right: 12px;" on:change={(e) => setAgentMode(e.detail)} small />
                             <span class="listening">{isListening ? "Listening" : state === "error" ? "Microphone problem" : "Not listening"}</span>
                             <MaterialToggleSwitch label="" checked={isListening} disabled={state !== "inactive" && state !== "listening"} style="margin-right: 5px;" on:change={() => toggleListening()} small />
                         {/if}
@@ -242,6 +247,7 @@
                     </div>
                 </div>
 
+                <SilasStatus />
                 {#if activeTab === "transcription"}
                     <AiTranscription {state} on:listen={() => toggleListening(true)} />
                 {:else if activeTab === "chat"}

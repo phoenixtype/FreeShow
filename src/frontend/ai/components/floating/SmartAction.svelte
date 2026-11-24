@@ -6,6 +6,8 @@
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { aiSmartAction, scriptures } from "../../../stores"
     import { translateText } from "../../../utils/language"
+    import SilasStatus from "./SilasStatus.svelte"
+    import { silasStatus } from "../../voice/silasAgent"
     import AiRing from "./AiRing.svelte"
     import ConfidenceMeter from "./ConfidenceMeter.svelte"
 
@@ -23,7 +25,11 @@
     </div>
 {/if} -->
 
-{#if smartAction}
+{#if $silasStatus}
+    <div class="ticker-wrap" style="bottom: calc({$bubbleBottom}px + (62px / 2));" transition:fly={{ x: 45 + 62 / 2, duration: 200 }}>
+        <div class="pill"><AiRing opacity={0.95} borderRadius="30px"><div style="margin-right: calc((62px / 2) - 4px);"><SilasStatus /></div></AiRing></div>
+    </div>
+{:else if smartAction}
     <div class="ticker-wrap" style="bottom: calc({$bubbleBottom}px + (62px / 2));" transition:fly={{ x: 45 + 62 / 2, duration: 200 }}>
         <!-- border-radius: 50px 10px 10px 50px; -->
         <MaterialButton

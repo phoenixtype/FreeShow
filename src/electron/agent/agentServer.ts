@@ -13,6 +13,7 @@ import { ToMain } from "../../types/IPC/ToMain"
 import { requestToMain } from "../IPC/main"
 import { OutputHelper } from "../output/OutputHelper"
 import { getDataFolderPath } from "../utils/files"
+import { wait } from "../utils/helpers"
 import { handleMcpMessage, refuseRequest, type McpApp, type McpContent, type McpTool } from "./mcpProtocol"
 
 export const AGENT_PORT = 5507
@@ -56,6 +57,9 @@ async function screenImage() {
     if (!state.ok) return failed(state.error || "The app is not ready yet.")
     const window = OutputHelper.renderWindow(OutputHelper.getOutput(state.result.outputId))
     if (!window) return failed(`The screen's window is not open, so there is no picture. get_live_state says what it would show: ${JSON.stringify(state.result.showing)}`)
+    // the change just made may still be fading in, and the first capture of a hidden window is its last frame
+    await wait(700)
+    await window.webContents.capturePage()
     const image = await window.webContents.capturePage()
     if (image.isEmpty()) return failed(`The screen could not be captured. It shows: ${JSON.stringify(state.result.showing)}`)
     const small = image.getSize().width > IMAGE_WIDTH ? nativeImage.createFromBuffer(image.toPNG()).resize({ width: IMAGE_WIDTH }) : image

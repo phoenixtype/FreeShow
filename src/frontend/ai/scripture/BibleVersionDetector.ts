@@ -13,6 +13,8 @@ interface Candidate {
     isShort: boolean
 }
 
+const ORDINARY = new Set(["message", "themessage", "easy", "web", "living", "amplified", "passion", "voice", "clear", "bible"])
+
 export async function detectBibleVersion(textChunk: string, isCancelled?: () => boolean): Promise<MatchResult | null> {
     if (!textChunk || isCancelled?.()) return null
 
@@ -34,6 +36,9 @@ export async function detectBibleVersion(textChunk: string, isCancelled?: () => 
         const aliasWords = candidate.alias.split(/\s+/).filter(Boolean)
         const pattern = aliasWords.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*")
         const isMatch = new RegExp(`\\b${pattern}\\b`, "i").test(textChunk) || isFuzzyMatch(normalizedChunk, candidate.normalized)
+
+        // "the message", "easy" and "web" are said all the time: they need the word beside them
+        if (isMatch && ORDINARY.has(candidate.normalized) && !new RegExp(`\\b${pattern}\\s+(?:version|translation|bible)\\b`, "i").test(textChunk)) continue
 
         if (isMatch) {
             if (candidate.id === activeBibleId) return null

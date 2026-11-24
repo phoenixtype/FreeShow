@@ -4,7 +4,7 @@
     import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
-    import { aiSmartAction, aiSttStatus, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript } from "../../../stores"
+    import { ai, aiSmartAction, aiSttStatus, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import type { AiSuggestion } from "../../../../types/ai/Ai"
     import { getFirstActiveOutput } from "../../../components/helpers/output"
@@ -113,7 +113,7 @@
                 </div>
             {:else}
                 <Center faded>
-                    <p>{state === "loading" ? "Getting ready to listen…" : "Listening. Words appear here as they are spoken."}</p>
+                    <p>{state === "loading" ? "Getting ready to listen…" : $ai.silas?.name === false ? "Listening. Words appear here as they are spoken." : "Listening. You can say “Silas, John three sixteen”."}</p>
                 </Center>
             {/if}
         </div>
@@ -164,7 +164,7 @@
         display: flex;
     }
     .columns > :global(.preview) {
-        flex: 0 0 46%;
+        flex: 0 0 54%;
         border-inline-end: 1px solid var(--primary-lighter);
     }
 
@@ -271,7 +271,7 @@
         border-top: 1px solid var(--primary-lighter);
     }
     .suggestion.live {
-        background-color: var(--secondary-opacity);
+        background-color: rgb(255 255 255 / 0.08);
     }
     .about {
         flex: 1;

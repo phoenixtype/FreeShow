@@ -6,6 +6,7 @@
     import AutoScriptureOptions from "./AutoScriptureOptions.svelte"
     import Title from "../../../components/input/Title.svelte"
     import LlmOptions from "../popups/LlmOptions.svelte"
+    import SilasOptions from "./SilasOptions.svelte"
     import STTOptions from "./STTOptions.svelte"
 
     $: isEnabled = $ai.enabled
@@ -27,6 +28,8 @@
 {#if isEnabled}
     <STTOptions />
 
+    <SilasOptions />
+
     <AutoScriptureOptions />
 
     <!-- the model behind the chat and the smarter detection: Scriptural AI, your own key, or free on this computer -->
@@ -42,5 +45,6 @@
         opacity: 0.8;
         margin: 6px 0 12px;
         line-height: 1.4;
+        white-space: initial;
     }
 </style>

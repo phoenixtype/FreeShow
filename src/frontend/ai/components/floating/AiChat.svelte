@@ -45,6 +45,7 @@
         get_transcript: "Read what was said",
         show_found: "Showed a match",
         set_listening: "Changed listening",
+        set_agent_mode: "Changed agent mode",
         search_bible: "Searched the Bible",
         read_passage: "Read a passage",
         show_scripture: "Showed a passage",
@@ -149,7 +150,7 @@
                     <div class="empty-state">
                         <Icon id="ai" size={2.2} gradient />
                         <p class="placeholder">
-                            {#if isAgent}Ask me to run the service{:else}<T id="chat.ask" />{/if}
+                            {#if isAgent}Ask Silas to run the service{:else}<T id="chat.ask" />{/if}
                         </p>
                         {#if isAgent}
                             <div class="examples">

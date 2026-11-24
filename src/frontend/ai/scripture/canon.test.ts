@@ -31,13 +31,7 @@ it("follows every book, however the reference is said and wherever in the senten
         const chapter = Math.min(book.chapters.length, 3)
         const verse = Math.min(book.chapters[chapter - 1].verses.length, 12)
         const name = book.name.toLowerCase().replace(/^1 /, "first ").replace(/^2 /, "second ").replace(/^3 /, "third ")
-        const ways = [
-            `let us read ${name} chapter ${spoken(chapter)} verse ${spoken(verse)}`,
-            `please open your bibles with me to ${name} ${spoken(chapter)} verse ${spoken(verse)} and it says`,
-            `${book.name} ${chapter}:${verse}`,
-            `it says in ${book.name} ${chapter}:${verse} that`,
-            `turn to the book of ${book.name}, chapter ${chapter}, verse ${verse}.`
-        ]
+        const ways = [`let us read ${name} chapter ${spoken(chapter)} verse ${spoken(verse)}`, `please open your bibles with me to ${name} ${spoken(chapter)} verse ${spoken(verse)} and it says`, `${book.name} ${chapter}:${verse}`, `it says in ${book.name} ${chapter}:${verse} that`, `turn to the book of ${book.name}, chapter ${chapter}, verse ${verse}.`]
         for (const words of ways) {
             const got = (await canon.search(words, ""))?.content
             if (got !== `${book.name} ${chapter}:${verse}`) missed.push(`${words} -> ${got}`)

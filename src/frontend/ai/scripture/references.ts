@@ -123,6 +123,24 @@ function parseReference(ref: string) {
     return { book: book.trim(), chapter, startVerse, endVerse }
 }
 
+/**
+ * A reference still being said when it was first heard: "John 3" (offered as 3:1) or
+ * "John 3:1" before "John 3:16", and "Romans 8:20" before "Romans 8:28".
+ * chapterOnly: no verse had been said, so any verse of the chapter follows from it.
+ */
+export function isPartOf(partial: string, whole: string, chapterOnly = false): boolean {
+    const a = parseReference(partial)
+    const b = parseReference(whole)
+    if (!a || !b || a.book.toLowerCase() !== b.book.toLowerCase() || a.startVerse === b.startVerse) return false
+    // "Psalm 100" before "Psalm 119:105"
+    if (a.chapter !== b.chapter) return a.startVerse === 1 && growsInto(a.chapter, b.chapter)
+    return (chapterOnly && a.startVerse === 1) || growsInto(a.startVerse, b.startVerse)
+}
+function growsInto(first: number, full: number) {
+    if (full <= first) return false
+    return String(full).startsWith(String(first)) || (first % 10 === 0 && full < first + 10) || (first % 100 === 0 && full < first + 100)
+}
+
 // checks if containerRef is or has targetRef
 // isReferenceWithin("Matthew 7:1-2", "Matthew 7:1-6") = true
 // isReferenceWithin("Matthew 7:1-8", "Matthew 7:1-6") = false

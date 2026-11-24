@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { BibleCacheData } from "./BibleCacheManager"
 import { normalizeNumbers } from "./numbers"
-import { normalizeReferences } from "./references"
+import { isPartOf, normalizeReferences } from "./references"
 
 const mockCacheData: BibleCacheData = {
     versePool: [],
@@ -93,5 +93,23 @@ describe("normalizeReferences - Multilingual", () => {
 
         // "Første Johannes 1:4"
         expect(normalizeReferences("Første Johannes 1:4", mockCacheData)).toBe("1 Johannes 1:4")
+    })
+})
+
+describe("isPartOf", () => {
+    it("knows the first half of a spoken reference", () => {
+        expect(isPartOf("John 3:1", "John 3:16")).toBe(true)
+        expect(isPartOf("Romans 8:20", "Romans 8:28")).toBe(true)
+        expect(isPartOf("Psalms 100:1", "Psalms 119:105")).toBe(true)
+    })
+    it("follows a chapter named before its verse", () => {
+        expect(isPartOf("John 3:1", "John 3:7", true)).toBe(true)
+        expect(isPartOf("Psalms 23:1", "Psalms 23:2")).toBe(false)
+    })
+    it("keeps a verse that was really asked for", () => {
+        expect(isPartOf("Romans 8:28", "Romans 8:29")).toBe(false)
+        expect(isPartOf("John 3:16", "John 3:16")).toBe(false)
+        expect(isPartOf("John 3:16", "Romans 3:16")).toBe(false)
+        expect(isPartOf("John 2:1", "John 3:16")).toBe(false)
     })
 })

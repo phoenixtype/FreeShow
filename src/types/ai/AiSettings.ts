@@ -3,8 +3,16 @@ export interface AiSettings {
     stt?: SttSettings
     llm?: LlmSettings
 
+    silas?: SilasSettings
+
     scripture?: AiScriptureSettings
     lyrics?: AiScriptureSettings
+}
+
+interface SilasSettings {
+    name?: boolean // answers to its name (on unless switched off)
+    agentMode?: boolean // leads the screen by itself
+    clearAfter?: number // minutes a finished passage stays up in agent mode, 0 = until cleared
 }
 
 interface SttSettings {

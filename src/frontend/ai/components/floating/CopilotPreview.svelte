@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { OutputHelper } from "../../../components/helpers/OutputHelper"
     import { keysToID, sortByName } from "../../../components/helpers/array"
-    import { isOutCleared } from "../../../components/helpers/output"
+    import { isOutCleared, toggleOutputs } from "../../../components/helpers/output"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { clearAll, clearSlide } from "../../../components/output/clear"
     import PreviewOutput from "../../../components/output/preview/PreviewOutput.svelte"
     import { outLocked, outputs, outputState, shows } from "../../../stores"
+    import { stepScreen } from "../../agent/stepScreen"
     import { isScreenOff, onScreenTitle } from "./onScreen"
 
     // what the congregation sees, so the operator never has to leave the transcript to check
@@ -25,7 +25,8 @@
         {#if $outLocked}
             <span class="tag">Locked</span>
         {:else if hidden}
-            <span class="tag">Screen is off</span>
+            <span class="tag" title="Only you see this">Screen is off</span>
+            <MaterialButton variant="outlined" small on:click={() => toggleOutputs(null, { state: true })}>Turn on</MaterialButton>
         {/if}
     </header>
 
@@ -48,8 +49,8 @@
     {/if}
 
     <div class="controls">
-        <MaterialButton icon="previous" title="preview._previous_slide" disabled={$outLocked || !screen || cleared} on:click={() => OutputHelper.advanceOutputs("previous", "copilot")} />
-        <MaterialButton icon="next" title="preview._next_slide" disabled={$outLocked || !screen || cleared} on:click={() => OutputHelper.advanceOutputs("next", "copilot")} />
+        <MaterialButton icon="previous" title="preview._previous_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("previous")} />
+        <MaterialButton icon="next" title="preview._next_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("next")} />
         <div class="fill" />
         <MaterialButton icon="slide" disabled={$outLocked || cleared} on:click={() => clearSlide()}>Clear words</MaterialButton>
         <MaterialButton icon="clear" disabled={$outLocked || cleared} on:click={() => clearAll(true)}>Clear all</MaterialButton>

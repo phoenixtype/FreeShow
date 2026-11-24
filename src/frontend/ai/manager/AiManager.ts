@@ -6,15 +6,16 @@ import { startScripture } from "../../components/actions/apiHelper"
 import { keysToID } from "../../components/helpers/array"
 import { getFirstActiveOutput } from "../../components/helpers/output"
 import { loadJsonBible } from "../../components/drawer/bible/scripture"
+import { clearSlide } from "../../components/output/clear"
 import { setActiveScripture } from "../../converters/bible"
-import { activeScripture, ai, aiSmartAction, aiSuggestions, drawerTabsData, outputs, scriptures } from "../../stores"
+import { activeScripture, ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputs, scriptures } from "../../stores"
 import { newToast } from "../../utils/common"
 import { getLLMManager } from "../llm/llmManager"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleVersion } from "../scripture/BibleVersionDetector"
 import { detectBibleEvents } from "../scripture/bibleEvents"
 import { searchByMeaning } from "../scripture/meaningSearch"
-import { isReferenceWithin } from "../scripture/references"
+import { isPartOf, isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 import { resolveNavigation } from "../scripture/voiceNavigation"
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
@@ -101,6 +102,7 @@ export class AiManager {
         // already up: on an auto-present setting, keep the screen on the line being sung,
         // unless someone moved the slides by hand in the last half minute
         if (hit.id === liveShowId()) {
+            this.heardAgain()
             if (this.autoLevel("lyrics") === "ask" || hit.confidence <= 50) return true
             if (this.lastOutputUpdate && Date.now() - this.lastOutputUpdate < this.MAX_AUTO_PLAY_INTERVAL) return true
             this.listenToOutput()
@@ -114,7 +116,9 @@ export class AiManager {
     }
 
     private static autoLevel(type: "scripture" | "lyrics"): ConfidenceLevels {
-        return get(ai)[type]?.confidence || "ask"
+        const chosen = get(ai)[type]?.confidence || "ask"
+        // leading by itself: certain and likely matches go up, whatever the setting
+        return get(ai).silas?.agentMode && (chosen === "ask" || chosen === "highest") ? "high" : chosen
     }
 
     // famous events and parables said in passing: "when Jesus walked on water"
@@ -127,7 +131,15 @@ export class AiManager {
 
     private static lastCommand = 0
     private static COMMAND_COOLDOWN = 1500
-    private static async navigate(command: CopilotCommand): Promise<boolean> {
+    /** steps the passage on screen because it was asked for by name: the new reference, or "" */
+    static async navigateNow(command: CopilotCommand): Promise<string> {
+        this.lastCommand = 0
+        this.listenToOutput()
+        return (await this.navigate(command, true)) ? this.navigatedTo : ""
+    }
+    private static navigatedTo = ""
+
+    private static async navigate(command: CopilotCommand, asked = false): Promise<boolean> {
         // a repeat within the cooldown still counts as handled
         if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return true
 
@@ -148,6 +160,7 @@ export class AiManager {
 
         this.lastCommand = Date.now()
         const content = `${book.name} ${target.chapter}:${target.verse}`
+        this.navigatedTo = content
         const trigger = async () => {
             this.expectOwnChange()
             await startScripture({ id, reference: `${reference.book}.${target.chapter}.${target.verse}` })
@@ -156,7 +169,7 @@ export class AiManager {
 
         // commands follow the scripture setting: presented directly, or offered when set to "ask"
         const draft = { id: uid(5), timestamp: Date.now(), content, confidence: 100 }
-        if ((get(ai).scripture?.confidence || "ask") === "ask") {
+        if (!asked && this.autoLevel("scripture") === "ask") {
             this.addSuggestion({ ...draft, action: "present", trigger })
             return true
         }
@@ -241,7 +254,10 @@ export class AiManager {
 
     static newMatch(match: MatchResult) {
         if (match.type === "empty" || !match.content) return
-        if (match.type === "scripture" && AiManager.liveContent === match.content) return
+        if (match.type === "scripture" && AiManager.liveContent === match.content) {
+            this.heardAgain()
+            return
+        }
 
         if (match.type !== "scripture" && match.type !== "scripture_version" && match.type !== "lyrics") return
 
@@ -344,8 +360,58 @@ export class AiManager {
     }
     private static outputUpdate(content: string) {
         this.liveContent = content
+        this.heardAgain()
         this.lastOutputUpdate = 0
         this.ownChangeUntil = Date.now() + 1500
+    }
+
+    // SILAS: asked for by name, so shown whatever the settings say
+
+    static async findReference(words: string): Promise<string | null> {
+        const detector = await this.referenceDetector()
+        return detector.findReference(words, this.liveContent)?.content || null
+    }
+    private static async referenceDetector() {
+        const open = get(drawerTabsData)?.scripture?.activeSubTab || ""
+        const local = this.getLocalScriptureIds()
+        const id = local.includes(open) ? open : local[0]
+        return (id && (await BibleCacheManager.getCache(id))) || (await BibleCacheManager.getCanon())
+    }
+    static async findInLocalBible(words: string): Promise<string | null> {
+        return (await (await this.referenceDetector()).search(words, ""))?.content || null
+    }
+    static async showReference(reference: string) {
+        await this.asOwnChange(reference, () => startScripture({ reference }))
+        this.addSuggestion({ id: uid(5), timestamp: Date.now(), content: reference, confidence: 100, action: "presented", trigger: () => this.showReference(reference) })
+    }
+    static async asOwnChange(content: string, change: () => Promise<unknown>) {
+        this.listenToOutput()
+        this.expectOwnChange()
+        await change()
+        this.outputUpdate(content || this.liveContent)
+    }
+    /** nothing of the copilot's is on screen any more */
+    static letGo() {
+        this.expectOwnChange()
+        this.outputUpdate("")
+        if (this.clearTimer) clearTimeout(this.clearTimer)
+    }
+
+    // In agent mode a passage or song comes down once the speaker has moved on. Only what
+    // the copilot put up itself: anything moved by hand empties liveContent.
+    private static CLEAR_AFTER_MINUTES = 2
+    private static clearTimer: ReturnType<typeof setTimeout> | null = null
+    private static heardAgain() {
+        if (this.clearTimer) clearTimeout(this.clearTimer)
+        this.clearTimer = null
+        const minutes = get(ai).silas?.clearAfter ?? this.CLEAR_AFTER_MINUTES
+        if (!get(ai).silas?.agentMode || !minutes || !this.liveContent) return
+        const content = this.liveContent
+        this.clearTimer = setTimeout(() => {
+            if (!get(ai).silas?.agentMode || this.liveContent !== content || get(outLocked)) return
+            this.letGo()
+            clearSlide()
+        }, minutes * 60_000)
     }
 
     /////
@@ -369,6 +435,7 @@ export class AiManager {
 
     private static SUGGESTION_MAX_AGE = 5 * 60 * 1000 // 5 minutes
     private static SUGGESTION_LIMIT = 15
+    private static STILL_SPEAKING_MS = 6000
     private static addSuggestion(content: AiSuggestion) {
         this.setSmartAction(content)
 
@@ -380,6 +447,9 @@ export class AiManager {
 
             // remove duplicate suggestions
             active = active.filter((a) => a.id !== content.id && a.content !== content.content)
+
+            // the first half of a reference is replaced by the whole of it
+            if (content.kind !== "song") active = active.filter((a) => a.action === "presented" || now - a.timestamp > this.STILL_SPEAKING_MS || !isPartOf(a.content, content.content, a.confidence <= 75))
 
             return [content, ...active].slice(0, this.SUGGESTION_LIMIT)
         })

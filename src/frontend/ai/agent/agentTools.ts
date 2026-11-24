@@ -8,7 +8,6 @@ import { uid } from "uid"
 import { activeProject, aiSuggestions, outLocked, projects, shows, showsCache, sttTranscript, ai } from "../../stores"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, startScripture, toggleSttListening } from "../../components/actions/apiHelper"
 import { getOutputSlideText } from "../../components/actions/apiGet"
-import { OutputHelper } from "../../components/helpers/OutputHelper"
 import { getFirstActiveOutput } from "../../components/helpers/output"
 import { loadShows } from "../../components/helpers/setShow"
 import { getLayoutRef } from "../../components/helpers/show"
@@ -18,6 +17,7 @@ import { nextProgramSegment, playPauseSpeaker, startProgram } from "../../compon
 import { convertText } from "../../converters/txt"
 import { ANON_KEY, FUNCTIONS_URL } from "../../scriptural/connection"
 import { copilotListening } from "../liveCopilot"
+import { stepScreen } from "./stepScreen"
 import { onScreenTitle } from "../components/floating/onScreen"
 import { readPassage } from "../scripture/passage"
 
@@ -81,7 +81,7 @@ function liveState() {
         showing: slide ? { kind: slide.id === "temp" ? "scripture" : "presentation", title: onScreenTitle(slide, get(shows)), ...(total ? { slide: (slide.index ?? 0) + 1, slides: total } : {}), words: scriptureWords || plain(words) || words } : null,
         background: output?.out?.background ? output.out.background.name || output.out.background.path || output.out.background.id || "" : null,
         openPlan: get(projects)[get(activeProject) || ""]?.name || null,
-        copilot: { on: !!get(ai).enabled, listening: get(copilotListening) }
+        copilot: { on: !!get(ai).enabled, listening: get(copilotListening), agentMode: !!get(ai).silas?.agentMode }
     }
 }
 
@@ -108,7 +108,7 @@ export function findByName(list: { [id: string]: { name?: string; private?: bool
     throw new ToolError(`Nothing named "${name}" was found.`)
 }
 
-async function searchBible(query: string, version: string) {
+export async function searchBible(query: string, version: string) {
     let response: Response
     try {
         response = await fetch(`${FUNCTIONS_URL}/search-scripture`, {
@@ -169,6 +169,15 @@ export const agentTools: AgentTool[] = [
             toggleSttListening({ value: !!on } as any)
             await until(() => get(copilotListening) === !!on, 8000)
             return { listening: get(copilotListening) }
+        }
+    },
+    {
+        name: "set_agent_mode",
+        description: "Let the app lead the screen by itself from what it hears (scripture, songs, clearing up), or hand it back to the operator.",
+        inputSchema: { type: "object", properties: { on: { type: "boolean" } }, required: ["on"] },
+        run: ({ on }) => {
+            ai.update((a) => ({ ...a, silas: { ...(a.silas || {}), agentMode: !!on } }))
+            return { agentMode: !!on }
         }
     },
     {
@@ -269,11 +278,11 @@ export const agentTools: AgentTool[] = [
                 return liveState()
             }
             requireUnlocked()
-            if (command === "next" || command === "previous") OutputHelper.advanceOutputs(command, "agent")
+            if (command === "next" || command === "previous") stepScreen(command)
             else if (command === "clear_words") clearSlide()
             else if (command === "clear_all") clearAll(true)
             else throw new ToolError(`Unknown command "${command}".`)
-            await settle(500)
+            await settle(900)
             return liveState()
         }
     },

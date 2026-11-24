@@ -357,6 +357,7 @@ export class BibleSearchDetector {
             ref: string
             finalScore: number
             evidence: number
+            quoted: boolean
             isCurrent: boolean
             upcomingDistance: number | null
         }> = []
@@ -399,6 +400,9 @@ export class BibleSearchDetector {
             const evidence = quoteEvidence(this.spokenVerseWords(verseId, queryWords), phraseMatch.maxRun)
             if (evidence < (isCurrent || upcomingDist === 1 ? MIN_EVIDENCE / 2 : MIN_EVIDENCE)) continue
 
+            // a retelling shares a verse's words; a quote has them in order, or most of them
+            const quoted = phraseMatch.maxRun >= 4 || this.verseCoverage(verseId, queryWords) >= 0.45
+
             const candidateParsed = this.parseReference(ref)
 
             if (isCurrent) {
@@ -429,6 +433,7 @@ export class BibleSearchDetector {
                     ref,
                     finalScore: scoreRatio,
                     evidence,
+                    quoted,
                     isCurrent,
                     upcomingDistance: upcomingDist
                 })
@@ -478,7 +483,7 @@ export class BibleSearchDetector {
 
         // a thin match may be offered, never put on screen by itself
         const expected = topMatch.isCurrent || topMatch.upcomingDistance === 1
-        const ceiling = !expected && topMatch.evidence < PRESENT_EVIDENCE ? 74 : 98
+        const ceiling = !expected && (topMatch.evidence < PRESENT_EVIDENCE || !topMatch.quoted) ? 74 : 98
         const confidence = Math.min(Math.max(Math.round(baseConfidence), 51), ceiling)
 
         if (confidence < 70) {
@@ -490,6 +495,12 @@ export class BibleSearchDetector {
             hasAnyCandidates: true,
             isAmbiguous
         }
+    }
+
+    /** a reference said outright, whole or as a verse of the passage that is up */
+    public findReference(words: string, currentlyOutputted = ""): MatchResult | null {
+        const forms = [normalizeMishearings(words), words].map((form) => normalizeReferences(normalizeNumbers(form), this.cacheData))
+        return this.findReferenceMatch(forms[0]) || this.findReferenceMatch(forms[1]) || this.findStandaloneVerseMatch(forms[0], currentlyOutputted) || this.findStandaloneVerseMatch(forms[1], currentlyOutputted)
     }
 
     private readonly DEBUG_MODE = false

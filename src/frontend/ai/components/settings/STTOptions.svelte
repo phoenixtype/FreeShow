@@ -7,7 +7,8 @@
     import MaterialDropdown from "../../../components/inputs/MaterialDropdown.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { activePopup, ai, mediaDownloads, popupData } from "../../../stores"
-    import { resolveSttEngine, SpeechToText } from "../../stt/stt"
+    import { copilotListening } from "../../liveCopilot"
+    import { resolveSttEngine, SPOKEN_LANGUAGES, SpeechToText } from "../../stt/stt"
 
     $: options = $ai.stt || {}
 
@@ -59,6 +60,15 @@
         })
     }
 
+    // LANGUAGE
+
+    const languages = [{ value: "", label: "Same as the app" }, { value: "auto", label: "Work it out (more than one language)" }, ...Object.entries(SPOKEN_LANGUAGES).map(([value, label]) => ({ value, label }))]
+    async function updateLanguage(value: string) {
+        ai.update((a) => ({ ...a, stt: { ...(a.stt || {}), engineOptions: { ...(a.stt?.engineOptions || {}), [selectedEngine]: { ...(a.stt?.engineOptions?.[selectedEngine] || {}), language: value } } } }))
+        // what is listening now was started in the old language
+        if ($copilotListening) await SpeechToText.restartEngine()
+    }
+
     // const sttEngines = {
     //     nemotron: { label: "Nemotron" }
     // }
@@ -84,6 +94,7 @@
 
 {#if status?.ready}
     <MaterialDropdown label="Microphone" options={microphones} value={options.micDeviceId || ""} on:change={(e) => updateValue("micDeviceId", e.detail)} />
+    <MaterialDropdown label="Spoken language" options={languages} value={options.engineOptions?.[selectedEngine]?.language || ""} on:change={(e) => updateLanguage(e.detail)} />
 {:else if currentlyDownloading?.size}
     <p class="note">Getting the speech model ready. This happens once.</p>
 {:else}

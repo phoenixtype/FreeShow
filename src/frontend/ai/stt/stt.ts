@@ -1,7 +1,19 @@
 import { get, writable } from "svelte/store"
 import { Main } from "../../../types/IPC/Main"
 import { requestMain, sendMain } from "../../IPC/main"
-import { ai } from "../../stores"
+import { ai, language } from "../../stores"
+
+// The model follows many languages, but left to guess it writes English spoken with an
+// Indian accent in Hindi script, and then no reference in it is found. So it is told:
+// the app's language unless another is chosen, or "auto" to let it guess.
+export const SPOKEN_LANGUAGES: Record<string, string> = { en: "English", es: "Spanish", fr: "French", pt: "Portuguese", de: "German", it: "Italian", nl: "Dutch", sv: "Swedish", no: "Norwegian", da: "Danish", fi: "Finnish", pl: "Polish", ro: "Romanian", ru: "Russian", uk: "Ukrainian", ko: "Korean", ja: "Japanese", zh: "Chinese", hi: "Hindi", ar: "Arabic" }
+export function spokenLanguage(chosen: string | undefined): string | undefined {
+    if (chosen === "auto") return undefined
+    if (chosen) return chosen
+    const own = (get(language) || "en").slice(0, 2)
+    const code = own === "ua" ? "uk" : own
+    return SPOKEN_LANGUAGES[code] ? code : undefined
+}
 
 export const audioLevelStore = writable<number>(0.0)
 
@@ -47,7 +59,8 @@ export class SpeechToText {
     static async restartEngine(operationId?: number) {
         const token = operationId ?? ++this.sessionToken
         const engine = resolveSttEngine()
-        const engineOptions = get(ai)?.stt?.engineOptions?.[engine] || {}
+        const engineOptions = { ...(get(ai)?.stt?.engineOptions?.[engine] || {}) }
+        engineOptions.language = spokenLanguage(engineOptions.language)
 
         const result = await requestMain(Main.AI_LISTEN_START, { engine, engineOptions }, undefined, 60000)
 
