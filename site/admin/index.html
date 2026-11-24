@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="referrer" content="no-referrer" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src https://gsrpimdgxepoydbrdlqx.supabase.co; base-uri 'none'; form-action 'none'" />
+        <title>Platform admin: Scriptural Project</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="stylesheet" href="admin.css" />
+    </head>
+    <body>
+        <header>
+            <img src="/favicon.svg" alt="" />
+            <strong>Scriptural Project</strong>
+            <span class="muted">Platform admin</span>
+            <span class="grow"></span>
+            <span class="muted" id="who"></span>
+            <button id="sign-out" class="text" hidden>Sign out</button>
+        </header>
+        <nav id="tabs" aria-label="Sections" hidden></nav>
+        <main id="main"></main>
+        <div id="toast" role="status" aria-live="polite" hidden></div>
+        <script src="admin.js" type="module"></script>
+    </body>
+</html>
