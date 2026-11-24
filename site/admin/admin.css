@@ -21,7 +21,7 @@ header { display: flex; align-items: center; gap: 10px; padding: 14px 24px; bord
 header img { width: 28px; height: 28px; }
 .grow { flex: 1; }
 .muted { color: var(--muted); }
-nav { display: flex; gap: 4px; padding: 8px 20px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+nav { display: flex; justify-content: safe center; gap: 4px; padding: 8px 20px; border-bottom: 1px solid var(--border); overflow-x: auto; }
 main { max-width: 1160px; margin: 0 auto; padding: 28px 24px 64px; }
 h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 16px; }
 button, select, input { font: inherit; color: inherit; }
@@ -45,6 +45,18 @@ table { width: 100%; border-collapse: collapse; }
 th { text-align: left; font-weight: 500; color: var(--muted); font-size: 0.875rem; }
 th, td { padding: 10px 14px 10px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
 td.num { font-variant-numeric: tabular-nums; }
+h2 { font-size: 1.0625rem; font-weight: 600; margin: 32px 0 8px; }
+.head { justify-content: space-between; }
+.head h1 { margin: 0; }
+.tight { margin: 0; }
+dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+dialog h2 { font-size: 1.25rem; margin: 0 0 4px; }
+dialog p { margin: 0 0 16px; }
+dialog label { display: block; margin-bottom: 14px; }
+dialog label span { display: block; margin-bottom: 4px; }
+dialog input, dialog select { width: 100%; min-width: 0; background: var(--background); }
+dialog .row { justify-content: flex-end; margin: 20px 0 0; }
 td select { min-height: 36px; padding: 4px 8px; }
 .bad { color: var(--bad); }
 .good { color: var(--good); }

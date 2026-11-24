@@ -140,7 +140,127 @@ function picker(options, value, label, pick) {
     return select
 }
 
-function searchable(title, placeholder, fn, heads, row, empty) {
+// A form over the page. "send" does the work and returns what to say; a refusal is shown
+// in the form, which stays open with what was typed.
+function ask(title, note, fields, action, send, reload) {
+    const bad = el("p", { className: "bad", role: "alert", hidden: true })
+    const go = el("button", { className: "main", type: "submit", textContent: action })
+    const form = el("form", { method: "dialog" }, el("h2", { textContent: title }), el("p", { className: "muted", textContent: note }), fields.map(([label, field]) => el("label", {}, el("span", { className: "muted small", textContent: label }), field)), bad, el("div", { className: "row" }, el("button", { type: "button", textContent: "Cancel", onclick: () => box.close() }), go))
+    const box = el("dialog", { "aria-label": title, onclose: () => box.remove() }, form)
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault()
+        go.disabled = true
+        bad.hidden = true
+        try {
+            const done = await send()
+            box.close()
+            say(done)
+            await reload()
+        } catch (err) {
+            // an ended sign-in puts the sign-in form on the page, which the dialog would cover
+            if (!readSession()) {
+                box.close()
+                return say(err.message, true)
+            }
+            bad.textContent = err.message
+            bad.hidden = false
+        }
+        go.disabled = false
+    })
+    document.body.append(box)
+    box.showModal()
+}
+
+const emailField = (value = "") => el("input", { type: "email", required: true, autocomplete: "off", value, readOnly: !!value })
+
+async function churchField() {
+    const select = el("select", { required: true })
+    const options = (rows) => select.replaceChildren(el("option", { value: "", textContent: "Choose a church" }), ...rows.map((church) => el("option", { value: church.id, textContent: church.owner ? `${church.name} (${church.owner})` : church.name })))
+    const find = (search) => rpc("platform_churches", { search, page_size: 200, page_offset: 0 })
+    const rows = await find("")
+    options(rows)
+    if (Number(rows[0]?.total || 0) <= rows.length) return [["Church", select]]
+    // more than one list holds
+    let timer
+    let latest = 0
+    const search = el("input", {
+        type: "search",
+        oninput: () => {
+            clearTimeout(timer)
+            timer = setTimeout(async () => {
+                const mine = ++latest
+                try {
+                    const found = await find(search.value)
+                    if (mine === latest) options(found)
+                } catch (err) {
+                    say(err.message, true)
+                }
+            }, 250)
+        }
+    })
+    return [["Find a church", search], ["Church", select]]
+}
+
+const addPerson = (target, email, role) => rpc("platform_add_person", { target, person_email: email, new_role: role })
+const givePlan = (email, plan) => rpc("platform_give_plan", { person_email: email, new_plan: plan })
+const placed = (answer, email) => (answer === "added" ? `${email} is in.` : `${email} joins when they first sign in.`)
+const planned = (answer, email) => (answer === "given" ? `${email}'s church has the plan now.` : `Their church gets the plan when ${email} has one.`)
+
+// for one person, for one church, or for neither yet
+async function askAdd(reload, { email, church } = {}) {
+    try {
+        const person = emailField(email)
+        const places = church ? [] : await churchField()
+        const role = picker({ owner: "Owner", admin: "Admin", editor: "Editor", viewer: "Viewer" }, "editor", "Role", () => null)
+        ask(church ? `Add to ${church.name}` : "Add to a church", "No account yet? They join when they first sign in with this email. We don't email them.", [["Email", person], ...places, ["Role", role]], "Add", async () => placed(await addPerson(church ? church.id : places.at(-1)[1].value, person.value, role.value), person.value.trim()), reload)
+    } catch (err) {
+        say(err.message, true)
+    }
+}
+
+function askPlan(reload) {
+    const person = emailField()
+    const plan = picker({ church: "Church", multi_campus: "Multi-campus" }, "church", "Plan", () => null)
+    ask("Give a free plan", "It goes to the church they own. New people get it when they sign in and make one. We don't email them.", [["Email", person], ["Plan", plan]], "Give plan", async () => planned(await givePlan(person.value, plan.value), person.value.trim()), reload)
+}
+
+// who was added or given a plan and has not got it yet
+async function waitingList(reload) {
+    const rows = await rpc("platform_waiting")
+    if (!rows.length) return []
+    const why = (row) => (!row.has_account ? "Has not signed in" : row.plan ? "Has no church on the free plan yet" : "Signed in, but not added")
+    return [
+        el("h2", { textContent: "Waiting" }),
+        table(
+            ["Email", "Gets", "Why it waits", "Since", ""],
+            rows.map((row) =>
+                el(
+                    "tr",
+                    {},
+                    cell(row.email),
+                    cell(row.plan ? `${PLANS[row.plan]} plan` : `${ROLES[row.role]} in ${row.church}`),
+                    cell(why(row)),
+                    cell(day(row.created_at)),
+                    cell(
+                        el(
+                            "div",
+                            { className: "row tight" },
+                            row.has_account && row.church_id ? el("button", { textContent: "Try again", onclick: () => change(() => addPerson(row.church_id, row.email, row.role), "Added.", reload) }) : null,
+                            el("button", {
+                                textContent: "Cancel",
+                                "aria-label": `Cancel for ${row.email}`,
+                                onclick: () => confirm(`Cancel this for ${row.email}?`) && change(() => rpc("platform_cancel_waiting", { target: row.id }), "Cancelled.", reload)
+                            })
+                        )
+                    )
+                )
+            ),
+            ""
+        )
+    ]
+}
+
+function searchable(title, placeholder, fn, heads, row, empty, { actions = () => [], below = async () => [] } = {}) {
     let offset = 0
     let timer
     const box = el("input", {
@@ -153,6 +273,7 @@ function searchable(title, placeholder, fn, heads, row, empty) {
         }
     })
     const list = el("div")
+    const extra = el("div")
     const count = el("span", { className: "muted" })
     const back = el("button", { textContent: "Back", onclick: () => ((offset -= PAGE), load()) })
     const next = el("button", { textContent: "Next", onclick: () => ((offset += PAGE), load()) })
@@ -167,13 +288,21 @@ function searchable(title, placeholder, fn, heads, row, empty) {
             count.textContent = total ? `${offset + 1} to ${offset + rows.length} of ${number(total)}` : ""
             back.hidden = offset === 0
             next.hidden = offset + rows.length >= total
-            list.replaceChildren(table(heads, rows.map((item) => row(item, load)), empty))
+            list.replaceChildren(table(heads, rows.map((item) => row(item, reload)), empty))
         } catch (err) {
             say(err.message, true)
         }
     }
-    main.replaceChildren(el("h1", { textContent: title }), el("div", { className: "row" }, box, count, el("span", { className: "grow" }), back, next), list)
-    return load()
+    async function rest() {
+        try {
+            extra.replaceChildren(...(await below(reload)))
+        } catch (err) {
+            say(err.message, true)
+        }
+    }
+    const reload = () => Promise.all([load(), rest()])
+    main.replaceChildren(el("div", { className: "row head" }, el("h1", { textContent: title }), el("div", { className: "row tight" }, actions(reload))), el("div", { className: "row" }, box, count, el("span", { className: "grow" }), back, next), list, extra)
+    return reload()
 }
 
 // SECTIONS //
@@ -218,7 +347,7 @@ const users = () =>
                             ? user.churches.map((church) =>
                                   el(
                                       "div",
-                                      { className: "row", style: "margin:0" },
+                                      { className: "row tight" },
                                       church.name,
                                       picker(ROLES, church.role, `Role in ${church.name}`, (role) => {
                                           if (role === "none" && !confirm(`Remove ${user.email} from ${church.name}?`)) return reload()
@@ -230,18 +359,27 @@ const users = () =>
                     )
                 ),
                 cell(
-                    user.is_admin
-                        ? ""
-                        : el("button", {
-                              textContent: user.suspended ? "Let back in" : "Suspend",
-                              onclick: () => {
-                                  if (!user.suspended && !confirm(`Suspend ${user.email}? They are signed out everywhere and can't sign in. Nothing of theirs is deleted.`)) return
-                                  return change(() => rpc("platform_set_suspended", { person: user.id, suspended: !user.suspended }), user.suspended ? "They can sign in again." : "Suspended.", reload)
-                              }
-                          })
+                    el(
+                        "div",
+                        { className: "row tight" },
+                        el("button", { textContent: "Add to a church", "aria-label": `Add ${user.email} to a church`, onclick: () => askAdd(reload, { email: user.email }) }),
+                        user.is_admin
+                            ? null
+                            : el("button", {
+                                  textContent: user.suspended ? "Let back in" : "Suspend",
+                                  onclick: () => {
+                                      if (!user.suspended && !confirm(`Suspend ${user.email}? They are signed out everywhere and can't sign in. Nothing of theirs is deleted.`)) return
+                                      return change(() => rpc("platform_set_suspended", { person: user.id, suspended: !user.suspended }), user.suspended ? "They can sign in again." : "Suspended.", reload)
+                                  }
+                              })
+                    )
                 )
             ),
-        "No one matches that."
+        "No one matches that.",
+        {
+            actions: (reload) => [el("button", { textContent: "Give a free plan", onclick: () => askPlan(reload) }), el("button", { className: "main", textContent: "Add person", onclick: () => askAdd(reload) })],
+            below: waitingList
+        }
     )
 
 const churches = () =>
@@ -249,7 +387,7 @@ const churches = () =>
         "Churches",
         "Search by name",
         "platform_churches",
-        ["Church", "Owner", "People", "Songs", "Plan", "AI this month", "Licensed Bibles"],
+        ["Church", "Owner", "People", "Songs", "Plan", "AI this month", "Licensed Bibles", ""],
         (church, reload) =>
             el(
                 "tr",
@@ -260,7 +398,8 @@ const churches = () =>
                 cell(number(church.songs), "num"),
                 cell(church.billed ? el("span", { className: church.status === "past_due" ? "bad" : "", textContent: `${PLANS[church.plan]}, ${church.status === "past_due" ? "payment late" : "paid by Stripe"}` }) : picker(PLANS, church.plan, `Plan of ${church.name}`, (plan) => change(() => rpc("platform_set_plan", { target: church.id, new_plan: plan }), "Plan saved.", reload))),
                 cell(`${number(church.ai_requests)}, ${dollars(church.ai_cost_micros)}`, "num"),
-                cell(picker({ ask: "Ask each time", grant: "Grant at once" }, church.auto_grant ? "grant" : "ask", `Licensed Bibles for ${church.name}`, (value) => change(() => rpc("platform_set_auto_grant", { target: church.id, allowed: value === "grant" }), "Saved.", reload)))
+                cell(picker({ ask: "Ask each time", grant: "Grant at once" }, church.auto_grant ? "grant" : "ask", `Licensed Bibles for ${church.name}`, (value) => change(() => rpc("platform_set_auto_grant", { target: church.id, allowed: value === "grant" }), "Saved.", reload))),
+                cell(el("button", { textContent: "Add person", "aria-label": `Add a person to ${church.name}`, onclick: () => askAdd(reload, { church }) }))
             ),
         "No church matches that."
     )
@@ -272,13 +411,13 @@ async function bibles() {
         el("h1", { textContent: "Bible requests" }),
         table(
             ["Church", "Version", "Asked", ""],
-            rows.map((row) => el("tr", {}, cell(row.church_name), cell(row.version), cell(day(row.requested_at)), cell(el("div", { className: "row", style: "margin:0" }, el("button", { textContent: "Grant", onclick: () => decide(row, "granted") }), el("button", { textContent: "Decline", onclick: () => decide(row, "declined") }))))),
+            rows.map((row) => el("tr", {}, cell(row.church_name), cell(row.version), cell(day(row.requested_at)), cell(el("div", { className: "row tight" }, el("button", { textContent: "Grant", onclick: () => decide(row, "granted") }), el("button", { textContent: "Decline", onclick: () => decide(row, "declined") }))))),
             "No one is waiting."
         )
     )
 }
 
-const ACTIONS = { set_plan: "Changed the plan", set_auto_grant: "Changed licensed Bibles", set_role: "Changed a role", set_suspended: "Suspended or let back in" }
+const ACTIONS = { set_plan: "Changed the plan", set_auto_grant: "Changed licensed Bibles", set_role: "Changed a role", set_suspended: "Suspended or let back in", add_person: "Added to a church", invite_person: "Added, waiting for sign-in", give_plan: "Gave a free plan", promise_plan: "Promised a free plan", cancel_waiting: "Cancelled a wait" }
 async function activity() {
     const rows = await rpc("platform_log")
     main.replaceChildren(
