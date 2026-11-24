@@ -4,7 +4,7 @@
     import type { ProjectShowRef, Tree } from "../../../types/Projects"
     import type { ShowType } from "../../../types/Show"
     import { addProjectItem, addToProject, updateRecentlyAddedFiles } from "../../converters/project"
-    import { actions, activeFocus, activePopup, activeProject, activeShow, contentProviderData, contextActive, drawer, drawerTabsData, editingProjectTemplate, focusMode, fullColors, playerVideos, popupData, projects, projectTemplates, projectView, providerItemLinks, recentFiles, selected, special } from "../../stores"
+    import { actions, activeFocus, activePopup, activeProject, activeShow, contentProviderData, contextActive, drawer, drawerTabsData, editingProjectTemplate, focusMode, fullColors, playerVideos, popupData, projects, projectTemplates, projectView, providerItemLinks, quickSearchActive, recentFiles, selected, special } from "../../stores"
     import { triggerFunction } from "../../utils/common"
     import { getAccess } from "../../utils/profile"
     import { isProjectItemLinked } from "../../utils/providerItemLinks"
@@ -408,6 +408,12 @@
             {:else}
                 <Center absolute>
                     <span style="opacity: 0.5;"><T id="empty.general" /></span>
+
+                    {#if !projectReadOnly}
+                        <div style="margin-top: 10px;">
+                            <MaterialButton variant="outlined" icon="search" title="Songs, loops, pictures and sounds" on:click={() => quickSearchActive.set(true)} white>Find and add</MaterialButton>
+                        </div>
+                    {/if}
 
                     {#if shouldPasteText}
                         <span style="padding-top: 20px" class="buttons">

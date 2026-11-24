@@ -4,7 +4,7 @@
     import { Main } from "../../../types/IPC/Main"
     import type { Project, Tree } from "../../../types/Projects"
     import { sendMain } from "../../IPC/main"
-    import { activePopup, activeProject, activeRename, contentProviderData, dictionary, drawer, editingProjectTemplate, focusMode, folders, openedFolders, pcoPlansWithUpdates, projects, projectTemplates, projectView, providerConnections, showRecentlyUsedProjects, sorted, special } from "../../stores"
+    import { activePopup, activeProject, activeRename, contentProviderData, dictionary, drawer, editingProjectTemplate, focusMode, folders, openedFolders, pcoPlansWithUpdates, projects, projectTemplates, projectView, providerConnections, quickSearchActive, showRecentlyUsedProjects, sorted, special } from "../../stores"
     import { translateText } from "../../utils/language"
     import { getAccess } from "../../utils/profile"
     import { exportProject } from "../export/project"
@@ -573,6 +573,7 @@
                         </div>
                     </MaterialButton>
 
+                    <MaterialButton variant="outlined" icon="search" title="Songs, loops, pictures and sounds" on:click={() => quickSearchActive.set(true)} white>Find and add</MaterialButton>
                     {#if $providerConnections.planningcenter}
                         <div class="group-spacer" />
                         <MaterialButton variant="outlined" icon="list" title="Planning Center" on:click={openPcoPicker} white>Planning Center</MaterialButton>

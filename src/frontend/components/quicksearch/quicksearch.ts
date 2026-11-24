@@ -58,6 +58,7 @@ import { duplicate } from "../helpers/clipboard"
 import { history } from "../helpers/history"
 import { addStageItem } from "../stage/stage"
 import { Main } from "./../../../types/IPC/Main"
+import { addFromLibrary, searchLibrary } from "../../scriptural/library"
 import { getMediaResults, showResult } from "./quicksearchData"
 
 interface QuickSearchValue {
@@ -75,7 +76,7 @@ interface QuickSearchValue {
 const MAX_RESULTS_NORMAL = 5
 const MAX_RESULTS_LARGE = 10
 
-export type SearchCategory = "show" | "settings" | "stage" | "overlays" | "projects" | "actions" | "navigation" | "faq" | "shows" | "media" | "audio" | "bible" | "items"
+export type SearchCategory = "show" | "settings" | "stage" | "overlays" | "projects" | "actions" | "navigation" | "faq" | "shows" | "media" | "audio" | "bible" | "items" | "library"
 export const quickSearchCategoryNames: Record<SearchCategory, string> = {
     show: "formats.show",
     settings: "menu.settings",
@@ -89,7 +90,8 @@ export const quickSearchCategoryNames: Record<SearchCategory, string> = {
     media: "tabs.media",
     audio: "tabs.audio",
     bible: "tabs.scripture",
-    items: "tools.items"
+    items: "tools.items",
+    library: "Scriptural library"
 }
 
 export async function quicksearch(searchValue: string, categoryFilter: null | SearchCategory = null) {
@@ -244,6 +246,11 @@ export async function quicksearch(searchValue: string, categoryFilter: null | Se
         addValues(audioMedia, "media")
     }
 
+    // --- SCRIPTURAL LIBRARY ---
+    if (isVisible("library")) {
+        addValues(await searchLibrary(rawSearchValue, categoryFilter ? 60 : MAX_RESULTS_LARGE), "library")
+    }
+
     // --- BIBLE ---
     // if (isVisible("bible")) {
     //     const bibleResults = trimValues(await getBibleResults(searchValue), MAX_RESULTS_LARGE)
@@ -269,6 +276,7 @@ export async function quicksearch(searchValue: string, categoryFilter: null | Se
 }
 
 const triggerActions = {
+    library: (_id: string, data: any) => void addFromLibrary(data),
     custom_actions: (id: string, data: any) => {
         if (id === "layout") {
             duplicate({ id: "layout" })

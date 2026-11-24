@@ -15,7 +15,7 @@
         "actions.export": `${ctrl} + e`,
         "main.search": `${ctrl} + f`,
         "actions.find_replace": `${ctrl} + f`, // only in editor
-        "main.quick_search": `${ctrl} + g`, // also F8
+        "main.quick_search": `${ctrl} + k`, // also Ctrl+G and F8
         "popup.history": `${ctrl} + h`,
         "edit._title_italic": `${ctrl} + i`,
         "actions.import": `${ctrl} + i`,

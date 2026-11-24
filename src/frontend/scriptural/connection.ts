@@ -8,7 +8,6 @@
 // change is decided by each database (row-level security), never by this app.
 
 import { Main } from "../../types/IPC/Main"
-import { requestMain } from "../IPC/main"
 
 // a little longer than the app waits for the browser
 const GOOGLE_WAIT_MS = 5 * 60 * 1000 + 5000
@@ -77,6 +76,8 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
 
     /** Opens Google's sign-in in the browser; null when the person backs out. */
     async function signInWithGoogle(): Promise<ScripturalSession | null> {
+        // only here: the rest of this file runs without the app around it
+        const { requestMain } = await import("../IPC/main")
         const answer = await requestMain(Main.BROWSER_SIGN_IN, { projectUrl }, undefined, GOOGLE_WAIT_MS)
         if (answer?.error === "cancelled") return null
         if (!answer?.code || !answer.verifier) throw new ScripturalError("The browser could not be opened. Sign in with your email instead.")

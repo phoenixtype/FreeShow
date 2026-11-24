@@ -61,7 +61,7 @@
             let matchedCategory = categoryMatch[1].toLowerCase()
 
             // add 's' to singular forms that should be plural
-            if (!matchedCategory.endsWith("s") && !["stage", "faq", "media", "audio", "bible"].includes(matchedCategory)) matchedCategory += "s"
+            if (!matchedCategory.endsWith("s") && !["stage", "faq", "media", "audio", "bible", "library"].includes(matchedCategory)) matchedCategory += "s"
 
             activeCategory = matchedCategory as SearchCategory
             value = value.replace(categoryMatch[0], "").trim()
@@ -104,9 +104,9 @@
     let selectedIndex = 0
 
     function keydown(e: KeyboardEvent) {
-        // CTRL + G or F8
+        // CTRL + K, CTRL + G or F8
         let key = getNormalizedKey(e)
-        if (((e.ctrlKey || e.metaKey) && key === "g") || e.key === "F8") {
+        if (((e.ctrlKey || e.metaKey) && (key === "g" || key === "k")) || e.key === "F8") {
             // toggle quick search
             quickSearchActive.set(!$quickSearchActive)
             return
@@ -198,7 +198,10 @@
                             {/if}
 
                             <div id="qs-item-{i}">
-                                <MaterialButton style="color: {value.color || 'unset'};" icon={value.icon || value.type} title={value.name} isActive={i === selectedIndex} on:click={(e) => selectQuicksearchValue(value, e.detail.ctrl)} white>
+                                <MaterialButton style="color: {value.color || 'unset'};" icon={value.data?.preview ? "" : value.icon || value.type} title={value.name} isActive={i === selectedIndex} on:click={(e) => selectQuicksearchValue(value, e.detail.ctrl)} white>
+                                    {#if value.data?.preview}
+                                        <img class="preview" src={value.data.preview} alt="" loading="lazy" draggable={false} />
+                                    {/if}
                                     <div class="item-text">
                                         <p>
                                             {value.name}
@@ -268,6 +271,14 @@
         --background: rgba(35, 35, 45, 0.8);
         background-color: var(--background);
         backdrop-filter: blur(16px);
+    }
+
+    .preview {
+        width: 64px;
+        height: 36px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
     }
 
     .search .icon {

@@ -79,7 +79,9 @@ async function freePath(file: string) {
     }
 }
 
-async function addMedia(args: any) {
+/** saves a file from the web or this computer into the media folder; reuse: the one already there by that name */
+export async function saveMedia(args: { source?: unknown; name?: unknown; reuse?: boolean }): Promise<{ path?: string; error?: string }> {
+    const failed = (error: string) => ({ error })
     const source = typeof args?.source === "string" ? args.source.trim() : ""
     const remote = /^https:\/\//i.test(source)
     if (!source || (!remote && !path.isAbsolute(source))) return failed("Give an https address or a full file path.")
@@ -91,7 +93,9 @@ async function addMedia(args: any) {
     const type = path.extname(fileName).toLowerCase()
     if (!MEDIA_TYPES.has(type) || (!remote && path.extname(source).toLowerCase() !== type)) return failed("Only pictures, videos, sounds, PDFs and slide decks can be added.")
 
-    const target = await freePath(path.join(getDataFolderPath("media"), fileName))
+    const wanted = path.join(getDataFolderPath("media"), fileName)
+    const target = await freePath(wanted)
+    if (args.reuse && target !== wanted) return { path: wanted }
     if (remote) {
         const response = await fetch(source, { signal: AbortSignal.timeout(5 * 60_000) })
         if (!response.ok || !response.body) return failed(`Could not download it (${response.status}).`)
@@ -112,6 +116,12 @@ async function addMedia(args: any) {
     } else {
         await copyFile(source, target, fsConstants.COPYFILE_EXCL)
     }
+    return { path: target }
+}
+
+async function addMedia(args: any) {
+    const { path: target, error } = await saveMedia({ source: args?.source, name: args?.name })
+    if (!target) return failed(error || "That could not be saved.")
 
     if (args.show === true) {
         const shown = await runInApp("show_media", { path: target })

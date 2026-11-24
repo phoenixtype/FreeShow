@@ -36,7 +36,7 @@ import { closeServers, startServers, updateServerData } from "../servers"
 import { detectEncoders, setRtmpEncoderSetting } from "../streaming/encoderDetection"
 import { downloadFfmpeg, resolveFfmpegPath } from "../streaming/ffmpegManager"
 import { processAudioData, timecodeStart, timecodeStop, updateTimecodeValue } from "../timecode/timecode"
-import { setAgentServer } from "../agent/agentServer"
+import { setAgentServer, saveMedia } from "../agent/agentServer"
 import { apiReturnData, emitOSC, startWebSocketAndRest, stopApiListener } from "../utils/api"
 import { closeMain } from "../utils/close"
 import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, getDataFolderRoot, getFileInfo, getMediaCodec, getMediaSyncFolderPath, getMediaTracks, getPaths, getSimularPaths, loadFile, loadShowsAsync, locateMediaFile, openInSystem, readExifData, readFile, readFolder, readFolderContent, selectFiles, selectFilesDialog, selectFolder, setMediaSyncFolderPath, writeFile } from "../utils/files"
@@ -299,6 +299,7 @@ export const mainResponses: MainResponses = {
     [Main.AI_GET_STATUS]: (data) => aiGetModelStatus(data),
     [Main.AI_SETUP]: (data) => aiHandleLocalSetup(data),
     [Main.AI_SET_KEY]: (data) => setAiKey(data),
+    [Main.SAVE_MEDIA]: (data) => saveMedia(data).catch(() => ({ error: "It could not be saved." })),
     [Main.BROWSER_SIGN_IN]: (data) => browserSignIn(data),
     [Main.BROWSER_SIGN_IN_CANCEL]: () => cancelBrowserSignIn(),
     [Main.AI_LLM_COMPLETE]: (data) => completeLLM(data),
