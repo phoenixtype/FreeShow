@@ -159,7 +159,7 @@
                 { test: (n) => n.endsWith(".dmg") && n.includes("arm64"), label: "Mac (Apple silicon)" },
                 { test: (n) => n.endsWith(".dmg") && n.includes("x64"), label: "Mac (Intel)" },
                 { test: (n) => n.endsWith(".exe"), label: "Windows" },
-                { test: (n) => n.endsWith(".AppImage"), label: "Linux" }
+                { test: (n) => n.endsWith("x86_64.AppImage"), label: "Linux" }
             ]
 
             fetch("https://api.github.com/repos/phoenixtype/FreeShow/releases/latest")
