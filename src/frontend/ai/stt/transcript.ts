@@ -1,7 +1,7 @@
 import { get } from "svelte/store"
 import { ai, sttTranscript } from "../../stores"
 import { newToast } from "../../utils/common"
-import { Silas } from "../voice/silasAgent"
+import { Matthias } from "../voice/matthiasAgent"
 import { AiManager } from "../manager/AiManager"
 
 type TranscriptPart = {
@@ -18,7 +18,7 @@ type TranscriptPart = {
     glue?: boolean
 }
 
-const SILAS_CHARS = 600
+const MATTHIAS_CHARS = 600
 
 interface PushedWord {
     words: number
@@ -29,7 +29,7 @@ export class Transcript {
     private static readonly MAX_TRANSCRIPT_CHARS = 10000
     private static readonly INTERIM_DEBOUNCE_MS = 350
 
-    // everything finalized since the app started, and how much of the end Silas reads
+    // everything finalized since the app started, and how much of the end Matthias reads
     private static heardChars = 0
 
     static push(part: TranscriptPart) {
@@ -53,9 +53,9 @@ export class Transcript {
         if (this.interimTimeout) clearTimeout(this.interimTimeout)
         this.interimTimeout = null
 
-        // words said to Silas are a request, not the sermon: marked as read, and not searched
+        // words said to Matthias are a request, not the sermon: marked as read, and not searched
         const { finalized, unprocessed } = get(sttTranscript)
-        if (Silas.hear(`${finalized.slice(-SILAS_CHARS)} ${unprocessed}`.trim(), Math.max(0, this.heardChars - SILAS_CHARS), !part.interim)) {
+        if (Matthias.hear(`${finalized.slice(-MATTHIAS_CHARS)} ${unprocessed}`.trim(), Math.max(0, this.heardChars - MATTHIAS_CHARS), !part.interim)) {
             this.getTranscriptChunk()
             this.wordsSinceRequest = 0
             return
@@ -125,7 +125,7 @@ export class Transcript {
 
         const startIdx = this.calculateStartIndex(words)
         const newWordsCount = words.length - startIdx
-        // nothing said before or to Silas is searched again: it would bring back what was up then
+        // nothing said before or to Matthias is searched again: it would bring back what was up then
         const overlap = Math.min(this.OVERLAP_WORDS, this.wordsSinceRequest)
         this.wordsSinceRequest += newWordsCount
         const chunkStartIdx = Math.max(0, startIdx - overlap)

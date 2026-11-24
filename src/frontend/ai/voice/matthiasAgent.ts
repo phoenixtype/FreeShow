@@ -1,4 +1,4 @@
-// Silas at work: hears the name in the transcript, waits for the request to be
+// Matthias at work: hears the name in the transcript, waits for the request to be
 // finished, and carries it out with the same paths the operator's own buttons use.
 
 import { get, writable } from "svelte/store"
@@ -17,21 +17,21 @@ import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT } from "../llm/prompts"
 import { AiManager } from "../manager/AiManager"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { presentSong } from "../songs/librarySongs"
-import { findCalls, matchTitle, NAME, parseRequest, type Request } from "./silas"
+import { findCalls, matchTitle, NAME, parseRequest, type Request } from "./matthias"
 import { matchVersion } from "./versions"
 
-export interface SilasStatus {
+export interface MatthiasStatus {
     state: "hearing" | "working" | "done" | "failed"
     text: string
 }
-export const silasStatus = writable<SilasStatus | null>(null)
+export const matthiasStatus = writable<MatthiasStatus | null>(null)
 
 const SHOWN_MS = 6000
 let statusTimer: ReturnType<typeof setTimeout> | null = null
-function say(state: SilasStatus["state"], text: string) {
-    silasStatus.set({ state, text })
+function say(state: MatthiasStatus["state"], text: string) {
+    matthiasStatus.set({ state, text })
     if (statusTimer) clearTimeout(statusTimer)
-    statusTimer = state === "done" || state === "failed" ? setTimeout(() => silasStatus.set(null), SHOWN_MS) : null
+    statusTimer = state === "done" || state === "failed" ? setTimeout(() => matthiasStatus.set(null), SHOWN_MS) : null
 }
 
 // the speech model writes about once a second, so a pause in the words is at least this long
@@ -41,7 +41,7 @@ const LONGEST_REQUEST_MS = 9000
 const REPEAT_MS = 8000
 const REWRITE_CHARS = 12
 
-export class Silas {
+export class Matthias {
     // where the last answered call stood, counted over everything heard
     private static handledAt = -1
     private static pending: { request: string; hey: boolean; at: number; since: number } | null = null
@@ -49,12 +49,12 @@ export class Silas {
     private static last = { words: "", at: 0 }
 
     static get on() {
-        return get(ai).silas?.name !== false
+        return get(ai).matthias?.name !== false
     }
 
     /**
      * transcript: the latest words, the first of them "before" characters into all that was heard.
-     * True while a request is being spoken: those words are for Silas, not the sermon.
+     * True while a request is being spoken: those words are for Matthias, not the sermon.
      */
     static hear(transcript: string, before: number, phraseEnded: boolean): boolean {
         if (!this.on) return false
@@ -83,7 +83,7 @@ export class Silas {
         if (this.timer) clearTimeout(this.timer)
         this.timer = null
         this.pending = null
-        silasStatus.set(null)
+        matthiasStatus.set(null)
     }
 
     private static async act() {
@@ -92,10 +92,10 @@ export class Silas {
         this.timer = null
         // counted even when nothing comes of it, so it is not asked again
         if (asked) this.handledAt = asked.at
-        if (!asked?.request) return silasStatus.set(null)
+        if (!asked?.request) return matthiasStatus.set(null)
 
         const words = asked.request.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "")
-        if (words === this.last.words && Date.now() - this.last.at < REPEAT_MS && !/next|previous|forward|back/.test(words)) return silasStatus.set(null)
+        if (words === this.last.words && Date.now() - this.last.at < REPEAT_MS && !/next|previous|forward|back/.test(words)) return matthiasStatus.set(null)
         this.last = { words, at: Date.now() }
 
         await this.ask(asked.request, asked.hey)
@@ -106,10 +106,10 @@ export class Silas {
         say("working", words)
         try {
             const done = await this.carryOut(parseRequest(words), certain, words)
-            if (done === null) silasStatus.set(null)
+            if (done === null) matthiasStatus.set(null)
             else say("done", done)
         } catch (err) {
-            if (!(err instanceof ToolError)) console.error("Silas:", err)
+            if (!(err instanceof ToolError)) console.error("Matthias:", err)
             say("failed", err instanceof ToolError ? err.message : `I could not do that: ${words}`)
         }
     }
@@ -248,8 +248,10 @@ export class Silas {
     private static async think(words: string, certain: boolean): Promise<string | null> {
         const reference = await AiManager.findReference(words)
         if (reference && !get(outLocked)) return this.passage(reference)
+        const song = matchTitle(words, songList()) || matchTitle(words.replace(/^\S+\s+/, ""), songList())
+        if (song && words.trim().includes(" ") && !get(outLocked)) return this.present(song)
         // the name may have been said in passing
-        if (!certain && !get(ai).silas?.agentMode) return null
+        if (!certain && !get(ai).matthias?.agentMode) return null
 
         const llm = getLLMManager()
         if (!llm) {
@@ -271,7 +273,7 @@ function songList() {
 
 /** full agent mode: the copilot leads the screen by itself until told otherwise */
 export function setAgentMode(on: boolean) {
-    ai.update((a) => ({ ...a, silas: { ...(a.silas || {}), agentMode: on } }))
+    ai.update((a) => ({ ...a, matthias: { ...(a.matthias || {}), agentMode: on } }))
     // whatever Bible is needed should be ready before the first word of it
     if (on) void BibleCacheManager.getCanon()
 }

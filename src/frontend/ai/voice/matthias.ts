@@ -1,22 +1,24 @@
-// Silas: the name the room calls the copilot by. He carried the apostles' letter to
-// Antioch, where it was read to the church (Acts 15). Chosen by measuring: over eight
-// accents and four commands the app's own speech model wrote "Silas" 28 times in 32,
-// against 1 in 8 for Baruch and none for Berea; the spellings below are the rest.
+// Matthias: the name the room calls the copilot by, chosen to serve among the twelve
+// (Acts 1). Picked by measuring what the app's own speech model writes when it is said:
+// with Nigerian voices 16 of 18 times to the letter and all 18 with the spellings below
+// (Silas 12, Baruch and Berea almost never), and it works for the person leading the app.
+// The commands are spelled for the same voices: "next vas", "takova", "Ps twenty three".
 //
 // This file only understands words. It decides nothing about the screen.
 
+import { distance } from "../scripture/nearestBook"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 
-export const NAME = "Silas"
+export const NAME = "Matthias"
 
-const SPELLINGS = "silas|silos|silus|sillas|sylas|cilas|cylas|sylus|cilus|silis|saylas|sailas|sighlas"
+const SPELLINGS = "matthias|mathias|matias|mattias|matheus|mathius|matthius|matthayas|mathayas|matthaias|mathaias|matthyas|mathyas|mathies|matthies|mateus|matheas|mattheas|mathais|matthais"
 // what it can also sound like; taken only with "hey" or straight before a plain command
-const LOOSE = "silence|silo|silent|silage"
+const LOOSE = "masais|mathis|matis|messias|mathes|mathers"
 const HEY = "hey|hi|ok|okay|hello"
 
-const CALL = new RegExp(`(?:^|[^\\p{L}])(?:(${HEY})[\\s,]+)?(?:(${SPELLINGS})|(${LOOSE}))(?=$|[^\\p{L}])[\\s,.!?:;-]*`, "giu")
-// "Paul and Silas prayed": spoken about, not to
-const SPOKEN_ABOUT = /(?:^|\s)(?:and|with|of|paul|to|named|called|was|is|that|for|from|by|brother|apostle|like|when|but|then|chose|or|about)\s*$/iu
+const CALL = new RegExp(`(?:^|[^\\p{L}])(?:(${HEY})[\\s,]+)?(?:he|hey|hi)?(?:(${SPELLINGS})|(${LOOSE}))(?=$|[^\\p{L}])[\\s,.!?:;-]*`, "giu")
+// "the lot fell upon Matthias": spoken about, not to
+const SPOKEN_ABOUT = /(?:^|\s)(?:and|with|of|paul|to|named|was|is|that|for|from|by|brother|apostle|like|when|but|then|chose|or|about|on|upon|appointed|called)\s*$/iu
 
 export interface Call {
     /** where in the words the call begins */
@@ -61,18 +63,59 @@ export type Request =
 const SHOW = "show(?: me| us)?|put up|foot up|put on|put|bring up|pull up|pool up|open(?: up)?|go to|turn to|take (?:me|us) to|give (?:me|us)|display|read|let us see|let's see|let us read|let's read|project"
 const FIND = "find(?: me| us)?|fine|search(?: for| the bible for| scripture for)?|look up|look for|where does (?:it|the bible|scripture) say|where is it written|which verse|what verse|what does the bible say about|what does scripture say about|what scripture"
 
+const NUMBER = "\\d|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thir|four|fif|six|seven|eigh|nine|twen|for|hundred"
+// what the speech model writes for these words said with a West African accent; safe here
+// because only words said straight to Matthias are read this way
+const HEARD: [RegExp, string][] = [
+    [/\bnext ?(?:vas|vass|vers|versus|verses|was|us|va|v|verse)\b/g, "next verse"],
+    [/\bprevious ?(?:vas|vass|vers|versus|was|us)\b/g, "previous verse"],
+    [/\b(?:vas|vass|vers|versus)\b/g, "verse"],
+    [/\bvast?r(?:e|i|ee)\b/g, "verse three"],
+    [/\bdiverse (?=about|that|on)/g, "the verse "],
+    [/^tak(?:e)? ?ov(?:a|er|ah)$/g, "take over"],
+    [/^stan(?:d)? ?down$/g, "stand down"],
+    [/^(?:issued?|showed|shown|shone|shohn|shon|shows|sho)\b/g, "show"],
+    [/^(?:puts?|foot) ?(?:up|ups|off)\b/g, "put up"],
+    [/^(?:turned|return|time|turns) to\b/g, "turn to"],
+    [/^(?:sin|sings|syn|seen|sim|seem|thing) (?=\w)/g, "sing "],
+    [/^(?:cla|clar|clea|claire|clare|clay|hear|clean|glare)\b(?= (?:the|that|it|all|every|screen))/g, "clear"],
+    [new RegExp(`\\b(?:ps|psum|psam|sum|some|som|somb|son|song|zone|salm|sam|samu|palm|psa) (?=${NUMBER})`, "g"), "psalm "],
+    [/\b(?:fast|face|force|fest) (?=samuel|kings|chronicles|corinthians|thessalonians|timothy|peter|john)/g, "first "]
+]
+
 const strip = (text: string) =>
-    text
-        .toLowerCase()
-        .replace(/[.!?,;:]+(?=\s|$)/g, "")
-        .replace(/\s+/g, " ")
+    HEARD.reduce(
+        (words, [heard, meant]) => words.replace(heard, meant),
+        text
+            .toLowerCase()
+            .replace(/[.!?,;:]+(?=\s|$)/g, "")
+            .replace(/\s+/g, " ")
+            .replace(/^(?:e |en |and |a |is |du |u |would |should )+(?=next|show|sho|put|find|clear|turn|sing)/, "")
+            .trim()
+    )
         .replace(/^(?:please|can you|could you|would you|will you|kindly|now|uh|um|so)\s+/g, "")
         .replace(/\s+(?:please|thank you|thanks|for us|on the screen|on screen)$/g, "")
         .trim()
 
 /** what was asked, in the order that plain commands win over open ones */
 export function parseRequest(spoken: string): Request {
-    const t = strip(spoken)
+    const request = parseWords(strip(spoken))
+    if (request.type !== "unknown" || !request.words) return request
+    // run together or misspelled ("cletherscreen"): the one plain command it is nearest to
+    const meant = nearestCommand(request.words)
+    return meant ? parseWords(meant) : request
+}
+
+const COMMANDS = ["clear the screen", "clear everything", "next verse", "previous verse", "next chapter", "previous chapter", "next slide", "previous slide", "another one", "bring it back", "take it down", "lock the screen", "unlock the screen", "turn the screen on", "turn the screen off", "take over", "stand down", "stop listening"]
+function nearestCommand(words: string): string | null {
+    const said = words.replace(/ /g, "")
+    if (said.length < 7) return null
+    if (/^[ck]l[a-z]{0,8}scr[a-z]*$/.test(said)) return "clear the screen"
+    const scored = COMMANDS.map((command) => ({ command, score: distance(said, command.replace(/ /g, "")) / said.length })).sort((a, b) => a.score - b.score)
+    return scored[0].score <= 0.25 && scored[1].score - scored[0].score > 0.05 ? scored[0].command : null
+}
+
+function parseWords(t: string): Request {
     if (!t) return { type: "unknown", words: "" }
 
     if (/^(?:unlock)(?: the)?(?: screen)?$/.test(t)) return { type: "lock", on: false }
@@ -91,7 +134,7 @@ export function parseRequest(spoken: string): Request {
     if (/^next (?:slide|line|part)$|^(?:go )?forward$/.test(t)) return { type: "slide", direction: "next" }
     if (/^(?:previous|last) (?:slide|line|part)$/.test(t)) return { type: "slide", direction: "previous" }
 
-    const navigate = parseCopilotCommand(t.replace(/\bnext was\b/, "next verse").replace(/^(?:go|move) (?:to )?(?:the )?(next|previous)/, "$1"))
+    const navigate = parseCopilotCommand(t.replace(/^(?:go|move) (?:to )?(?:the )?(next|previous)/, "$1"))
     // "go to chapter 3 of Romans" names a book: that is a passage, not a step
     if (navigate && !/\bof [a-z]/.test(t)) return { type: "navigate", command: navigate }
 

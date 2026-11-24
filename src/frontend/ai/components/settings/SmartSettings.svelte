@@ -6,7 +6,7 @@
     import AutoScriptureOptions from "./AutoScriptureOptions.svelte"
     import Title from "../../../components/input/Title.svelte"
     import LlmOptions from "../popups/LlmOptions.svelte"
-    import SilasOptions from "./SilasOptions.svelte"
+    import MatthiasOptions from "./MatthiasOptions.svelte"
     import STTOptions from "./STTOptions.svelte"
 
     $: isEnabled = $ai.enabled
@@ -28,7 +28,7 @@
 {#if isEnabled}
     <STTOptions />
 
-    <SilasOptions />
+    <MatthiasOptions />
 
     <AutoScriptureOptions />
 

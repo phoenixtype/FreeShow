@@ -1,21 +1,21 @@
 <script lang="ts">
     import Icon from "../../../components/helpers/Icon.svelte"
-    import { NAME } from "../../voice/silas"
-    import { silasStatus } from "../../voice/silasAgent"
+    import { NAME } from "../../voice/matthias"
+    import { matthiasStatus } from "../../voice/matthiasAgent"
 
     const icons = { hearing: "microphone", working: "ai", done: "check", failed: "close" }
 </script>
 
-{#if $silasStatus}
-    <div class="silas {$silasStatus.state}" role="status">
-        <Icon id={icons[$silasStatus.state]} white />
+{#if $matthiasStatus}
+    <div class="matthias {$matthiasStatus.state}" role="status">
+        <Icon id={icons[$matthiasStatus.state]} white />
         <b>{NAME}</b>
-        <span>{$silasStatus.text}</span>
+        <span>{$matthiasStatus.text}</span>
     </div>
 {/if}
 
 <style>
-    .silas {
+    .matthias {
         display: flex;
         align-items: center;
         gap: 8px;

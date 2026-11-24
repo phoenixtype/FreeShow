@@ -81,7 +81,7 @@ function liveState() {
         showing: slide ? { kind: slide.id === "temp" ? "scripture" : "presentation", title: onScreenTitle(slide, get(shows)), ...(total ? { slide: (slide.index ?? 0) + 1, slides: total } : {}), words: scriptureWords || plain(words) || words } : null,
         background: output?.out?.background ? output.out.background.name || output.out.background.path || output.out.background.id || "" : null,
         openPlan: get(projects)[get(activeProject) || ""]?.name || null,
-        copilot: { on: !!get(ai).enabled, listening: get(copilotListening), agentMode: !!get(ai).silas?.agentMode }
+        copilot: { on: !!get(ai).enabled, listening: get(copilotListening), agentMode: !!get(ai).matthias?.agentMode }
     }
 }
 
@@ -176,7 +176,7 @@ export const agentTools: AgentTool[] = [
         description: "Let the app lead the screen by itself from what it hears (scripture, songs, clearing up), or hand it back to the operator.",
         inputSchema: { type: "object", properties: { on: { type: "boolean" } }, required: ["on"] },
         run: ({ on }) => {
-            ai.update((a) => ({ ...a, silas: { ...(a.silas || {}), agentMode: !!on } }))
+            ai.update((a) => ({ ...a, matthias: { ...(a.matthias || {}), agentMode: !!on } }))
             return { agentMode: !!on }
         }
     },

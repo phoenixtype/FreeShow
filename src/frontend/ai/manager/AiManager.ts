@@ -118,7 +118,7 @@ export class AiManager {
     private static autoLevel(type: "scripture" | "lyrics"): ConfidenceLevels {
         const chosen = get(ai)[type]?.confidence || "ask"
         // leading by itself: certain and likely matches go up, whatever the setting
-        return get(ai).silas?.agentMode && (chosen === "ask" || chosen === "highest") ? "high" : chosen
+        return get(ai).matthias?.agentMode && (chosen === "ask" || chosen === "highest") ? "high" : chosen
     }
 
     // famous events and parables said in passing: "when Jesus walked on water"
@@ -365,7 +365,7 @@ export class AiManager {
         this.ownChangeUntil = Date.now() + 1500
     }
 
-    // SILAS: asked for by name, so shown whatever the settings say
+    // MATTHIAS: asked for by name, so shown whatever the settings say
 
     static async findReference(words: string): Promise<string | null> {
         const detector = await this.referenceDetector()
@@ -404,11 +404,11 @@ export class AiManager {
     private static heardAgain() {
         if (this.clearTimer) clearTimeout(this.clearTimer)
         this.clearTimer = null
-        const minutes = get(ai).silas?.clearAfter ?? this.CLEAR_AFTER_MINUTES
-        if (!get(ai).silas?.agentMode || !minutes || !this.liveContent) return
+        const minutes = get(ai).matthias?.clearAfter ?? this.CLEAR_AFTER_MINUTES
+        if (!get(ai).matthias?.agentMode || !minutes || !this.liveContent) return
         const content = this.liveContent
         this.clearTimer = setTimeout(() => {
-            if (!get(ai).silas?.agentMode || this.liveContent !== content || get(outLocked)) return
+            if (!get(ai).matthias?.agentMode || this.liveContent !== content || get(outLocked)) return
             this.letGo()
             clearSlide()
         }, minutes * 60_000)

@@ -113,7 +113,7 @@
                 </div>
             {:else}
                 <Center faded>
-                    <p>{state === "loading" ? "Getting ready to listen…" : $ai.silas?.name === false ? "Listening. Words appear here as they are spoken." : "Listening. You can say “Silas, John three sixteen”."}</p>
+                    <p>{state === "loading" ? "Getting ready to listen…" : $ai.matthias?.name === false ? "Listening. Words appear here as they are spoken." : "Listening. You can say “Matthias, John three sixteen”."}</p>
                 </Center>
             {/if}
         </div>

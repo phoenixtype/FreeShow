@@ -1,24 +1,27 @@
 import { describe, expect, it } from "vitest"
-import { findCalls, matchTitle, parseRequest } from "./silas"
+import { findCalls, matchTitle, parseRequest } from "./matthias"
 
 const calls = (words: string) => findCalls(words).map((c) => c.request)
 
 describe("findCalls", () => {
     it("hears the name and what follows", () => {
-        expect(calls("And that is why we trust him. Silas, show John three sixteen.")).toEqual(["show John three sixteen."])
-        expect(calls("hey silus next verse")).toEqual(["next verse"])
-        expect(calls("Let us stand Sillas clear the screen Silas next verse")).toEqual(["clear the screen", "next verse"])
-        expect(calls("okay Silas")).toEqual([""])
+        expect(calls("And that is why we trust him. Matthias, show John three sixteen.")).toEqual(["show John three sixteen."])
+        expect(calls("hey Matias next verse")).toEqual(["next verse"])
+        expect(calls("Let us stand Mathias clear the screen Matthias next verse")).toEqual(["clear the screen", "next verse"])
+        expect(calls("okay Matthias")).toEqual([""])
     })
-    it("does not answer when Silas is only spoken about", () => {
-        expect(calls("but at midnight Paul and Silas prayed and sang praises")).toEqual([])
-        expect(calls("he chose Silas and departed")).toEqual([])
-        expect(calls("the man named Silas was a prophet")).toEqual([])
+    it("does not answer when Matthias is only spoken about", () => {
+        expect(calls("and the lot fell upon Matthias and he was numbered with the eleven")).toEqual([])
+        expect(calls("they called Joseph and Matthias")).toEqual([])
+        expect(calls("a man named Matthias was chosen")).toEqual([])
     })
     it("takes a sound-alike only before a plain command", () => {
-        expect(calls("silence next verse")).toEqual(["next verse"])
-        expect(calls("there was silence in heaven for half an hour")).toEqual([])
-        expect(calls("silence fell on the whole crowd and they listened")).toEqual([])
+        expect(calls("messias next verse")).toEqual(["next verse"])
+        expect(calls("we have found the messias which is being interpreted the Christ")).toEqual([])
+    })
+    it("hears the name run together with hey, and never takes Matthew for it", () => {
+        expect(calls("HeMatthias put up Ps twenty three")).toEqual(["put up Ps twenty three"])
+        expect(calls("turn to Matthew chapter five verse three")).toEqual([])
     })
 })
 
@@ -55,6 +58,21 @@ describe("parseRequest", () => {
         expect(parseRequest("put up Psalm twenty three")).toEqual({ type: "show", what: "psalm twenty three" })
         expect(parseRequest("sing Amazing Grace")).toEqual({ type: "song", name: "amazing grace" })
         expect(type("was a faithful brother")).toBe("unknown")
+    })
+    it("understands the commands as the model writes them for a Nigerian voice", () => {
+        const next = { type: "navigate", command: { type: "verse-step", delta: 1 } }
+        for (const words of ["Next Vas", "Nextvas", "next versus", "Next V", "e next vas", "next us"]) expect(parseRequest(words)).toEqual(next)
+        expect(parseRequest("Cladescreen")).toEqual({ type: "clear", all: false })
+        expect(parseRequest("Cletherscreen")).toEqual({ type: "clear", all: false })
+        expect(parseRequest("Sim Rock of Ages")).toEqual({ type: "song", name: "rock of ages" })
+        expect(parseRequest("was a faithful witness of the resurrection").type).toBe("unknown")
+        expect(parseRequest("Takova")).toEqual({ type: "agent", on: true })
+        for (const words of ["put up Ps twenty three", "puts up Ps twenty three", "put up some twenty three", "Put Ups twenty three".replace("Ups", "up sum")]) expect(parseRequest(words)).toEqual({ type: "show", what: "psalm twenty three" })
+        expect(parseRequest("showed John three sixteen")).toEqual({ type: "show", what: "john three sixteen" })
+        expect(parseRequest("turned to fast Corinthians thirteen four")).toEqual({ type: "show", what: "first corinthians thirteen four" })
+        expect(parseRequest("find diverse about being anxious")).toEqual({ type: "search", query: "being anxious", topic: true })
+        for (const words of ["Cla the screen", "Claire the Screen", "clea the screen"]) expect(parseRequest(words)).toEqual({ type: "clear", all: false })
+        expect(parseRequest("Sin Amazing Grace")).toEqual({ type: "song", name: "amazing grace" })
     })
     it("moves through what a search found", () => expect(parseRequest("another one")).toEqual({ type: "result", direction: "next" }))
 })

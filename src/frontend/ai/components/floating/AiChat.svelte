@@ -150,7 +150,7 @@
                     <div class="empty-state">
                         <Icon id="ai" size={2.2} gradient />
                         <p class="placeholder">
-                            {#if isAgent}Ask Silas to run the service{:else}<T id="chat.ask" />{/if}
+                            {#if isAgent}Ask Matthias to run the service{:else}<T id="chat.ask" />{/if}
                         </p>
                         {#if isAgent}
                             <div class="examples">

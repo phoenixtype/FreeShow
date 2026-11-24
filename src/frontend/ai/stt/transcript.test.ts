@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-vi.mock("../voice/silasAgent", () => ({ Silas: { hear: () => false } }))
+vi.mock("../voice/matthiasAgent", () => ({ Matthias: { hear: () => false } }))
 vi.mock("../../stores", () => ({ ai: { subscribe: () => () => {} }, sttTranscript: { subscribe: () => () => {} } }))
 vi.mock("../../utils/common", () => ({ newToast: () => {} }))
 vi.mock("../manager/AiManager", () => ({ AiManager: {} }))

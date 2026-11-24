@@ -1,4 +1,5 @@
 import type { BibleCacheData } from "./BibleCacheManager"
+import { correctBookNames } from "./nearestBook"
 import { CHAPTER_PATTERN, JOINER_PATTERN, normalizeBookName, OF_PATTERN, ORDINAL_PREFIX_PATTERN, PSALM_NORMALIZATION_MAP, PSALM_PATTERN, RANGE_PATTERN, THE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
 
 export function normalizeReferences(text: string, cacheData: BibleCacheData): string {
@@ -10,6 +11,8 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     // "Genesis, chapter 3, verse 12": the transcript's commas are not part of the reference
     normalized = normalized.replace(new RegExp(`\\s*[,;]\\s*(?=(?:${CHAPTER_PATTERN}|${VERSE_PATTERN})\\b)`, "giu"), " ")
+
+    normalized = correctBookNames(normalized, cacheData.bookNames, CHAPTER_PATTERN, VERSE_PATTERN)
 
     // 2. Normalize plural or localized book names (e.g., "Psalms" -> "Psalm")
     for (const [plural, singular] of Object.entries(PSALM_NORMALIZATION_MAP)) {

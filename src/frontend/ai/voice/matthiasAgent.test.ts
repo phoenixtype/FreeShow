@@ -23,7 +23,7 @@ import { get } from "svelte/store"
 import { clearSlide } from "../../components/output/clear"
 import { ai, outLocked } from "../../stores"
 import { presentSong } from "../songs/librarySongs"
-import { Silas, silasStatus } from "./silasAgent"
+import { Matthias, matthiasStatus } from "./matthiasAgent"
 
 let position = 0
 beforeEach(() => {
@@ -34,63 +34,63 @@ beforeEach(() => {
     position += 2000
 })
 // each test is a new stretch of one long transcript
-const hear = (words: string, ended = false) => Silas.hear(words, position, ended)
+const hear = (words: string, ended = false) => Matthias.hear(words, position, ended)
 const settle = () => vi.advanceTimersByTimeAsync(10_000)
 
 it("waits for the request to be finished, then does it once", async () => {
-    expect(hear("so the love of God is real silas show")).toBe(true)
+    expect(hear("so the love of God is real matthias show")).toBe(true)
     await vi.advanceTimersByTimeAsync(1000)
-    expect(hear("so the love of God is real silas show john three")).toBe(true)
+    expect(hear("so the love of God is real matthias show john three")).toBe(true)
     await vi.advanceTimersByTimeAsync(1000)
     expect(manager.showReference).not.toHaveBeenCalled()
-    hear("so the love of God is real, Silas, show John three sixteen.", true)
+    hear("so the love of God is real, Matthias, show John three sixteen.", true)
     await settle()
     expect(manager.showReference).toHaveBeenCalledTimes(1)
     // the same words, heard again as the transcript grows
-    expect(hear("so the love of God is real, Silas, show John three sixteen. And we know")).toBe(false)
+    expect(hear("so the love of God is real, Matthias, show John three sixteen. And we know")).toBe(false)
     await settle()
     expect(manager.showReference).toHaveBeenCalledTimes(1)
 })
 
 it("does one request after another", async () => {
-    hear("silas next verse", true)
+    hear("matthias next verse", true)
     await settle()
-    hear("silas next verse and the light silas clear the screen", true)
+    hear("matthias next verse and the light matthias clear the screen", true)
     await settle()
     expect(manager.navigateNow).toHaveBeenCalledTimes(1)
     expect(clearSlide).toHaveBeenCalledTimes(1)
 })
 
 it("searches, shows the best, and moves to another", async () => {
-    await Silas.ask("find the verse about being anxious")
+    await Matthias.ask("find the verse about being anxious")
     expect(manager.showReference).toHaveBeenLastCalledWith("Philippians 4:6")
-    await Silas.ask("another one")
+    await Matthias.ask("another one")
     expect(manager.showReference).toHaveBeenLastCalledWith("Matthew 6:25")
 })
 
 it("plays a song of the library", async () => {
-    await Silas.ask("sing amazing grace")
+    await Matthias.ask("sing amazing grace")
     expect(presentSong).toHaveBeenCalledWith("a", "")
 })
 
 it("leaves a locked screen alone", async () => {
     outLocked.set(true)
-    await Silas.ask("show John 3 16")
+    await Matthias.ask("show John 3 16")
     expect(manager.showReference).not.toHaveBeenCalled()
-    expect(get(silasStatus)).toEqual({ state: "failed", text: "The screen is locked" })
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: "The screen is locked" })
 })
 
 it("takes and gives back the lead", async () => {
-    await Silas.ask("take over")
-    expect(get(ai).silas?.agentMode).toBe(true)
-    await Silas.ask("stand down")
-    expect(get(ai).silas?.agentMode).toBe(false)
+    await Matthias.ask("take over")
+    expect(get(ai).matthias?.agentMode).toBe(true)
+    await Matthias.ask("stand down")
+    expect(get(ai).matthias?.agentMode).toBe(false)
 })
 
 it("says nothing when the name was only said in passing, or is switched off", async () => {
-    hear("silas was a faithful man", true)
+    hear("matthias was a faithful man", true)
     await settle()
-    expect(get(silasStatus)).toBeNull()
-    ai.set({ silas: { name: false } })
-    expect(hear("and then silas next verse", true)).toBe(false)
+    expect(get(matthiasStatus)).toBeNull()
+    ai.set({ matthias: { name: false } })
+    expect(hear("and then matthias next verse", true)).toBe(false)
 })

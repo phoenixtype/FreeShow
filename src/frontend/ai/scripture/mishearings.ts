@@ -1,6 +1,9 @@
 export const COMMON_MISHEARINGS: Record<string, string> = {
     // Phonetic & ASR Mishearings
     palm: "psalm",
+    psum: "psalm",
+    psam: "psalm",
+    salm: "psalm",
     palms: "psalms",
     genes: "genesis",
     joan: "jonah",
@@ -77,6 +80,12 @@ export const COMMON_MISHEARINGS: Record<string, string> = {
 
 export function normalizeMishearings(text: string): string {
     let normalized = text.toLowerCase()
+
+    // as the speech model writes them for a West African accent
+    normalized = normalized
+        .replace(/\b(?:fast|face|fest) (?=(?:samuel|kings|chronicles|corinthians|thessalonians|timothy|peter|john)\b)/g, "first ")
+        .replace(/\bvast?r(?:e|i|ee)\b/g, "verse three")
+        .replace(/\b(?:vas|vass|vers|versus)(?= (?:\d|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty))/g, "verse")
 
     const mishearingKeys = Object.keys(COMMON_MISHEARINGS).sort((a, b) => b.length - a.length)
     const mishearingRegex = new RegExp(`(?<!\\p{L})(${mishearingKeys.join("|")})(?!\\p{L})`, "giu")
