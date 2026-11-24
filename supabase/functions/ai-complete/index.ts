@@ -3,22 +3,23 @@
 // monthly allowance (use_ai_request). Claude answers; Gemini if Claude fails.
 // POST { churchId, prompt, systemPrompt?, jsonSchema?, maxTokens? } -> { text }
 import { createClient } from "npm:@supabase/supabase-js@2"
-import { callerRole, cors, failure, json } from "../_shared/church.ts"
+import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
 
 const CLAUDE_MODEL = "claude-sonnet-5-5"
 const GEMINI_MODEL = "gemini-2.5-flash"
 const MAX_TOKENS = 4096
-// Claude thinks before it answers, and its thinking comes out of max_tokens: short answers
-// need room for it, and these are short, quick requests
-const CLAUDE_MAX_TOKENS = 8192
+// Claude thinks before it answers, and its thinking comes out of max_tokens. At low effort
+// it is brief, and Claude always gets the whole cap, however short an answer was asked for.
 const CLAUDE_EFFORT = "low"
+// Sonnet 5.5, in millionths of a dollar per token; a cache write costs a quarter more than input
+const PRICE = { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 }
 const MAX_PROMPT_CHARS = 60_000
 
-async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?: unknown; maxTokens?: number }): Promise<string> {
+async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?: unknown; maxTokens?: number }, spent: (micros: number) => void): Promise<string> {
     const key = Deno.env.get("ANTHROPIC_API_KEY")
     if (!key) throw new Error("no Anthropic key")
     const outputConfig = { effort: CLAUDE_EFFORT, ...(body.jsonSchema ? { format: { type: "json_schema", schema: body.jsonSchema } } : {}) }
-    const request: Record<string, unknown> = { model: CLAUDE_MODEL, max_tokens: CLAUDE_MAX_TOKENS, output_config: outputConfig, messages: [{ role: "user", content: body.prompt }] }
+    const request: Record<string, unknown> = { model: CLAUDE_MODEL, max_tokens: MAX_TOKENS, output_config: outputConfig, messages: [{ role: "user", content: body.prompt }] }
     // the same for every step of an agent turn, so it is paid for in full only once
     if (body.systemPrompt) request.system = [{ type: "text", text: body.systemPrompt, cache_control: { type: "ephemeral" } }]
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -29,7 +30,8 @@ async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?
     })
     if (!response.ok) throw new Error(`Claude ${response.status}`)
     const data = await response.json()
-    console.log("Claude usage", JSON.stringify(data.usage || {}))
+    const usage = data.usage || {}
+    spent(Math.ceil((usage.input_tokens || 0) * PRICE.input + (usage.output_tokens || 0) * PRICE.output + (usage.cache_creation_input_tokens || 0) * PRICE.cacheWrite + (usage.cache_read_input_tokens || 0) * PRICE.cacheRead))
     if (data.stop_reason === "refusal" || data.stop_reason === "max_tokens") throw new Error(`Claude stopped: ${data.stop_reason}`)
     return data.content?.find((b: { type: string }) => b.type === "text")?.text || ""
 }
@@ -74,20 +76,28 @@ Deno.serve(async (req) => {
             return json({ error: free ? "plan_required" : "allowance_used", message }, 402)
         }
 
+        // only the server settles a request: a member could hand their own back
+        let cost = 0
+        const settle = async (answered: boolean) => {
+            const { error: settleError } = await admin().rpc("settle_ai_request", { target: body.churchId, cost, answered })
+            if (settleError) console.error("Could not settle an AI request:", settleError.message)
+        }
+
         let text: string
         try {
-            text = await claude(body)
+            text = await claude(body, (micros) => (cost += micros))
         } catch (claudeError) {
             console.warn("Claude failed, trying Gemini:", String(claudeError))
             try {
                 text = await gemini(body)
             } catch (geminiError) {
                 // neither answered: the church is not charged for it
-                await userDb.rpc("refund_ai_request", { target: body.churchId })
+                await settle(false)
                 console.error("Gemini failed too:", String(geminiError))
                 return json({ error: "ai_unavailable", message: "Scriptural AI is not answering right now. Try again in a minute." }, 503)
             }
         }
+        await settle(true)
         return json({ text })
     } catch (error) {
         return failure(error)
