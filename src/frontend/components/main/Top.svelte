@@ -193,6 +193,10 @@
         flex: 1;
         min-width: max-content;
     }
+    .top .side:first-child .brand {
+        width: var(--navigation-width);
+        justify-content: center;
+    }
 
     .top.drag {
         -webkit-app-region: drag;

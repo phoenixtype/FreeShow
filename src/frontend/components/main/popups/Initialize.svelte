@@ -81,7 +81,5 @@
     .main {
         display: flex;
         flex-direction: column;
-
-        width: min(560px, 90vw);
     }
 </style>
