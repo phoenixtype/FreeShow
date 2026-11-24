@@ -2,6 +2,7 @@ import type { MatchResult } from "../../../types/ai/Ai"
 import type { BibleCacheData } from "./BibleCacheManager"
 import { normalizeMishearings } from "./mishearings"
 import { normalizeNumbers } from "./numbers"
+import { MIN_EVIDENCE, PRESENT_EVIDENCE, quoteEvidence } from "./quoteEvidence"
 import { normalizeBookName, RANGE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
 import { normalizeReferences } from "./references"
 
@@ -140,6 +141,15 @@ export class BibleSearchDetector {
             if (queryWords.has(wordId)) covered += idf
         }
         return total ? covered / total : 0
+    }
+
+    private spokenVerseWords(verseId: number, queryWords: Set<number>) {
+        const spoken = new Set<number>()
+        for (let i = this.cacheData.verseTokensOffsets[verseId]; i < this.cacheData.verseTokensOffsets[verseId + 1]; i++) {
+            const wordId = this.cacheData.verseTokens[i]
+            if (queryWords.has(wordId)) spoken.add(wordId)
+        }
+        return [...spoken].map((wordId) => ({ word: this.cacheData.vocabPool[wordId], idf: this.cacheData.wordIdf[wordId] }))
     }
 
     // Calculates sequential phrase / n-gram match between input tokens and verse tokens
@@ -346,6 +356,7 @@ export class BibleSearchDetector {
             verseId: number
             ref: string
             finalScore: number
+            evidence: number
             isCurrent: boolean
             upcomingDistance: number | null
         }> = []
@@ -382,6 +393,12 @@ export class BibleSearchDetector {
             // a handful of common words can match a long verse completely; the match is worth what it covers of the verse
             const coverageTarget = Math.min(0.25, Math.max(0.08, queryWords.size * 0.03))
             scoreRatio *= Math.min(1, this.verseCoverage(verseId, queryWords) / coverageTarget)
+
+            // ordinary talk that happens to share words with a verse is not a quote;
+            // reading on from the verse on screen needs less, as it is already expected
+            const evidence = quoteEvidence(this.spokenVerseWords(verseId, queryWords), phraseMatch.maxRun)
+            if (evidence < (isCurrent || upcomingDist === 1 ? MIN_EVIDENCE / 2 : MIN_EVIDENCE)) continue
+
             const candidateParsed = this.parseReference(ref)
 
             if (isCurrent) {
@@ -411,6 +428,7 @@ export class BibleSearchDetector {
                     verseId,
                     ref,
                     finalScore: scoreRatio,
+                    evidence,
                     isCurrent,
                     upcomingDistance: upcomingDist
                 })
@@ -458,7 +476,10 @@ export class BibleSearchDetector {
             baseConfidence = Math.max(baseConfidence, 80)
         }
 
-        const confidence = Math.min(Math.max(Math.round(baseConfidence), 51), 98)
+        // a thin match may be offered, never put on screen by itself
+        const expected = topMatch.isCurrent || topMatch.upcomingDistance === 1
+        const ceiling = !expected && topMatch.evidence < PRESENT_EVIDENCE ? 74 : 98
+        const confidence = Math.min(Math.max(Math.round(baseConfidence), 51), ceiling)
 
         if (confidence < 70) {
             return { match: null, hasAnyCandidates: true, isAmbiguous }
