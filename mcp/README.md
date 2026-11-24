@@ -14,7 +14,7 @@ The server is off until turned on, answers only this computer, and needs the tok
 | Tool | Does |
 |---|---|
 | `get_live_state`, `get_screen_image` | What is on screen, in words and as a picture |
-| `get_transcript`, `show_found`, `set_listening` | The Live Copilot: what it heard and found |
+| `get_transcript`, `show_found`, `set_listening`, `set_agent_mode` | The Live Copilot: what it heard and found |
 | `search_bible`, `read_passage`, `show_scripture` | Scripture |
 | `list_songs`, `get_song`, `add_song`, `present_song` | The song library |
 | `list_plans`, `create_plan`, `add_to_plan` | Service plans |
