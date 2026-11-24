@@ -5,7 +5,6 @@
     import { activePopup, dataPath, dictionary, guideActive, language, popupData, timeFormat } from "../../../stores"
     import { createData } from "../../../utils/createData"
     import { getLanguageList, setLanguage, translateText } from "../../../utils/language"
-    import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
     import HRule from "../../input/HRule.svelte"
     import InputRow from "../../input/InputRow.svelte"
@@ -54,7 +53,6 @@
 
 <div class="main">
     <p><T id="setup.good_luck" /></p>
-    <p style="opacity: 0.8;"><T id="setup.tips" /></p>
 
     <HRule />
 
@@ -67,8 +65,7 @@
 
     <MaterialFolderPicker PICK_ID="DATA_SHOWS" label={translateText("settings.data_location", $dictionary)} value={$dataPath} on:change={updateDataPath} openButton={false} />
 
-    <MaterialButton variant="outlined" class="start" style="font-size: 1.8em;padding: 15px;margin-top: 20px;" on:click={create} white>
-        <Icon id="check" size={2.5} />
+    <MaterialButton variant="contained" class="start" style="align-self: flex-end;margin-top: 20px;" on:click={create}>
         <T id="setup.get_started" />
     </MaterialButton>
 
@@ -85,6 +82,6 @@
         display: flex;
         flex-direction: column;
 
-        width: 50vw;
+        width: min(560px, 90vw);
     }
 </style>

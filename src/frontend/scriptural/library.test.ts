@@ -4,10 +4,10 @@ vi.mock("../IPC/main", () => ({ requestMain }))
 vi.mock("../utils/common", () => ({ newToast: (text: string) => toasts.push(text) }))
 vi.mock("../stores", async () => {
     const { writable } = await import("svelte/store")
-    return { activeProject: writable(null), activeShow: writable(null), projects: writable({}) }
+    return { activeProject: writable(null), activeShow: writable(null), projects: writable({}), audioFolders: writable({}), mediaFolders: writable({}) }
 })
 import { get } from "svelte/store"
-import { activeProject, activeShow, projects } from "../stores"
+import { activeProject, activeShow, mediaFolders, projects } from "../stores"
 import { addFromLibrary, matchLibrary, type LibraryItem } from "./library"
 
 const make = (label: string, type: LibraryItem["type"], words: string): LibraryItem => ({ id: label, label, type, url: `https://x.org/a/${label}.mp4`, words: `${label} ${words}`.toLowerCase() })
@@ -19,7 +19,11 @@ describe("matchLibrary", () => {
         expect(names("cross")).toEqual(["Cross at dawn"])
         expect(names("gold loop")).toEqual(["Gold flow"])
         expect(names("sound")).toEqual(["Pad in G"])
-        expect(names("worship")).toEqual(["Gold flow", "Pad in G"])
+        expect(names("worship").sort()).toEqual(["Gold flow", "Pad in G"])
+    })
+    it("prefers the word typed in full", () => {
+        const pads = [make("Worship pad in G flat", "audio", "pad g"), make("Worship pad in G", "audio", "pad g")]
+        expect(matchLibrary(pads, "pad in g", 10)[0].label).toBe("Worship pad in G")
     })
     it("needs every word, from its start", () => {
         expect(names("gold easter")).toEqual([])
@@ -39,6 +43,7 @@ describe("addFromLibrary", () => {
         activeProject.set("p1")
         requestMain.mockResolvedValue({ path: "/media/Gold flow.mp4" })
         await addFromLibrary(list[1])
+        expect(Object.values(get(mediaFolders)).map((a) => a.path)).toEqual(["/media"])
         expect(get(projects).p1.shows).toEqual([{ id: "/media/Gold flow.mp4", name: "Gold flow", type: "video" }])
         expect(requestMain.mock.calls[0][1]).toEqual({ source: "https://x.org/a/Gold flow.mp4", name: "Gold flow.mp4", reuse: true })
     })

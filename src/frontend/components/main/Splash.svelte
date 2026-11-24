@@ -45,17 +45,17 @@
     const HIDE_KEY = "home-get-ready-hidden"
     let hidden = localStorage.getItem(HIDE_KEY) === "1"
     $: steps = [
-        { label: "Add your songs", hint: "Import from EasyWorship, ProPresenter and others, or sync your church library", done: Object.keys($shows).length > 0, open: () => activePopup.set("import") },
+        { label: "Add your songs", hint: "Import from EasyWorship, ProPresenter and others, or sync your church library", done: Object.keys($shows).some((id) => id !== "default"), open: () => activePopup.set("import") },
         {
             label: "Download a Bible",
             hint: "KJV, BSB and more, free and offline",
-            done: Object.keys($scriptures).length > 0,
+            done: Object.values($scriptures).some((a) => !a.api && !a.collection),
             open: () => {
                 popupData.set({ importType: "scriptural" })
                 activePopup.set("import_scripture")
             }
         },
-        { label: "Plan the service", hint: "A project holds the songs, scripture and media in order", done: Object.values($projects).some((p) => p?.shows?.length), open: createProject },
+        { label: "Plan the service", hint: "A project holds the songs, scripture and media in order", done: Object.entries($projects).some(([id, p]) => id !== "default" && p?.shows?.length), open: createProject },
         { label: "Turn on Live Copilot", hint: "It hears the scripture and songs and offers to put them up", done: !!($ai.enabled && $ai.stt?.micDeviceId), open: openLiveCopilot }
     ]
     $: showSteps = !hidden && steps.some((s) => !s.done)

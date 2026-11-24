@@ -98,7 +98,7 @@
     <!-- {#if !isWindows}
     <div class="dragZone" />
     {/if} -->
-    <span style="width: var(--navigation-width);">
+    <span class="side">
         {#if !$saved && $os.platform !== "win32"}
             <div class="unsaved" />
         {/if}
@@ -113,7 +113,7 @@
         <TopButton id="edit" disabled={editDisabled} />
         <TopButton id="stage" />
     </span>
-    <span style="width: var(--navigation-width);justify-content: flex-end;">
+    <span class="side" style="justify-content: flex-end;">
         <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title={translateText("settings.ai", $dictionary)} on:click={openLiveCopilot}>
             <Icon id="ai" size={1.5} white />
             <span class="copilot-label"><T id="settings.ai" /></span>
@@ -186,6 +186,12 @@
     }
     .top span {
         display: flex;
+    }
+
+    /* equal sides that grow with their buttons, so the middle stays centered and nothing is cut off */
+    .top .side {
+        flex: 1;
+        min-width: max-content;
     }
 
     .top.drag {

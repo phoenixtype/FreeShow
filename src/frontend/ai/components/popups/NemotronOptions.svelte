@@ -67,7 +67,7 @@
 {:else if status.unsupported}
     <Tip type="warning" value={status.error} />
 {:else if !status.ready}
-    <MaterialButton variant="outlined" icon="download" disabled={isModelDownloading} style="flex: 1;" on:click={downloadModel}>
+    <MaterialButton variant="outlined" icon="download" disabled={isModelDownloading} style="align-self: flex-end;margin-inline-start: auto;" on:click={downloadModel}>
         <T id="cloud.replace" />{getPercent(modelDownload)}
     </MaterialButton>
 

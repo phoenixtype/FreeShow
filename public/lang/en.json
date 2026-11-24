@@ -95,10 +95,10 @@
         "custom_action": "Assign an action to trigger when this is activated."
     },
     "setup": {
-        "good_luck": "We hope you find this software useful. Good luck with the presentation! :)",
+        "good_luck": "Songs and scripture on screen for your church. Two choices, then you are in.",
         "tips": "Find handy tips and tutorials on the website.",
         "change_later": "You can change these settings later",
-        "get_started": "Get started!",
+        "get_started": "Get started",
         "or": "or",
         "restore_data": "Restore previous data"
     },

@@ -5,7 +5,7 @@
 import { get } from "svelte/store"
 import { Main } from "../../types/IPC/Main"
 import { requestMain } from "../IPC/main"
-import { activeProject, activeShow, projects } from "../stores"
+import { activeProject, activeShow, audioFolders, mediaFolders, projects } from "../stores"
 import { newToast } from "../utils/common"
 
 const BACKGROUNDS = "https://project.scriptural.online/backgrounds/library.json"
@@ -52,13 +52,17 @@ async function load(): Promise<LibraryItem[]> {
     return loading
 }
 
-/** every word typed has to fit; a name that starts with what was typed comes first */
+/** every word typed has to fit. Words typed in full count most ("pad in g" is G before G flat),
+ * then a name that starts with what was typed, then the shorter name */
 export function matchLibrary(list: LibraryItem[], search: string, max: number): LibraryItem[] {
     const words = search.toLowerCase().split(/\s+/).filter(Boolean)
     if (!words.length) return []
     const hits = list.filter((item) => words.every((word) => item.words.split(" ").some((own) => own.startsWith(word))))
-    const rank = (item: LibraryItem) => (item.label.toLowerCase().startsWith(words[0]) ? 0 : 1)
-    return hits.sort((a, b) => rank(a) - rank(b)).slice(0, max)
+    const rank = (item: LibraryItem) => {
+        const own = item.label.toLowerCase().split(" ")
+        return words.filter((word) => own.includes(word)).length * 2 + (own[0].startsWith(words[0]) ? 1 : 0)
+    }
+    return hits.sort((a, b) => rank(b) - rank(a) || a.label.length - b.label.length).slice(0, max)
 }
 
 export async function searchLibrary(search: string, max: number) {
@@ -68,6 +72,14 @@ export async function searchLibrary(search: string, max: number) {
 
 const extensionOf = (url: string) => new URL(url).pathname.split(".").pop() || ""
 
+// the media folder as one of the drawer's folders, so what was saved is there to find again
+function showFolder(path: string, type: LibraryItem["type"]) {
+    const folder = path.slice(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")))
+    const store = type === "audio" ? audioFolders : mediaFolders
+    if (Object.values(get(store)).some((a) => a.path === folder)) return
+    store.update((all) => ({ ...all, scriptural_library: { name: "Scriptural library", icon: "folder", path: folder } }))
+}
+
 export async function addFromLibrary(item: LibraryItem) {
     newToast(`Saving ${item.label}`)
     const saved = await requestMain(Main.SAVE_MEDIA, { source: item.url, name: `${item.label}.${extensionOf(item.url)}`, reuse: true }, undefined, SAVE_WAIT_MS)
@@ -76,6 +88,7 @@ export async function addFromLibrary(item: LibraryItem) {
         return
     }
 
+    showFolder(saved.path, item.type)
     const media = { id: saved.path, name: item.label, type: item.type }
     const projectId = get(activeProject)
     if (projectId && get(projects)[projectId]?.shows) {
