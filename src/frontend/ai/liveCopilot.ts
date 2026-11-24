@@ -1,9 +1,12 @@
 // Live Copilot: listens to the preacher and puts the scripture on screen.
 // One place turns it on, used by the top bar button and the settings switch.
 
-import { get } from "svelte/store"
+import { get, writable } from "svelte/store"
 import { activePage, activePopup, ai, popupData, settingsTab, sttTempDisabled } from "../stores"
 import { triggerFunction } from "../utils/common"
+
+// true only while the microphone is really being heard
+export const copilotListening = writable(false)
 
 export function enableLiveCopilot() {
     ai.update((a) => ({ ...a, enabled: true }))

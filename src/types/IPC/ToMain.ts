@@ -41,7 +41,9 @@ export enum ToMain {
     OPEN_FOLDER2 = "OPEN_FOLDER2",
     OPEN_FILE2 = "OPEN_FILE2",
     RECEIVE_MIDI2 = "RECEIVE_MIDI2",
-    HID_DATA = "HID_DATA"
+    HID_DATA = "HID_DATA",
+    // an outside agent, through the app's own MCP server
+    AGENT = "AGENT"
 }
 export interface ToMainSendPayloads {
     [ToMain.ALERT]: string
@@ -81,11 +83,13 @@ export interface ToMainSendPayloads {
     [ToMain.AI_STATUS]: { state: "listening" | "stopped" | "error"; message?: string }
     [ToMain.AI_OLLAMA_PULL]: { model: string; percent: number }
     [ToMain.AI_TRANSCRIPT]: { text: string; interim?: boolean; startMs?: number; endMs?: number; language?: string; music?: boolean; utteranceEnd?: boolean; confidence?: number; glue?: boolean }
+    [ToMain.AGENT]: { method: "list" | "call"; name?: string; args?: any }
     [ToMain.HID_DATA]: { path?: string; data: number[] }
 }
 
 export interface ToMainReturnPayloads {
     [ToMain.API]: Promise<any>
+    [ToMain.AGENT]: Promise<any>
     [ToMain.GET_DYNAMIC_VALUES]: Promise<{ [key: string]: string }>
 }
 

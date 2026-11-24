@@ -8,6 +8,7 @@ import { NdiReceiver } from "../ndi/NdiReceiver"
 import { OutputHelper } from "../output/OutputHelper"
 import { closeServers } from "../servers"
 import { RtmpStreamer } from "../streaming/RtmpStreamer"
+import { setAgentServer } from "../agent/agentServer"
 import { stopApiListener } from "./api"
 import { stopMidi } from "./midi"
 import { SpeechToText } from "../ai/stt/SpeechToTextManager"
@@ -45,6 +46,7 @@ export async function exitApp() {
 
     closeServers()
     stopApiListener()
+    setAgentServer({ enabled: false })
 
     stopMidi()
 

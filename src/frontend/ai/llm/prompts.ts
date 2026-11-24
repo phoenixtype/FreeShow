@@ -1,3 +1,4 @@
+import { AGENT_SCHEMA_FIELDS } from "../agent/agentChat"
 // STT Controller
 
 export const STT_CONTROLLER_PROMPT = `
@@ -79,7 +80,7 @@ export function getSlideChatSystemPrompt(targetType: "slide" | "overlay" | "temp
 
     // prompt does require some work
     return `
-You are an AI assistant integrated into FreeShow, an open-source presentation software designed for churches, conferences, and live events.
+You are an AI assistant built into Scriptural Project, presentation software designed for churches, conferences, and live events.
 Your sole role in this chat is to generate, design, and format content for the CURRENT ${label.toUpperCase()} (${description}).
 ${currentItemsContext}
 ### CRITICAL RULES:
@@ -278,9 +279,9 @@ export const SLIDE_CHAT_RESPONSE_SCHEMA = {
 // Chat
 
 export const CHAT_SYSTEM_PROMPT = `
-You are an AI assistant integrated into FreeShow, an open-source presentation software designed for churches, conferences, and live events.
+You are an AI assistant built into Scriptural Project, presentation software designed for churches, conferences, and live events.
 
-### FREESHOW COMPREHENSIVE KNOWLEDGE BASE:
+### SCRIPTURAL PROJECT COMPREHENSIVE KNOWLEDGE BASE:
 
 1. STRUCTURAL HIERARCHY & DATA OBJECTS
    - **Shows**: The foundational presentation file. Consists of slides categorized into **Groups** (e.g., Verse 1, Chorus, Bridge, Speaker Point). Slides contain items like text boxes, shapes, media elements, and web views.
@@ -326,10 +327,8 @@ You are an AI assistant integrated into FreeShow, an open-source presentation so
    - Text formatting accepts horizontal alignment (\`"left"\`, \`"center"\`, \`"right"\`, \`"justify"\`) and vertical alignment (\`"top"\`, \`"center"\`, \`"bottom"\`).
    - \`value\`: Provide context-aware default placeholder text when text strings are omitted in user commands.
 
-3. SCRIPTURE AND SONGS:
-   - "Show John 3:16", "put up Psalm 23": \`SHOW_SCRIPTURE\` with \`data.reference\`.
-   - "Add the song ...": \`ADD_SONG\` with \`data.name\` and \`data.lyrics\`, only with words the user gave you or you are sure of; never invent lyrics.
-   - "Play / present the song ...": \`PRESENT_SONG\` with \`data.name\`.
+3. SCRIPTURE, SONGS, PLANS AND THE SCREEN:
+   - Use the tools. "action" is only for creating slides, templates and overlays.
 
 4. COMMAND EXECUTION & NULL ACTION RULE:
    - Generate an \`action\` payload ONLY when receiving explicit imperative creation or modification commands (e.g., "Add a lower third template", "Create a show", "Generate a welcome slide").
@@ -343,22 +342,21 @@ export const CHAT_RESPONSE_SCHEMA = {
             type: "string",
             description: "The friendly, human-facing response text for the chat UI. MUST NOT contain developer jargon, references to JSON, or code payloads."
         },
+        ...AGENT_SCHEMA_FIELDS,
         action: {
             type: ["object", "null"],
             description: "Executable creation payload, or null if no software action is required.",
             properties: {
                 type: {
                     type: "string",
-                    enum: ["CREATE_SLIDE", "CREATE_TEMPLATE", "CREATE_OVERLAY", "SHOW_SCRIPTURE", "ADD_SONG", "PRESENT_SONG"],
+                    enum: ["CREATE_SLIDE", "CREATE_TEMPLATE", "CREATE_OVERLAY"],
                     description: "The action type to execute."
                 },
                 data: {
                     type: "object",
-                    description: "Payload parameters. SHOW_SCRIPTURE needs reference; ADD_SONG needs name and lyrics; PRESENT_SONG needs name; CREATE_* need items.",
+                    description: "Payload parameters: a name and items.",
                     properties: {
                         name: { type: "string" },
-                        reference: { type: ["string", "null"], description: "SHOW_SCRIPTURE: a Bible reference such as 'John 3:16' or 'Romans 8:28-30'." },
-                        lyrics: { type: ["string", "null"], description: "ADD_SONG: the words, a blank line between slides, '[Verse 1]' / '[Chorus]' lines starting sections." },
                         color: { type: ["string", "null"] },
                         category: { type: "string" },
                         items: {

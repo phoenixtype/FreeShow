@@ -17,6 +17,11 @@ class GoogleProvider extends APIModel {
         if (!schema || typeof schema !== "object") return schema
 
         const { additionalProperties, ...rest } = schema
+        // ["string", "null"] is a nullable string to Gemini
+        if (Array.isArray(rest.type)) {
+            rest.nullable = rest.type.includes("null")
+            rest.type = rest.type.find((t: string) => t !== "null")
+        }
         return Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, this.cleanSchema(v)]))
     }
 

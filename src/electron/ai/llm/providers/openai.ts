@@ -33,14 +33,15 @@ class OpenAIProvider extends APIModel {
     async complete(apiKey: string, model: string, options: LLMCompletionOptions): Promise<string> {
         const body: any = {
             model: model || this.fallbackModel,
-            temperature: options.temperature ?? 0,
-            max_tokens: options.maxTokens ?? 1024,
+            max_completion_tokens: options.maxTokens ?? 4096,
             messages: buildMessages(options)
         }
+        // the reasoning models refuse a temperature
+        if (!/^(o\d|gpt-5)/.test(body.model)) body.temperature = options.temperature ?? 0
         if (options.jsonSchema) {
             body.response_format = {
                 type: "json_schema",
-                json_schema: { name: "response_schema", strict: true, schema: options.jsonSchema }
+                json_schema: { name: "response_schema", strict: false, schema: options.jsonSchema }
             }
         }
 

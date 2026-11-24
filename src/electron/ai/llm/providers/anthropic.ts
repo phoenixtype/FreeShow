@@ -55,7 +55,7 @@ class AnthropicProvider extends APIModel {
             })
 
             if (data?.stop_reason === "refusal") throw new Error("Request was refused by the model")
-            if (data?.stop_reason === "length") throw new Error("Response was cut off at the token limit")
+            if (data?.stop_reason === "max_tokens") throw new Error("Response was cut off at the token limit")
 
             const textBlock = Array.isArray(data?.content) ? data.content.find((block: any) => block?.type === "text") : undefined
             return textBlock?.text || ""

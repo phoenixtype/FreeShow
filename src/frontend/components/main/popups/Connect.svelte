@@ -9,6 +9,7 @@
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
     import Link from "../../inputs/Link.svelte"
+    import { newToast } from "../../../utils/common"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialDropdown from "../../inputs/MaterialDropdown.svelte"
     import MaterialNumberInput from "../../inputs/MaterialNumberInput.svelte"
@@ -48,7 +49,8 @@
         controller: 5512,
         output_stream: 5513,
 
-        companion: 5505
+        companion: 5505,
+        agents: 5507
         // rest: 5506
 
         // PCO: 5501
@@ -65,7 +67,7 @@
 
     let qrImg = ""
     function generateQR(text) {
-        if (remoteController ? !controllerId : (!useHostname && ip === "localhost") || id === "companion") return
+        if (remoteController ? !controllerId : (!useHostname && ip === "localhost") || id === "companion" || id === "agents") return
 
         var qr = qrcode(0, "L")
         qr.addData(text)
@@ -75,7 +77,20 @@
 
     let options = false
 
-    const RESERVED_PORTS = { nowPlaying: [5502], WebSocket: [5505], REST: [5506], companion: [5505, 5506], remote: [5510], stage: [5511], controller: [5512], output_stream: [5513] }
+    $: agentToken = $serverData?.agents?.password || ""
+    $: agentCommand = `claude mcp add --transport http scriptural-project http://127.0.0.1:5507/mcp --header "Authorization: Bearer ${agentToken}"`
+    function copyAgent(value: string) {
+        navigator.clipboard.writeText(value)
+        newToast("actions.copied")
+    }
+    function replaceAgentToken() {
+        const password = Array.from(crypto.getRandomValues(new Uint8Array(24)), (n) => n.toString(16).padStart(2, "0")).join("")
+        serverData.update((a) => ({ ...a, agents: { ...a.agents, password } }))
+        sendMain(Main.AGENT_SERVER, { enabled: true, token: password })
+        newToast("Connect your agents again with the new command.")
+    }
+
+    const RESERVED_PORTS = { nowPlaying: [5502], WebSocket: [5505], REST: [5506], companion: [5505, 5506], remote: [5510], stage: [5511], controller: [5512], output_stream: [5513], agents: [5507] }
     $: isReserved = !RESERVED_PORTS[id]?.includes(port) && Object.values(RESERVED_PORTS).flat().includes(port)
 
     function updatePort(e: any) {
@@ -131,7 +146,17 @@
     // $: enableOutputSelector = ($serverData?.output_stream?.outputId && $outputs[$serverData.output_stream.outputId]) || getActiveOutputs($outputs, false, true).length > 1
 </script>
 
-{#if remoteController}
+{#if id === "agents"}
+    <div style="text-align: start;max-width: 560px;">
+        <p style="white-space: initial;margin-bottom: 10px;">An AI agent on this computer can find scripture, build plans, see the screen and run it. Paste this in a terminal to connect Claude Code:</p>
+        <code class="command">{agentCommand.replace(agentToken, "••••••••")}</code>
+        <div style="display: flex;justify-content: flex-end;gap: 6px;margin-top: 10px;">
+            <MaterialButton variant="outlined" icon="reset" on:click={replaceAgentToken}>New token</MaterialButton>
+            <MaterialButton variant="outlined" icon="copy" on:click={() => copyAgent(agentCommand)}>Copy command</MaterialButton>
+        </div>
+        <p style="white-space: initial;margin-top: 10px;opacity: 0.7;">For another agent: address http://127.0.0.1:5507/mcp, with the token as a Bearer header. The token is part of the command, so keep it to yourself.</p>
+    </div>
+{:else if remoteController}
     <MaterialButton class="popup-options" icon="reset" iconSize={1.1} title="actions.reset" on:click={() => setRemoteId()} white />
 {:else}
     <MaterialButton class="popup-options {options ? 'active' : ''}" icon="options" iconSize={1.3} title={options ? "actions.close" : "create_show.more_options"} on:click={() => (options = !options)} white />
@@ -139,7 +164,9 @@
     <MaterialButton class="popup-reset" icon="help" iconSize={1.1} title="titlebar.help" on:click={() => sendMain(Main.URL, "https://freeshow.app/docs/connecting")} white />
 {/if}
 
-{#if options}
+{#if id === "agents"}
+    <!-- shown above -->
+{:else if options}
     <div class="reserved" class:isReserved>
         <MaterialNumberInput label="settings.port" value={port} defaultValue={RESERVED_PORTS[id]?.[0]} min={1025} max={65535} on:change={(e) => updatePort(e)} />
     </div>
@@ -226,6 +253,16 @@
 
     div :global(img) {
         border-radius: var(--radius-sm);
+    }
+
+    .command {
+        display: block;
+        padding: 10px;
+        border-radius: var(--radius-sm);
+        background-color: var(--primary-darkest);
+        white-space: pre-wrap;
+        word-break: break-all;
+        user-select: text;
     }
 
     .reserved.isReserved :global(input) {

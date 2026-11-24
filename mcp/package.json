@@ -1,14 +1,10 @@
 {
     "name": "scriptural-project-mcp",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "private": true,
-    "description": "MCP server so AI agents can run Scriptural Project: find scripture, add songs, images and decks, and present them.",
+    "description": "Passes MCP messages from stdio to the server inside Scriptural Project.",
     "type": "module",
     "bin": { "scriptural-project-mcp": "server.mjs" },
     "license": "GPL-3.0",
-    "engines": { "node": ">=20" },
-    "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.32.2",
-        "zod": "^3.25.0"
-    }
+    "engines": { "node": ">=20" }
 }

@@ -13,6 +13,7 @@
     import T from "../../helpers/T.svelte"
     import InputRow from "../../input/InputRow.svelte"
     import Title from "../../input/Title.svelte"
+    import { newToast } from "../../../utils/common"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialDropdown from "../../inputs/MaterialDropdown.svelte"
     import MaterialNumberInput from "../../inputs/MaterialNumberInput.svelte"
@@ -75,6 +76,20 @@
         else sendMain(Main.WEBSOCKET_STOP)
     }
 
+    // an AI agent on this computer, through the app's own MCP server
+    $: agentsOn = $serverData?.agents?.enabled === true
+    async function toggleAgents(e: any) {
+        const enabled = !!e.detail
+        const token = $serverData?.agents?.password || newToken()
+        const running = await requestMain(Main.AGENT_SERVER, { enabled, token })
+        if (enabled && !running) newToast("AI agents could not connect: another program is using that port. Close it and try again.")
+
+        serverData.update((a) => ({ ...a, agents: { ...a.agents, enabled: enabled && !!running, password: token } }))
+    }
+    function newToken() {
+        return Array.from(crypto.getRandomValues(new Uint8Array(24)), (n) => n.toString(16).padStart(2, "0")).join("")
+    }
+
     function restart() {
         sendMain(Main.START, { ports: $ports, max: $maxConnections, disabled: $disabledServers, data: $serverData })
     }
@@ -102,7 +117,7 @@
         // ...(($isOptimizedMode && $disabledServers.output_stream !== false) ? [] : [{ id: "output_stream", name: "OutputShow", icon: "stage", enabledByDefault: false }]),
         { id: "output_stream", name: "Output in a browser", icon: "stage", enabledByDefault: false },
         // Bitfocus Companion (WebSocket/REST)
-        { id: "companion", name: "API (agents, Companion, Stream Deck)", icon: "companion", enabledByDefault: false }
+        { id: "companion", name: "API (Companion, Stream Deck)", icon: "companion", enabledByDefault: false }
         // { id: "rest", name: "REST Listener", icon: "companion", enabledByDefault: false, url: "https://freeshow.app/docs/api" },
     ]
     // Camera
@@ -275,6 +290,27 @@
         {/if}
     </InputRow>
 {/each}
+
+<InputRow>
+    <MaterialButton
+        style="flex: 1;justify-content: space-between;"
+        disabled={!agentsOn}
+        on:click={() => {
+            popupData.set({ ip, id: "agents" })
+            activePopup.set("connect")
+        }}
+    >
+        <span style="display: flex;align-items: center;justify-content: center;gap: 15px;">
+            <Icon id="ai" size={1.1} />
+
+            AI agents
+
+            <span style="opacity: 0.5;font-size: 0.7em;margin-left: 5px;">Claude and others, on this computer</span>
+        </span>
+    </MaterialButton>
+
+    <MaterialToggleSwitch label="" checked={agentsOn} on:change={toggleAgents} />
+</InputRow>
 
 <InputRow>
     <MaterialButton

@@ -85,7 +85,9 @@ export function normalizeNumbers(text: string): string {
     })
 
     // 5. Convert single-word cardinal and ordinal numbers ("trois" -> "3", "seize" -> "16", "eighth" -> "8")
-    normalized = normalized.replace(SINGLE_NUMBER_REGEX, (match) => {
+    normalized = normalized.replace(SINGLE_NUMBER_REGEX, (match, _word, offset: number) => {
+        // "to" is two in Norwegian, and in English the word before every book: "turn to John"
+        if (match === "to" && !/(?:kapittel|kap\.?|vers)\s*$/u.test(normalized.slice(0, offset))) return match
         const val = ALL_NUMBER_WORDS[match.toLowerCase()]
         return val !== undefined ? val.toString() : match
     })

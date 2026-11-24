@@ -4,10 +4,18 @@
     import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
-    import { aiSmartAction, aiSttStatus, aiSuggestions, outLocked, scriptures, sttTranscript } from "../../../stores"
+    import { aiSmartAction, aiSttStatus, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript } from "../../../stores"
     import { translateText } from "../../../utils/language"
+    import type { AiSuggestion } from "../../../../types/ai/Ai"
+    import { getFirstActiveOutput } from "../../../components/helpers/output"
+    import { readPassage } from "../../scripture/passage"
     import { Transcript } from "../../stt/transcript"
-    import ConfidenceMeter from "./ConfidenceMeter.svelte"
+
+    import { createEventDispatcher } from "svelte"
+    import CopilotPreview from "./CopilotPreview.svelte"
+    import { onScreenTitle } from "./onScreen"
+
+    const dispatch = createEventDispatcher<{ listen: void }>()
 
     export let state: "loading" | "inactive" | "error" | "listening" | "processing" = "inactive"
 
@@ -44,198 +52,263 @@
         aiSmartAction.update((cur) => (cur?.id === id ? null : cur))
         aiSuggestions.update((list) => list.filter((item) => item.id !== id))
     }
+
+    function clearSuggestions() {
+        aiSmartAction.set(null)
+        aiSuggestions.set([])
+    }
+
+    // the words of each passage, so the operator reads it before the room does
+    const isPassage = (suggestion: AiSuggestion) => suggestion.kind !== "song" && (suggestion.action === "present" || suggestion.action === "presented")
+    let passages: { [key: string]: string } = {}
+    const passageKey = (suggestion: AiSuggestion) => `${suggestion.scriptureTranslation || ""}:${suggestion.content}`
+    $: loadPassages(suggestions)
+    async function loadPassages(list: AiSuggestion[]) {
+        for (const suggestion of list) {
+            const key = passageKey(suggestion)
+            if (!isPassage(suggestion) || passages[key] !== undefined) continue
+            passages[key] = ""
+            const passage = await readPassage(suggestion.content, suggestion.scriptureTranslation)
+            passages = { ...passages, [key]: passage?.text || "" }
+        }
+    }
+
+    $: liveTitle = onScreenTitle($outputs && getFirstActiveOutput()?.out?.slide, $shows)
+    const sameReference = (a: string, b: string) => !!a && a.replace(/[–—]/g, "-").toLowerCase() === b.toLowerCase()
+
+    const matchLabel = (confidence: number) => (confidence >= 95 ? "Certain" : confidence >= 75 ? "Likely" : "Possible")
 </script>
 
-<div class="card-body">
-    {#if state === "error"}
-        <p class="placeholder error">{translateText($aiSttStatus.message || "Something went wrong...")}</p>
-    {:else if state === "processing"}
-        <div class="processing-view">
-            <div class="spinner large"></div>
-            <p><T id="ai.processing" /></p>
-        </div>
-    {:else if $sttTranscript.finalized || $sttTranscript.unprocessed}
-        <div class="transcript-box" bind:this={transcriptElem} on:scroll={onTranscriptScroll}>
-            <p>
-                {$sttTranscript.finalized}{#if $sttTranscript.unprocessed}{" "}<span class="interim">{$sttTranscript.unprocessed}</span>{/if}
-            </p>
+<div class="columns">
+    <CopilotPreview />
 
-            {#if $sttTranscript.finalized}
-                <div class="transcript-actions">
-                    <MaterialButton icon="copy" title="actions.copy" style="padding: 10px;" on:click={() => Transcript.copy()} />
+    <section class="heard">
+        <div class="card-body">
+            {#if state === "error"}
+                <div class="message">
+                    <p class="error">{translateText($aiSttStatus.message || "The microphone could not be opened.")}</p>
+                    <MaterialButton variant="outlined" icon="refresh" on:click={() => dispatch("listen")}>Try again</MaterialButton>
                 </div>
+            {:else if state === "processing"}
+                <div class="message">
+                    <div class="spinner"></div>
+                    <p><T id="ai.processing" /></p>
+                </div>
+            {:else if $sttTranscript.finalized || $sttTranscript.unprocessed}
+                <div class="transcript-box" bind:this={transcriptElem} on:scroll={onTranscriptScroll}>
+                    <p>
+                        {$sttTranscript.finalized}{#if $sttTranscript.unprocessed}{" "}<span class="interim">{$sttTranscript.unprocessed}</span>{/if}
+                    </p>
+
+                    {#if $sttTranscript.finalized}
+                        <div class="transcript-actions">
+                            <MaterialButton icon="copy" title="actions.copy" style="padding: 10px;" on:click={() => Transcript.copy()} />
+                        </div>
+                    {/if}
+                </div>
+            {:else if state === "inactive"}
+                <div class="message">
+                    <p>Not listening.</p>
+                    <MaterialButton variant="outlined" icon="microphone" on:click={() => dispatch("listen")}>Start listening</MaterialButton>
+                </div>
+            {:else}
+                <Center faded>
+                    <p>{state === "loading" ? "Getting ready to listen…" : "Listening. Words appear here as they are spoken."}</p>
+                </Center>
             {/if}
         </div>
-    {:else}
-        <!-- loading, inactive or listening -->
-        <Center faded>
-            <T id="ai.waiting" />
-        </Center>
-    {/if}
+
+        {#if suggestions.length}
+            <div class="suggestions-head">
+                <p>Found</p>
+                <MaterialButton small style="padding: 4px 10px;" on:click={clearSuggestions}>Clear list</MaterialButton>
+            </div>
+            <div class="suggestions-panel">
+                {#each suggestions as suggestion (suggestion.id)}
+                    {@const live = sameReference(liveTitle, suggestion.content)}
+                    {@const words = passages[passageKey(suggestion)]}
+                    <div class="suggestion" class:live>
+                        <div class="about">
+                            <p class="reference">
+                                {suggestion.content}
+                                {#if suggestion.scriptureTranslation}
+                                    <span class="note">{getShortBibleName($scriptures[suggestion.scriptureTranslation]?.name)}</span>
+                                {/if}
+                                <span class="note">{live ? "On screen" : suggestion.action === "presented" ? "Shown" : suggestion.confidence ? matchLabel(suggestion.confidence) : ""}</span>
+                            </p>
+                            {#if words}<p class="words">{words}</p>{/if}
+                        </div>
+
+                        {#if suggestion.action === "open_scripture"}
+                            <MaterialButton variant="outlined" small on:click={() => suggestion.trigger?.()}><T id="main.open" /></MaterialButton>
+                        {:else}
+                            {#if !live && suggestion.trigger}
+                                <MaterialButton variant="outlined" small disabled={$outLocked} title="menu._title_display" on:click={() => suggestion.trigger?.()}>Show</MaterialButton>
+                            {/if}
+                            {#if isPassage(suggestion)}
+                                <MaterialButton icon="scripture" title="main.open" style="padding: 6px;" on:click={() => startScripture({ id: suggestion.scriptureTranslation, reference: suggestion.content, play: false })} />
+                            {/if}
+                        {/if}
+                        <MaterialButton icon="close" title="actions.remove" style="padding: 6px;" on:click={() => removeSuggestion(suggestion.id)} />
+                    </div>
+                {/each}
+            </div>
+        {/if}
+    </section>
 </div>
 
-{#if suggestions.length}
-    <div class="suggestions-panel">
-        {#each suggestions as suggestion (suggestion.id)}
-            <div class="suggestion">
-                <div class="suggestionHeader">
-                    <span class="reference">
-                        {suggestion.content}
-
-                        {#if suggestion.action === "scripture" && suggestion.scriptureTranslation}
-                            <span class="translation">({getShortBibleName($scriptures[suggestion.scriptureTranslation]?.name)})</span>
-                        {/if}
-                    </span>
-
-                    {#if suggestion.confidence}
-                        <ConfidenceMeter confidence={suggestion.confidence} />
-                    {/if}
-
-                    <div class="fill" />
-
-                    {#if suggestion.action === "presented"}
-                        <MaterialButton icon="check" title="ai.auto_present" style="padding: 6px;" disabled />
-                    {:else if suggestion.action === "open_scripture"}
-                        <MaterialButton icon="scripture" title="main.open" style="padding: 6px;" on:click={() => suggestion.trigger?.()} />
-                    {:else if suggestion.trigger}
-                        <MaterialButton
-                            icon="play"
-                            disabled={$outLocked}
-                            title="menu._title_display"
-                            style="padding: 6px;"
-                            on:click={() => {
-                                suggestion.trigger?.()
-                                // removeSuggestion(suggestion.id)
-                            }}
-                        />
-
-                        <!-- open -->
-                        <MaterialButton
-                            icon="scripture"
-                            title="main.open"
-                            style="padding: 6px;"
-                            on:click={() => {
-                                startScripture({ id: suggestion.scriptureTranslation, reference: suggestion.content, play: false })
-                            }}
-                        />
-                    {/if}
-                    <MaterialButton icon="delete" title="actions.remove" style="padding: 6px;" on:click={() => removeSuggestion(suggestion.id)} />
-                </div>
-            </div>
-        {/each}
-    </div>
-{/if}
-
 <style>
+    .columns {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+    }
+    .columns > :global(.preview) {
+        flex: 0 0 46%;
+        border-inline-end: 1px solid var(--primary-lighter);
+    }
+
+    .heard {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* narrow window: the preview stays on top, small, so the words keep the room */
+    @media (max-width: 820px) {
+        .columns {
+            flex-direction: column;
+        }
+        .columns > :global(.preview) {
+            flex: 0 0 auto;
+            border-inline-end: none;
+            border-bottom: 1px solid var(--primary-lighter);
+        }
+        .columns > :global(.preview .frame) {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+    }
+
     .card-body {
         position: relative;
-
         flex: 1;
-        /* padding: 5px; */
+        min-height: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        overflow-y: auto;
+        overflow: hidden;
+    }
+
+    .message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 20px;
+        text-align: center;
+    }
+    .message p {
+        white-space: initial;
+    }
+    .error {
+        color: #ff6b6b;
     }
 
     .transcript-box {
         width: 100%;
-        max-height: 100%;
+        height: 100%;
         overflow-y: auto;
-        font-size: 0.95rem;
+        font-size: 1rem;
         line-height: 1.5;
         cursor: text;
     }
-
     .transcript-box,
     .transcript-box p,
     .transcript-box span {
         user-select: text;
     }
-
     .transcript-box p {
         white-space: initial;
         overflow-wrap: anywhere;
-        padding: 10px 25px;
+        padding: 12px 48px 12px 16px;
     }
-
     .transcript-actions {
         position: absolute;
         bottom: 8px;
         right: 10px;
     }
-
     .interim {
-        opacity: 0.45;
+        opacity: 0.55;
     }
 
-    .placeholder {
-        font-style: italic;
-        font-size: 0.9rem;
-    }
-    .placeholder.error {
-        color: #ff5050;
-        font-style: normal;
-        white-space: initial;
-    }
-
-    .processing-view {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        color: #00dfd8;
-    }
-
-    .suggestion {
+    .suggestions-head {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 5px 14px;
+        justify-content: space-between;
+        padding: 4px 8px 4px 16px;
+        border-top: 1px solid var(--primary-lighter);
+    }
+    .suggestions-head p {
+        opacity: 0.7;
     }
 
     .suggestions-panel {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        max-height: 180px;
+        max-height: 52%;
         overflow-y: auto;
         flex-shrink: 0;
-
-        background-color: rgb(0 0 0 / 0.1);
-        border-top: 1px solid rgba(0, 0, 0, 0.3);
     }
 
-    .fill {
-        flex: 1;
-    }
-
-    .suggestionHeader {
+    .suggestion {
         display: flex;
         align-items: center;
-        gap: 5px;
-        flex: 1;
+        gap: 6px;
+        padding: 8px 8px 8px 16px;
+        border-top: 1px solid var(--primary-lighter);
     }
-    .suggestionHeader .reference {
+    .suggestion.live {
+        background-color: var(--secondary-opacity);
+    }
+    .about {
+        flex: 1;
+        min-width: 0;
+    }
+    .reference {
         font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
+    .note {
+        font-weight: normal;
+        font-size: 0.85em;
+        opacity: 0.7;
+        margin-inline-start: 6px;
+    }
+    .words {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: initial;
+        font-size: 0.9em;
+        line-height: 1.35;
+        opacity: 0.8;
+    }
 
-    /* Animations */
     .spinner {
-        width: 22px;
-        height: 22px;
-        border: 2px solid rgba(255, 255, 255, 0.15);
-        border-top-color: #00dfd8;
+        width: 28px;
+        height: 28px;
+        border: 2px solid var(--primary-lighter);
+        border-top-color: var(--secondary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
     }
-
-    .spinner.large {
-        width: 32px;
-        height: 32px;
-    }
-
     @keyframes spin {
         to {
             transform: rotate(360deg);

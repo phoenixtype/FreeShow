@@ -117,6 +117,7 @@ export enum Main {
     START = "START",
     STOP = "STOP",
     SERVER_DATA = "SERVER_DATA",
+    AGENT_SERVER = "AGENT_SERVER",
     WEBSOCKET_START = "WEBSOCKET_START",
     WEBSOCKET_STOP = "WEBSOCKET_STOP",
     API_TRIGGER = "API_TRIGGER",
@@ -244,6 +245,7 @@ export interface MainSendPayloads {
     [Main.PRESENTATION_CONTROL]: { action: string }
     [Main.START]: { ports: { [key: string]: number }; max: number; disabled: { [key: string]: boolean }; data: { [key: string]: ServerData } }
     [Main.SERVER_DATA]: { [key: string]: any }
+    [Main.AGENT_SERVER]: { enabled: boolean; token?: string }
     [Main.WEBSOCKET_START]: { port?: number; password?: string }
     [Main.API_TRIGGER]: { action: string; returnId: string; data: any }
     [Main.EMIT_OSC]: { signal: any; data: any }
@@ -322,6 +324,7 @@ export interface MainSendPayloads {
 }
 
 export interface MainReturnPayloads {
+    [Main.AGENT_SERVER]: Promise<boolean>
     // DEV
     [Main.IS_DEV]: boolean
     [Main.GET_CACHE_PATH]: string

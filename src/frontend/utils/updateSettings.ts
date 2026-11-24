@@ -332,6 +332,10 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     serverData: (v: any) => {
         serverData.set(v)
 
+        if (v?.agents?.enabled && v.agents.password) {
+            setTimeout(() => sendMain(Main.AGENT_SERVER, { enabled: true, token: v.agents.password }), 3000)
+        }
+
         if (v?.companion?.enabled) {
             setTimeout(() => {
                 sendMain(Main.WEBSOCKET_START, { port: get(ports).companion, password: v.companion.password })

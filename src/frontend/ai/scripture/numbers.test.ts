@@ -9,6 +9,11 @@ describe("normalizeNumbers - Multilingual", () => {
         expect(normalizeNumbers("verse 1 through 6")).toBe("verse 1-6")
     })
 
+    it("leaves the English word to alone", () => {
+        expect(normalizeNumbers("turn to John three sixteen")).toBe("turn to john 3 16")
+        expect(normalizeNumbers("verses 1 to 6")).toBe("verses 1-6")
+    })
+
     it("normalizes French numbers", () => {
         expect(normalizeNumbers("Jean trois seize")).toBe("jean 3 16")
         expect(normalizeNumbers("Jean chapitre trois verset seize")).toBe("jean chapitre 3 verset 16")

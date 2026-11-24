@@ -7,6 +7,7 @@
     import Tabs from "../../../components/main/Tabs.svelte"
     import { activePage, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, language, mediaDownloads, settingsTab, sttTempDisabled, sttTranscript } from "../../../stores"
     import { audioLevelStore, resolveSttEngine, SpeechToText } from "../../stt/stt"
+    import { copilotListening } from "../../liveCopilot"
     import AiChat from "./AiChat.svelte"
     import AiRing from "./AiRing.svelte"
     import AiTranscription from "./AiTranscription.svelte"
@@ -152,6 +153,7 @@
     $: audioLevel = $audioLevelStore
 
     onDestroy(() => {
+        copilotListening.set(false)
         if (burstTimer) clearTimeout(burstTimer)
         if (state !== "inactive") SpeechToText.disable()
     })
@@ -182,6 +184,7 @@
     }
 
     $: isListening = state === "listening"
+    $: copilotListening.set(isListening)
     $: isStarting = state === "processing"
 
     async function enableListening() {
@@ -193,6 +196,14 @@
         if (isEnabled && micDeviceId) state = result.ok ? "listening" : "error"
     }
 
+    // Escape closes the panel and nothing else: it must not also clear the screen
+    function onKeydown(e: KeyboardEvent) {
+        if (!isOpen || e.key !== "Escape") return
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        toggleExpand()
+    }
+
     function openSettings() {
         isOpen = false
         settingsTab.set("ai")
@@ -200,7 +211,7 @@
     }
 </script>
 
-<svelte:window on:keydown={(e) => isOpen && e.key === "Escape" && toggleExpand()} />
+<svelte:window on:keydown|capture={onKeydown} />
 
 {#if isOpen}
     <div class="backdrop" on:mousedown|self={toggleExpand} transition:fade={{ duration: 250 }}></div>
@@ -211,7 +222,7 @@
 {/if}
 
 <div class="speech-widget {isOpen ? 'is-open' : 'is-closed'}" style={isOpen ? "" : `bottom: ${$bubbleBottom}px;`}>
-    <AiRing {state} {audioLevel} borderRadius={isOpen ? "20px" : "50%"} opacity={state === "inactive" || isOpen ? 0.8 : 0.4} fill {wordConfirmTick} {wordConfirmDurationMs}>
+    <AiRing {state} {audioLevel} borderRadius={isOpen ? "20px" : "50%"} opacity={isOpen ? 0.98 : state === "inactive" ? 0.8 : 0.4} fill {wordConfirmTick} {wordConfirmDurationMs}>
         {#if !isOpen}
             <AiVisual {state} on:click={toggleExpand} />
         {:else}
@@ -221,6 +232,7 @@
 
                     <div class="headerActions">
                         {#if activeTab === "transcription"}
+                            <span class="listening">{isListening ? "Listening" : state === "error" ? "Microphone problem" : "Not listening"}</span>
                             <MaterialToggleSwitch label="" checked={isListening} disabled={state !== "inactive" && state !== "listening"} style="margin-right: 5px;" on:change={() => toggleListening()} small />
                         {/if}
 
@@ -231,9 +243,9 @@
                 </div>
 
                 {#if activeTab === "transcription"}
-                    <AiTranscription {state} />
+                    <AiTranscription {state} on:listen={() => toggleListening(true)} />
                 {:else if activeTab === "chat"}
-                    <AiChat />
+                    <AiChat sessionKey="default" />
                 {/if}
             </div>
         {/if}
@@ -244,8 +256,7 @@
     .backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(8px);
+        background: rgba(0, 0, 0, 0.45);
         z-index: 5000;
     }
 
@@ -277,10 +288,10 @@
         bottom: 50%;
         right: 50%;
         transform: translate(50%, 50%);
-        width: 560px;
-        height: 400px;
-        max-width: 90vw;
-        max-height: 85vh;
+        width: 1060px;
+        height: 620px;
+        max-width: 94vw;
+        max-height: 88vh;
     }
 
     .modal-view {
@@ -294,7 +305,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid var(--primary-lighter);
         background-color: rgb(0 0 0 / 0.1);
     }
 
@@ -306,6 +317,12 @@
     }
     .card-header :global(.tabs button.isActive) {
         background-color: rgb(0 0 0 / 0.15) !important;
+    }
+
+    .listening {
+        font-size: 0.9em;
+        opacity: 0.7;
+        margin-inline-end: 8px;
     }
 
     .headerActions {

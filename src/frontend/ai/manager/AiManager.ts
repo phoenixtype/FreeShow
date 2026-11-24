@@ -161,7 +161,7 @@ export class AiManager {
             return true
         }
 
-        this.addSuggestion({ ...draft, action: "presented" })
+        this.addSuggestion({ ...draft, action: "presented", trigger })
         trigger()
         return true
     }
@@ -184,15 +184,22 @@ export class AiManager {
 
     private static scriptureAlerted: boolean = false
     private static async globalBibleDetection(textChunk: string, isCancelled?: () => boolean) {
-        const activeBibleId = get(drawerTabsData)?.scripture?.activeSubTab
-        if (!activeBibleId) return null
+        const localIds = this.getLocalScriptureIds()
+        const openBibleId = get(drawerTabsData)?.scripture?.activeSubTab || ""
 
-        const scriptureData = get(scriptures)[activeBibleId]
-        if (scriptureData?.api) {
-            if (!this.scriptureAlerted) newToast("Please use a local Bible instead of an API Bible for the auto detection!")
-            this.scriptureAlerted = true
-            return null
+        // an online Bible has no words here to listen against: spoken references are
+        // followed all the same, and quotes through any Bible stored on this computer
+        if (!localIds.includes(openBibleId)) {
+            if (!localIds.length) {
+                if (!this.scriptureAlerted) newToast("Listening for references. Download a Bible to also catch verses as they are quoted.")
+                this.scriptureAlerted = true
+                return await (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled)
+            }
+            const match = await this.bibleDetection(localIds[0], textChunk, isCancelled)
+            if (match) delete match.scriptureTranslation
+            return match
         }
+        const activeBibleId = openBibleId
 
         const match = await this.bibleDetection(activeBibleId, textChunk, isCancelled)
         if (!match) return null
@@ -242,14 +249,15 @@ export class AiManager {
             id: uid(5),
             timestamp: Date.now(),
             content: match.content,
-            confidence: match.confidence
+            confidence: match.confidence,
+            ...(match.type === "lyrics" ? { kind: "song" } : {})
         }
         if (match.scriptureIsNewTranslation) suggestionDraft.scriptureTranslation = match.scriptureTranslation
 
         const trigger = () => this.triggerMatchAction(match)
 
         if (this.shouldAutoPlay(match)) {
-            const suggestion = { ...suggestionDraft, action: "presented" }
+            const suggestion = { ...suggestionDraft, action: "presented", trigger }
             this.addSuggestion(suggestion)
 
             console.info(`Auto-playing ${match.type}:`, match.content)

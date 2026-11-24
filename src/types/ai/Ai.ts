@@ -27,6 +27,7 @@ export interface AiSuggestion {
     timestamp: number
     confidence: number
     trigger?: () => void
+    kind?: "song" // a song of the library; otherwise scripture
 
     scriptureTranslation?: string
 }

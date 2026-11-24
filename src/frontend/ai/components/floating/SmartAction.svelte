@@ -29,7 +29,7 @@
         <MaterialButton
             style="padding: 0;border-radius: 50px;"
             on:click={() => {
-                if (smartAction?.trigger) {
+                if (smartAction?.trigger && smartAction.action !== "presented") {
                     smartAction.trigger()
                     setTimeout(() => aiSmartAction.set(null), 500)
                 } else {

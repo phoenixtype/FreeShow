@@ -8,7 +8,7 @@
     import Center from "../../../components/system/Center.svelte"
     import { activeEdit, activeShow, ai, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
-    import { chatSessions, getLLMManager } from "../../llm/llmManager"
+    import { addChatMessage, chatSessions, getLLMManager } from "../../llm/llmManager"
     import { getSlideChatSystemPrompt } from "../../llm/prompts"
     import { ChatAction, chatActionLabels } from "../../manager/ChatAction"
     import AiRing from "./AiRing.svelte"
@@ -36,6 +36,33 @@
 
     let chatInput = ""
     let isSending = false
+
+    // the copilot's own chat runs the app; the others design one slide
+    $: isAgent = activeSessionKey === "default"
+    let steps: { tool: string; ok: boolean }[] = []
+    const stepLabels: { [key: string]: string } = {
+        get_live_state: "Checked the screen",
+        get_transcript: "Read what was said",
+        show_found: "Showed a match",
+        set_listening: "Changed listening",
+        search_bible: "Searched the Bible",
+        read_passage: "Read a passage",
+        show_scripture: "Showed a passage",
+        list_songs: "Looked through the songs",
+        get_song: "Read a song",
+        add_song: "Added a song",
+        present_song: "Showed a song",
+        control_screen: "Changed the screen",
+        list_plans: "Looked at the plans",
+        create_plan: "Made a plan",
+        add_to_plan: "Added to the plan",
+        speaker_timer: "Changed the speaker timer"
+    }
+    const examples = ["Put up John 3:16", "What is on screen?", "Make a plan for Sunday with Amazing Grace", "Show the verse they just quoted"]
+    function tryExample(example: string) {
+        chatInput = example
+        sendChatMessage()
+    }
 
     $: chatMessages = $chatSessions[activeSessionKey] || []
 
@@ -69,9 +96,10 @@
         setTimeout(scrollToBottomChat)
 
         try {
-            const currentItems = getEditItems()
-            const promptToUse = getSlideChatSystemPrompt(targetType, currentItems)
-            const res = await llm.sendMessage(activeSessionKey, inputPrompt, { systemPrompt: promptToUse })
+            steps = []
+            const systemPrompt = isAgent ? undefined : getSlideChatSystemPrompt(targetType, getEditItems())
+            const res = await llm.sendMessage(activeSessionKey, inputPrompt, { systemPrompt, onStep: (tool, ok) => (steps = [...steps, { tool, ok }]) })
+            if (!res) addChatMessage(activeSessionKey, "assistant", "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot, then try again.")
             if (res?.action && res.action.type === "APPLY_TO_SLIDE") {
                 ChatAction.handle(res.action)
             }
@@ -109,7 +137,7 @@
     }
 </script>
 
-<div class="chat-container">
+<div class="chat-container" class:fill={isAgent}>
     <!-- {#if chatMessages.length > 0}
         <MaterialButton class="popup-reset" icon="delete" title="Clear" on:click={clearChat} white />
     {/if} -->
@@ -120,7 +148,16 @@
                 <Center faded>
                     <div class="empty-state">
                         <Icon id="ai" size={2.2} gradient />
-                        <p class="placeholder"><T id="chat.ask" /></p>
+                        <p class="placeholder">
+                            {#if isAgent}Ask me to run the service{:else}<T id="chat.ask" />{/if}
+                        </p>
+                        {#if isAgent}
+                            <div class="examples">
+                                {#each examples as example}
+                                    <MaterialButton variant="outlined" small on:click={() => tryExample(example)}>{example}</MaterialButton>
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
                 </Center>
             {:else}
@@ -143,6 +180,9 @@
                 {/each}
                 {#if isSending}
                     <div class="chat-message assistant placeholder">
+                        {#each steps as step}
+                            <p class:failed={!step.ok}>{step.ok ? stepLabels[step.tool] || step.tool : `${stepLabels[step.tool] || step.tool}: did not work`}</p>
+                        {/each}
                         <p><T id="ai.processing" /></p>
                     </div>
                 {/if}
@@ -154,7 +194,7 @@
         </div>
     {:else}
         <Center faded>
-            <p class="placeholder">No LLM provider configured in Settings > Smart</p>
+            <p class="placeholder">Choose a model in Settings, Live Copilot, to use the chat.</p>
         </Center>
     {/if}
 </div>
@@ -181,6 +221,25 @@
         width: 560px;
         max-width: calc(85vw - 40px);
         overflow: hidden;
+    }
+
+    .chat-container.fill {
+        flex: 1;
+        min-height: 0;
+        height: auto;
+        max-height: none;
+        width: 100%;
+        max-width: none;
+    }
+    .examples {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        max-width: 520px;
+    }
+    .failed {
+        color: #ff9d9d;
     }
 
     .chat-messages {

@@ -1,22 +1,26 @@
-# Scriptural Project MCP server
+# AI agents and Scriptural Project
 
-Lets an AI agent (Claude and others) run Scriptural Project on the same computer: find scripture, add songs, images and decks, build service plans and present.
+The app has its own MCP server, so an AI agent on the same computer can find scripture, build service plans, see the screen and run it.
 
-1. In the app, turn on Settings > Connection > API. Set a password there if others share the network.
-2. `cd mcp && npm install`
-3. Add the server to the agent. For Claude Code:
+1. In the app: Settings > Connection > AI agents. Turn it on and copy the command.
+2. Paste it in a terminal. For Claude Code:
 
 ```bash
-claude mcp add scriptural-project -e SCRIPTURAL_PROJECT_TOKEN=<api password> -- node /path/to/FreeShow/mcp/server.mjs
+claude mcp add --transport http scriptural-project http://127.0.0.1:5507/mcp --header "Authorization: Bearer <token>"
 ```
+
+The server is off until turned on, answers only this computer, and needs the token.
 
 | Tool | Does |
 |---|---|
-| `search_bible` | Finds passages by reference, wording or meaning (Scriptural's search) |
-| `show_scripture` | Puts a passage on screen |
-| `list_songs`, `add_song`, `present_song` | The song library |
-| `list_projects`, `create_project`, `add_to_project` | Service plans |
-| `add_media` | Saves an image, video, PDF or deck from a URL or file into the media folder |
-| `control_output` | Next, previous, clear |
+| `get_live_state`, `get_screen_image` | What is on screen, in words and as a picture |
+| `get_transcript`, `show_found`, `set_listening` | The Live Copilot: what it heard and found |
+| `search_bible`, `read_passage`, `show_scripture` | Scripture |
+| `list_songs`, `get_song`, `add_song`, `present_song` | The song library |
+| `list_plans`, `create_plan`, `add_to_plan` | Service plans |
+| `add_media` | Saves a picture, video, PDF or deck, and can show it |
+| `control_screen`, `speaker_timer` | Next, previous, clear, lock; the speaker's countdown |
 
-The agent finds lyrics, images and decks on the web itself and passes them in. Settings: `SCRIPTURAL_PROJECT_URL` (default `http://127.0.0.1:5506`), `SCRIPTURAL_PROJECT_TOKEN`, `SCRIPTURAL_PROJECT_MEDIA`.
+No tool deletes anything. The chat inside the app uses the same tools (`src/frontend/ai/agent/agentTools.ts`).
+
+For an agent that can only start a program (stdio), run `node mcp/server.mjs` with `SCRIPTURAL_PROJECT_TOKEN` set.

@@ -5,20 +5,15 @@ import type { Item, Overlay, Slide } from "../../../types/Show"
 import { history } from "../../components/helpers/history"
 import { getLayoutRef } from "../../components/helpers/show"
 import { getStyles, removeText } from "../../components/helpers/style"
-import { startScripture } from "../../components/actions/apiHelper"
-import { startShowSync } from "../../components/helpers/showActions"
-import { convertText } from "../../converters/txt"
-import { activeEdit, activeShow, overlays, refreshEditSlide, shows, showsCache, templates } from "../../stores"
+import { activeEdit, activeShow, overlays, refreshEditSlide, showsCache, templates } from "../../stores"
 import { newToast } from "../../utils/common"
 import { translateText } from "../../utils/language"
 import { send } from "../../utils/request"
 
 export interface FreeShowAction {
-    type: "APPLY_TO_SLIDE" | "CREATE_SLIDE" | "CREATE_TEMPLATE" | "CREATE_OVERLAY" | "SHOW_SCRIPTURE" | "ADD_SONG" | "PRESENT_SONG"
+    type: "APPLY_TO_SLIDE" | "CREATE_SLIDE" | "CREATE_TEMPLATE" | "CREATE_OVERLAY"
     data: {
         name?: string
-        reference?: string | null
-        lyrics?: string | null
         color?: string | null
         category?: string
         items?: Array<{
@@ -50,40 +45,6 @@ export class ChatAction {
         if (!action) return
 
         console.log("Chat action:", action)
-
-        // scripture and songs: the same paths the app's own API uses
-        if (action.type === "SHOW_SCRIPTURE") {
-            const reference = action.data?.reference?.trim()
-            if (!reference) return newToast("Say which passage to show, such as John 3:16.")
-            startScripture({ reference }).catch(() => newToast(`Could not find ${reference}.`))
-            return
-        }
-        if (action.type === "ADD_SONG") {
-            const name = action.data?.name?.trim()
-            if (!name || !action.data?.lyrics?.trim()) return newToast("A song needs a title and its words.")
-            convertText({ name, text: action.data.lyrics, category: "song", noFormatting: true, open: true })
-            newToast(translateText("actions.done"))
-            return
-        }
-        if (action.type === "PRESENT_SONG") {
-            const wanted = action.data?.name?.trim().toLowerCase()
-            // an empty name would match every song and put the first one on screen
-            if (!wanted) return newToast("Say which song to present.")
-            const list = Object.entries(get(shows)).filter(([, s]) => !s.private)
-            const exact = list.find(([, s]) => s.name?.trim().toLowerCase() === wanted)
-            const partial = list.filter(([, s]) => s.name?.toLowerCase().includes(wanted))
-            const match = exact || (partial.length === 1 ? partial[0] : null)
-            if (match) startShowSync(match[0])
-            else if (partial.length)
-                newToast(
-                    `Which one: ${partial
-                        .slice(0, 3)
-                        .map(([, s]) => s.name)
-                        .join(", ")}?`
-                )
-            else newToast(`No song named "${action.data!.name}"`)
-            return
-        }
 
         // Create "Generated" category
 

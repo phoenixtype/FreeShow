@@ -1,7 +1,7 @@
 import axios from "axios"
 import type { LLMCompletionOptions } from "../../../../types/ai/Ai"
 
-export const LLM_API_TIMEOUT = 12000
+export const LLM_API_TIMEOUT = 45000
 
 export interface ModelOption {
     id: string

@@ -2,6 +2,7 @@ import { Bible } from "json-bible/lib/Bible"
 import { get } from "svelte/store"
 import { loadJsonBible } from "../../components/drawer/bible/scripture"
 import { scriptures } from "../../stores"
+import { CANON } from "./canon"
 import { BibleSearchDetector } from "./BibleSearchDetector"
 import { CHAPTER_PATTERN, ORDINAL_PREFIX_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
 
@@ -47,6 +48,13 @@ export class BibleCacheManager {
 
         this.cachePromises.set(bibleId, promise)
         return await promise
+    }
+
+    private static canon: Promise<BibleSearchDetector> | null = null
+    /** references only, for when no Bible is stored on this computer */
+    public static getCanon(): Promise<BibleSearchDetector> {
+        if (!this.canon) this.canon = this.buildCacheAsync({ books: CANON } as any).then((data) => new BibleSearchDetector(data))
+        return this.canon
     }
 
     /**
