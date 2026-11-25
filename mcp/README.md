@@ -15,11 +15,12 @@ The server is off until turned on, answers only this computer, and needs the tok
 |---|---|
 | `get_live_state`, `get_screen_image` | What is on screen, in words and as a picture |
 | `get_transcript`, `show_found`, `set_listening`, `set_agent_mode` | The Live Copilot: what it heard and found |
-| `search_bible`, `read_passage`, `show_scripture` | Scripture |
-| `list_songs`, `get_song`, `add_song`, `present_song` | The song library |
-| `list_plans`, `create_plan`, `add_to_plan` | Service plans |
+| `search_bible`, `read_passage`, `show_scripture`, `set_bible_version` | Scripture |
+| `list_songs`, `get_song`, `add_song`, `present_song`, `show_section` | The song library |
+| `list_plans`, `create_plan`, `add_to_plan`, `open_plan`, `show_plan_item` | Service plans, and running them |
 | `add_media` | Saves a picture, video, PDF or deck, and can show it |
-| `control_screen`, `speaker_timer` | Next, previous, clear, lock; the speaker's countdown |
+| `control_screen`, `show_overlay`, `speaker_timer` | Next, previous, clear, restore, lock, screen on and off; overlays; the speaker's countdown |
+| `open_page` | Takes the operator to a page of the app |
 
 No tool deletes anything. The chat inside the app uses the same tools (`src/frontend/ai/agent/agentTools.ts`).
 

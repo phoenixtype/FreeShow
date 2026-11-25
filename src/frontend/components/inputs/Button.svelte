@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { afterUpdate } from "svelte"
+
     export let active = false
     export let outlineColor: string | null = null
     export let outline = false
@@ -9,10 +11,15 @@
     export let bold = true
     export let red = false
     export let redHover = false
+
+    // a button with only an icon is read out by its title
+    let button: HTMLButtonElement | undefined
+    let iconOnly = false
+    afterUpdate(() => (iconOnly = !!button && !button.textContent?.trim()))
     export let brighterHover = false
 </script>
 
-<button data-title={title} id={$$props.id} data-testid={$$props["data-testid"]} style="{outlineColor ? 'outline-offset: -2px;outline: 2px solid ' + outlineColor + ' !important;' : ''}{$$props.style || ''}" class:active class:outline class:center class:border class:bold class:dark class:red class:redHover class:brighterHover class={$$props.class} on:click on:dblclick disabled={$$props.disabled} tabindex={active ? -1 : 0}>
+<button bind:this={button} data-title={title} aria-label={iconOnly && title ? title : undefined} id={$$props.id} data-testid={$$props["data-testid"]} style="{outlineColor ? 'outline-offset: -2px;outline: 2px solid ' + outlineColor + ' !important;' : ''}{$$props.style || ''}" class:active class:outline class:center class:border class:bold class:dark class:red class:redHover class:brighterHover class={$$props.class} on:click on:dblclick disabled={$$props.disabled} tabindex={active ? -1 : 0}>
     <slot />
 </button>
 

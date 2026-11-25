@@ -2,7 +2,7 @@ import JsonBible from "json-bible"
 import { ApiBiblesList, ApiBible as JsonBibleApi } from "json-bible/lib/api"
 import type { CustomBibleListContent } from "json-bible/lib/api/ApiBible"
 import { stripMarkdown } from "json-bible/lib/markdown"
-import { get } from "svelte/store"
+import { get, writable } from "svelte/store"
 import { uid } from "uid"
 import { Main } from "../../../../types/IPC/Main"
 import type { BibleContent } from "../../../../types/Scripture"
@@ -293,8 +293,14 @@ export function sortScriptureSelection(selection: (string | number)[]) {
 
 // OUTPUT
 
+/** the Scripture tab is open, so it follows along by itself */
+export const scriptureDrawerOpen = writable(false)
+/** the passage last put on screen, wherever the operator has browsed to since */
+export const screenScripture = writable<{ id?: string; reference?: any } | null>(null)
+
 export async function playScripture() {
     if (get(outLocked)) return
+    const played = clone(get(activeScripture))
 
     const biblesContent = await getActiveScripturesContent()
     if (!biblesContent?.length || !biblesContent[0]) return
@@ -357,6 +363,7 @@ export async function playScripture() {
     const [previousSlides, nextSlides] = await Promise.all([getPreviousSlides(), getNextSlides()])
 
     setOutput("slide", { id: "temp", categoryId, tempItems, previousSlides, nextSlides, attributionString, translations: biblesContent.length, settings, customDynamicValues: slideDynamicValues[0] })
+    screenScripture.set(played)
 
     // track
     const reference = `${biblesContent[0].book} ${fullReferenceRange || biblesContent[0].chapters[0]}`.trim()

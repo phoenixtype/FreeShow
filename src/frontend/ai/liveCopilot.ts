@@ -3,10 +3,16 @@
 
 import { get, writable } from "svelte/store"
 import { activePage, activePopup, ai, popupData, settingsTab, sttTempDisabled } from "../stores"
-import { triggerFunction } from "../utils/common"
 
 // true only while the microphone is really being heard
 export const copilotListening = writable(false)
+
+// the panel beside the app, and whether its box to type in should take the cursor
+export const copilotOpen = writable(false)
+export const focusMatthias = writable(false)
+
+export type CopilotState = "loading" | "inactive" | "error" | "listening" | "processing"
+export const copilotState = writable<CopilotState>("inactive")
 
 export function enableLiveCopilot() {
     ai.update((a) => ({ ...a, enabled: true }))
@@ -26,5 +32,12 @@ export function openLiveCopilot() {
         return
     }
 
-    triggerFunction("open_live_copilot")
+    copilotOpen.update((open) => !open)
+}
+
+/** straight to typing a request, wherever the operator is */
+export function askMatthias() {
+    if (!get(ai).enabled) return openLiveCopilot()
+    copilotOpen.set(true)
+    focusMatthias.set(true)
 }

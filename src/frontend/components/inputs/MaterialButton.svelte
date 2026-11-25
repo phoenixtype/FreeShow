@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte"
+    import { afterUpdate, createEventDispatcher } from "svelte"
     import { translateText } from "../../utils/language"
     import Icon from "../helpers/Icon.svelte"
     import { dictionary } from "../../stores"
@@ -18,6 +18,10 @@
     export let tab = false
     export let red = false
     let button
+
+    // a button with only an icon is read out by its title
+    let iconOnly = false
+    afterUpdate(() => (iconOnly = !!button && !button.textContent.trim()))
 
     // automatically do white icon if no content
     if (!$$slots.default) white = true
@@ -89,6 +93,7 @@
     tabindex={disabled ? -1 : 0}
     aria-disabled={disabled}
     data-title={translateText(title, $dictionary)}
+    aria-label={iconOnly && title ? translateText(title, $dictionary) : undefined}
     class:isActive
     class:showOutline
     class:white
@@ -181,13 +186,13 @@
     }
 
     button:not(.contained):not(.isActive):not(:disabled):hover {
-        background: rgba(255, 255, 255, 0.01) !important;
+        background: var(--hover) !important;
     }
     button:not(.contained):not(.isActive):not(:disabled):active {
-        background: rgba(255, 255, 255, 0.04) !important;
+        background: var(--focus) !important;
     }
     button:not(.contained):not(.isActive):not(:disabled):active:hover {
-        background: rgba(255, 255, 255, 0.06) !important;
+        background: var(--focus) !important;
     }
     button.contained:not(:disabled):hover {
         filter: brightness(1.05);

@@ -2,27 +2,40 @@ import { beforeEach, expect, it, vi } from "vitest"
 
 vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
-    return { activeScripture: writable({}), ai: writable({}), aiSuggestions: writable([]), outLocked: writable(false), scriptures: writable({}), shows: writable({ a: { name: "Amazing Grace" } }) }
+    return { activeProject: writable("p"), ai: writable({}), aiSuggestions: writable([]), outLocked: writable(false), projects: writable({ p: { name: "Sunday", shows: [] } }), shows: writable({ a: { name: "Amazing Grace" } }), sttTranscript: writable({ finalized: "", unprocessed: "" }) }
 })
-vi.mock("../../components/actions/apiHelper", () => ({ startScripture: vi.fn(), toggleSttListening: vi.fn() }))
-vi.mock("../../components/drawer/bible/scripture", () => ({ getShortBibleName: () => "" }))
-vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ out: { slide: { id: "temp" } } }), toggleOutputs: vi.fn() }))
-vi.mock("../../components/output/clear", () => ({ clearAll: vi.fn(), clearSlide: vi.fn(), restoreOutput: vi.fn() }))
-vi.mock("../../converters/bible", () => ({ setActiveScripture: vi.fn() }))
-vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: vi.fn() }))
-vi.mock("../agent/agentTools", () => ({ searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+vi.mock("../../components/actions/apiHelper", () => ({ addToProject: vi.fn(), toggleSttListening: vi.fn() }))
+const screen = vi.hoisted(() => ({ slide: { id: "temp" } as { id: string } | null }))
+vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ out: { slide: screen.slide } }), toggleOutputs: vi.fn() }))
+vi.mock("../../components/output/clear", () => ({ clearBackground: vi.fn(), clearOverlays: vi.fn() }))
+vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ nextProgramSegment: vi.fn(), playPauseSpeaker: vi.fn(), startProgram: vi.fn() }))
+vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
+const chat = vi.hoisted(() => ({ run: vi.fn() }))
+vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))
+vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+vi.mock("../agent/control", async () => {
+    const { writable } = await import("svelte/store")
+    const { ai } = await import("../../stores")
+    return { handMoves: writable(0), setAgentMode: (on: boolean) => ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } })) }
+})
+vi.mock("../agent/openPage", () => ({ openPage: vi.fn() }))
+vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), showPlanItem: vi.fn() }))
 vi.mock("../agent/stepScreen", () => ({ stepScreen: vi.fn() }))
-vi.mock("../llm/llmManager", () => ({ getLLMManager: () => null }))
+const model = vi.hoisted(() => ({ llm: null as any }))
+vi.mock("../llm/llmManager", () => ({ addChatMessage: vi.fn(), getChatHistory: () => [], getLLMManager: () => model.llm }))
 vi.mock("../llm/prompts", () => ({ CHAT_RESPONSE_SCHEMA: {}, CHAT_SYSTEM_PROMPT: "" }))
-vi.mock("../songs/librarySongs", () => ({ presentSong: vi.fn() }))
-vi.mock("../scripture/BibleCacheManager", () => ({ BibleCacheManager: { getCanon: vi.fn() } }))
-const manager = vi.hoisted(() => ({ showReference: vi.fn(), findReference: vi.fn(async (w: string) => (/john/i.test(w) ? "John 3:16" : null)), navigateNow: vi.fn(async () => "John 3:17"), letGo: vi.fn(), asOwnChange: vi.fn((_c: string, f: () => unknown) => f()) }))
+vi.mock("../songs/librarySongs", () => ({ showSection: vi.fn(async () => "Chorus"), showSlide: vi.fn(async () => 2) }))
+const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn(), findReference: vi.fn(async (w: string) => (/john/i.test(w) ? "John 3:16" : null)), navigateNow: vi.fn(async () => "John 3:17"), clearScreen: vi.fn(), undoChange: vi.fn(() => true), showAgain: vi.fn(async () => "John 3:16"), asOwnChange: vi.fn((_c: string, f: () => unknown) => f()) }))
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 
 import { get } from "svelte/store"
-import { clearSlide } from "../../components/output/clear"
+import { addToProject } from "../../components/actions/apiHelper"
 import { ai, outLocked } from "../../stores"
-import { presentSong } from "../songs/librarySongs"
+import { handMoves } from "../agent/control"
+import { showPlanItem } from "../agent/planItems"
+import { stepScreen } from "../agent/stepScreen"
+import { addChatMessage } from "../llm/llmManager"
+import { showSection } from "../songs/librarySongs"
 import { Matthias, matthiasStatus } from "./matthiasAgent"
 
 let position = 0
@@ -31,6 +44,9 @@ beforeEach(() => {
     vi.clearAllMocks()
     ai.set({})
     outLocked.set(false)
+    model.llm = null
+    screen.slide = { id: "temp" }
+    Matthias.stop()
     position += 2000
 })
 // each test is a new stretch of one long transcript
@@ -58,7 +74,7 @@ it("does one request after another", async () => {
     hear("matthias next verse and the light matthias clear the screen", true)
     await settle()
     expect(manager.navigateNow).toHaveBeenCalledTimes(1)
-    expect(clearSlide).toHaveBeenCalledTimes(1)
+    expect(manager.clearScreen).toHaveBeenCalledTimes(1)
 })
 
 it("searches, shows the best, and moves to another", async () => {
@@ -70,7 +86,7 @@ it("searches, shows the best, and moves to another", async () => {
 
 it("plays a song of the library", async () => {
     await Matthias.ask("sing amazing grace")
-    expect(presentSong).toHaveBeenCalledWith("a", "")
+    expect(manager.showSong).toHaveBeenCalledWith({ id: "a", name: "Amazing Grace" })
 })
 
 it("leaves a locked screen alone", async () => {
@@ -93,4 +109,74 @@ it("says nothing when the name was only said in passing, or is switched off", as
     expect(get(matthiasStatus)).toBeNull()
     ai.set({ matthias: { name: false } })
     expect(hear("and then matthias next verse", true)).toBe(false)
+})
+
+it("does everything asked for in one breath, in order", async () => {
+    await Matthias.ask("put up John 3 16 then clear the screen")
+    expect(manager.showReference).toHaveBeenCalledWith("John 3:16")
+    expect(manager.clearScreen).toHaveBeenCalledTimes(1)
+})
+
+it("goes to a part of the song, and takes verse two for the song's when one is up", async () => {
+    screen.slide = { id: "a" }
+    await Matthias.ask("back to the chorus")
+    expect(showSection).toHaveBeenLastCalledWith("chorus", undefined)
+    await Matthias.ask("go to verse two")
+    expect(showSection).toHaveBeenLastCalledWith("verse", 2)
+})
+
+it("steps several at once", async () => {
+    const done = Matthias.ask("go forward three slides")
+    await settle()
+    await done
+    expect(stepScreen).toHaveBeenCalledTimes(3)
+})
+
+it("runs the plan and adds to it, and never shows what is only added", async () => {
+    await Matthias.ask("next item")
+    expect(showPlanItem).toHaveBeenCalledTimes(1)
+    await Matthias.ask("add Amazing Grace to the plan")
+    expect(addToProject).toHaveBeenCalledWith({ projectId: "p", id: "a" })
+    expect(manager.showSong).not.toHaveBeenCalled()
+})
+
+it("does not put up a passage that is only asked about", async () => {
+    await Matthias.ask("who wrote John 3 16", true, true)
+    await Matthias.ask("make a plan with John 3 16", true, true)
+    expect(manager.showReference).not.toHaveBeenCalled()
+})
+
+it("answers a typed request it cannot do without a model, and writes the conversation down", async () => {
+    await Matthias.ask("compose a poem", true, true)
+    expect(addChatMessage).toHaveBeenNthCalledWith(1, "default", "user", "compose a poem")
+    expect(vi.mocked(addChatMessage).mock.calls[1][2]).toMatch(/did not understand/)
+})
+
+it("works on one request at a time, and stops at once when told to", async () => {
+    model.llm = {}
+    let finish: (a: unknown) => void = () => {}
+    chat.run.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)))
+    const first = Matthias.ask("prepare something long", true, true)
+    const second = Matthias.ask("next verse", true, true)
+    await vi.advanceTimersByTimeAsync(10)
+    expect(manager.navigateNow).not.toHaveBeenCalled()
+    await Matthias.ask("stand down", true, true)
+    expect(get(ai).matthias?.agentMode).toBe(false)
+    finish({ content: "All done" })
+    await Promise.all([first, second])
+    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(vi.mocked(addChatMessage).mock.calls.some((c) => c[2] === "All done")).toBe(false)
+})
+
+it("leaves the screen alone once the operator has moved it, and still does the rest", async () => {
+    model.llm = {}
+    const refusals: string[] = []
+    chat.run.mockImplementationOnce(async (_h, deps) => {
+        refusals.push(deps.refuse("show_scripture"))
+        handMoves.update((n) => n + 1)
+        refusals.push(deps.refuse("show_scripture"), deps.refuse("list_songs"))
+        return { content: "Done" }
+    })
+    await Matthias.ask("prepare something long", true, true)
+    expect(refusals).toEqual(["", expect.stringMatching(/operator/), ""])
 })

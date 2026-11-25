@@ -224,6 +224,12 @@ export const aiSttStatus: Writable<{ state: "inactive" | "listening" | "stopped"
 export const aiLlmStatus: Writable<AiFeatureStatus> = writable({ state: "stopped" })
 export const aiSuggestions: Writable<AiSuggestion[]> = writable([])
 export const aiSmartAction: Writable<AiSuggestion | null> = writable(null)
+export interface TranscriptLine {
+    at: number
+    text: string
+}
+/** everything heard since the app was opened, line by line; kept on this computer, in memory only */
+export const transcriptLog: Writable<TranscriptLine[]> = writable([])
 export const sttTranscript: Writable<{ finalized: string; unprocessed: string }> = writable({ finalized: "", unprocessed: "" })
 export const sttTempDisabled: Writable<boolean> = writable(false)
 

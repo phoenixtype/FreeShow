@@ -2,14 +2,15 @@ import { get, type Unsubscriber } from "svelte/store"
 import { uid } from "uid"
 import type { AiSuggestion, MatchResult } from "../../../types/ai/Ai"
 import type { ConfidenceLevels } from "../../../types/ai/AiSettings"
-import { startScripture } from "../../components/actions/apiHelper"
-import { keysToID } from "../../components/helpers/array"
-import { getFirstActiveOutput } from "../../components/helpers/output"
-import { loadJsonBible } from "../../components/drawer/bible/scripture"
-import { clearSlide } from "../../components/output/clear"
+import { clone, keysToID } from "../../components/helpers/array"
+import { getFirstActiveOutput, setOutput } from "../../components/helpers/output"
+import { loadJsonBible, screenScripture } from "../../components/drawer/bible/scripture"
+import { clearAll, clearSlide, restoreOutput } from "../../components/output/clear"
 import { setActiveScripture } from "../../converters/bible"
-import { activeScripture, ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputs, scriptures } from "../../stores"
+import { ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputCache, outputs, scriptures } from "../../stores"
 import { newToast } from "../../utils/common"
+import { handBack, isHeld, movedByHand, OwnChanges, type OwnChange } from "../agent/control"
+import { currentScripture, otherTab, presentPassage } from "../agent/presentPassage"
 import { getLLMManager } from "../llm/llmManager"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleVersion } from "../scripture/BibleVersionDetector"
@@ -19,6 +20,12 @@ import { isPartOf, isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 import { resolveNavigation } from "../scripture/voiceNavigation"
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
+
+interface Shown {
+    content: string
+    kind: "scripture" | "song"
+    show: () => Promise<unknown>
+}
 
 export class AiManager {
     private static lastMatch: number = 0
@@ -104,10 +111,11 @@ export class AiManager {
         if (hit.id === liveShowId()) {
             this.heardAgain()
             if (this.autoLevel("lyrics") === "ask" || hit.confidence <= 50) return true
-            if (this.lastOutputUpdate && Date.now() - this.lastOutputUpdate < this.MAX_AUTO_PLAY_INTERVAL) return true
+            if (isHeld()) return true
             this.listenToOutput()
-            this.expectOwnChange()
+            this.expectOwnChange({ show: hit.id })
             if (await followSong(hit.id, recent)) this.outputUpdate(hit.name)
+            else this.ownChanges.settle()
             return true
         }
 
@@ -143,7 +151,7 @@ export class AiManager {
         // a repeat within the cooldown still counts as handled
         if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return true
 
-        const { id, reference } = get(activeScripture)
+        const { id, reference } = currentScripture()
         if (!id || !reference?.book || !reference.chapters?.length) return false
 
         const chapter = Number(reference.chapters[reference.chapters.length - 1])
@@ -162,20 +170,18 @@ export class AiManager {
         const content = `${book.name} ${target.chapter}:${target.verse}`
         this.navigatedTo = content
         const trigger = async () => {
-            this.expectOwnChange()
-            await startScripture({ id, reference: `${reference.book}.${target.chapter}.${target.verse}` })
-            this.outputUpdate(content)
+            await this.present(content, `${reference.book}.${target.chapter}.${target.verse}`, otherTab(id))
         }
 
         // commands follow the scripture setting: presented directly, or offered when set to "ask"
         const draft = { id: uid(5), timestamp: Date.now(), content, confidence: 100 }
-        if (!asked && this.autoLevel("scripture") === "ask") {
+        if (!asked && (isHeld() || this.autoLevel("scripture") === "ask")) {
             this.addSuggestion({ ...draft, action: "present", trigger })
             return true
         }
 
         this.addSuggestion({ ...draft, action: "presented", trigger })
-        trigger()
+        await trigger()
         return true
     }
 
@@ -301,7 +307,6 @@ export class AiManager {
         return suggested.includes(match.content)
     }
 
-    private static MAX_AUTO_PLAY_INTERVAL = 30000
     private static shouldAutoPlay(match: MatchResult): boolean {
         if (match.confidence <= 95 && this.alreadySuggested(match)) return false
 
@@ -313,9 +318,8 @@ export class AiManager {
         // never auto-play low confidence matches
         if (match.confidence <= 50) return false
 
-        const now = Date.now()
-        // skip if the output was manually updated recently
-        if (this.lastOutputUpdate && now - this.lastOutputUpdate < this.MAX_AUTO_PLAY_INTERVAL) return false
+        // the operator has just moved the screen
+        if (isHeld() || get(outLocked)) return false
 
         const confidence = this.autoLevel(match.type)
         if (confidence === "ask") return false
@@ -338,31 +342,46 @@ export class AiManager {
             if (match.type === "scripture_version") {
                 if (match.scriptureTranslation) setActiveScripture(match.scriptureTranslation)
             } else if (match.type === "scripture") {
-                this.expectOwnChange()
-                await startScripture({ reference: match.content })
-                this.outputUpdate(match.content)
+                await this.present(match.content, match.content)
             } else if (match.type === "lyrics" && match.showId) {
-                this.expectOwnChange()
-                await presentSong(match.showId, match.lyricsText || "")
-                this.outputUpdate(match.content)
+                const { showId, lyricsText } = match
+                await this.asOwnChange(match.content, () => presentSong(showId, lyricsText || ""), { show: showId })
             }
         } catch (err) {
             console.warn("Live Copilot could not present", match.content, err)
         }
     }
 
-    // Output changes the copilot makes itself are not "moved by hand". Loading a
-    // song or a Bible can take a few seconds, so the window runs from just before
-    // the present until shortly after it lands.
-    private static ownChangeUntil = 0
-    private static expectOwnChange() {
-        this.ownChangeUntil = Date.now() + 15_000
+    // Output changes the copilot makes itself are not "moved by hand".
+    private static ownChanges = new OwnChanges()
+    private static expectOwnChange(change: OwnChange) {
+        const out = getFirstActiveOutput()?.out
+        this.undone = { slide: clone(out?.slide || null), scripture: get(screenScripture), content: this.liveContent }
+        this.ownChanges.expect(change)
     }
     private static outputUpdate(content: string) {
         this.liveContent = content
         this.heardAgain()
-        this.lastOutputUpdate = 0
-        this.ownChangeUntil = Date.now() + 1500
+        handBack()
+    }
+
+    // what was up before the copilot's last change, to put back
+    private static undone: { slide: any; scripture: any; content: string } | null = null
+    // what the copilot has put up, newest last
+    private static shown: Shown[] = []
+    private static remember(content: string, kind: Shown["kind"], show: () => Promise<unknown>) {
+        if (!content) return
+        this.shown = [...this.shown.filter((entry) => entry.content !== content), { content, kind, show }].slice(-20)
+    }
+
+    private static async present(content: string, reference: string, id = "") {
+        let up = false
+        await this.asOwnChange(content, async () => (up = await presentPassage(reference, id)), "passage")
+        if (!up) {
+            this.liveContent = ""
+            throw new Error(`${content} could not be put up`)
+        }
+        this.remember(content, "scripture", () => this.present(content, reference, id))
     }
 
     // MATTHIAS: asked for by name, so shown whatever the settings say
@@ -381,20 +400,64 @@ export class AiManager {
         return (await (await this.referenceDetector()).search(words, ""))?.content || null
     }
     static async showReference(reference: string) {
-        await this.asOwnChange(reference, () => startScripture({ reference }))
+        await this.present(reference, reference)
         this.addSuggestion({ id: uid(5), timestamp: Date.now(), content: reference, confidence: 100, action: "presented", trigger: () => this.showReference(reference) })
     }
-    static async asOwnChange(content: string, change: () => Promise<unknown>) {
+    static async showSong(song: { id: string; name: string }) {
+        const show = () => this.asOwnChange(song.name, () => presentSong(song.id, ""), { show: song.id })
+        await show()
+        this.remember(song.name, "song", show)
+    }
+    /** content: what will be up, or "" when that stays what it is */
+    static async asOwnChange(content: string, change: () => unknown, expected: OwnChange = "any") {
         this.listenToOutput()
-        this.expectOwnChange()
-        await change()
+        this.expectOwnChange(expected)
+        try {
+            await change()
+        } finally {
+            // "any" is only for changes that are done when they say so; a passage is still landing
+            if (expected !== "passage") this.ownChanges.settle()
+        }
         this.outputUpdate(content || this.liveContent)
     }
-    /** nothing of the copilot's is on screen any more */
-    static letGo() {
-        this.expectOwnChange()
+    static async showAgain(): Promise<string> {
+        return this.reshow(this.shown[this.shown.length - 1])
+    }
+    /** the last thing shown that is not up now */
+    static async showBefore(kind?: Shown["kind"]): Promise<string> {
+        return this.reshow([...this.shown].reverse().find((entry) => entry.content !== this.liveContent && (!kind || entry.kind === kind)))
+    }
+    private static async reshow(entry: Shown | undefined): Promise<string> {
+        if (!entry) return ""
+        await entry.show()
+        return entry.content
+    }
+
+    /** takes the words, or everything, off the screen; undoChange brings it back */
+    static clearScreen(all = false) {
+        this.listenToOutput()
+        this.expectOwnChange("nothing")
+        if (all) {
+            clearAll(true)
+            this.undone = null
+        } else clearSlide()
         this.outputUpdate("")
         if (this.clearTimer) clearTimeout(this.clearTimer)
+    }
+    /** what was up before the copilot's last change */
+    static undoChange(): boolean {
+        const before = this.undone
+        if (!before && !get(outputCache)) return false
+        this.listenToOutput()
+        this.ownChanges.expect("any")
+        this.undone = null
+        if (before) {
+            setOutput("slide", before.slide)
+            screenScripture.set(before.scripture)
+        } else restoreOutput()
+        this.ownChanges.settle()
+        this.outputUpdate(before?.content || "")
+        return true
     }
 
     // In agent mode a passage or song comes down once the speaker has moved on. Only what
@@ -409,8 +472,8 @@ export class AiManager {
         const content = this.liveContent
         this.clearTimer = setTimeout(() => {
             if (!get(ai).matthias?.agentMode || this.liveContent !== content || get(outLocked)) return
-            this.letGo()
-            clearSlide()
+            if (isHeld()) return
+            this.clearScreen()
         }, minutes * 60_000)
     }
 
@@ -457,9 +520,8 @@ export class AiManager {
 
     /////
 
-    private static lastOutputUpdate = 0
     private static outputListener: Unsubscriber | null = null
-    private static listenToOutput() {
+    static listenToOutput() {
         if (this.outputListener) return
 
         let initialized = false
@@ -475,9 +537,9 @@ export class AiManager {
             if (slideKey === previousOutput) return
             previousOutput = slideKey
 
-            if (!initialized || Date.now() < this.ownChangeUntil) return
+            if (!initialized || this.ownChanges.isOwn(slide)) return
             // moved by hand: hold off auto-present, and what was on screen is no longer live
-            this.lastOutputUpdate = Date.now()
+            movedByHand()
             this.liveContent = ""
         })
     }

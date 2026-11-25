@@ -164,7 +164,15 @@ export async function startProjectItemByName(name: string) {
         if (slide?.id === item.id && slide?.index === firstEnabledIndex && slide?.layout === get(showsCache)[item.id].settings.activeLayout) return
 
         setOutput("slide", { id: item.id, layout: get(showsCache)[item.id].settings.activeLayout, index: firstEnabledIndex })
-    } else if (item.type === "image" || item.type === "video") {
+    } else await outputProjectItem(item)
+}
+
+/** puts up a project item that is not a show: media, PDF, audio, overlay or player */
+export async function outputProjectItem(item: any) {
+    const outputId: string = getActiveOutputs(get(outputs), false, true, true)[0]
+    const currentOutput = get(outputs)[outputId] || {}
+
+    if (item.type === "image" || item.type === "video") {
         let outputStyle = get(styles)[currentOutput.style || ""]
         const mediaData = get(media)[item.id] || {}
         const mediaStyle = getMediaStyle(mediaData, outputStyle)
@@ -696,12 +704,10 @@ export function getClearedState() {
 
 // "1.1.1,2,3" = "Gen 1:1-3"
 // or "John 3:16" / "1 John 1:4-6"
-export async function startScripture(data: API_scripture) {
+export async function resolveScriptureRequest(data: Pick<API_scripture, "reference" | "id">): Promise<{ book: number; chapter: number; verses: (string | number)[][] } | null> {
     const split = data.reference.split(".")
     const book = Number(split[0])
     const chapter = Number(split[1])
-
-    let ref: { book: number; chapter: number; verses: (string | number)[][] }
 
     if (split.length > 1 && !isNaN(book) && !isNaN(chapter)) {
         const rawVerses = (split[2] ?? "").trim()
@@ -710,17 +716,17 @@ export async function startScripture(data: API_scripture) {
             .split(",")
             .map((v) => v.trim())
             .filter(Boolean)
-        ref = { book, chapter, verses: [verseItems.length ? verseItems : [rawVerses]] }
-    } else {
-        // convert text reference to actual reference
-        let resolved = await resolveScriptureReference(data.reference, data.id)
-        if (!resolved) {
-            resolved = parseEngScriptureRefToNumbers(data.reference)
-            if (!resolved) return
-        }
-
-        ref = { book: resolved.book, chapter: resolved.chapter, verses: [resolved.verses] }
+        return { book, chapter, verses: [verseItems.length ? verseItems : [rawVerses]] }
     }
+
+    // convert text reference to actual reference
+    const resolved = (await resolveScriptureReference(data.reference, data.id)) || parseEngScriptureRefToNumbers(data.reference)
+    return resolved ? { book: Number(resolved.book), chapter: resolved.chapter, verses: [resolved.verses] } : null
+}
+
+export async function startScripture(data: API_scripture) {
+    const ref = await resolveScriptureRequest(data)
+    if (!ref) return
 
     if (get(activePage) !== "edit") activePage.set("show")
     if (data.id) setDrawerTabData("scripture", data.id) // use active if no ID

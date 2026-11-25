@@ -72,7 +72,7 @@
 </script>
 
 <Center class="context #splash">
-    <img src="./scriptural-logo.svg" alt="" draggable={false} style="width: 64px;height: 64px;border-radius: 22.27%;box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);" />
+    <img src="./scriptural-logo.svg" alt="" draggable={false} style="width: 48px;height: 48px;border-radius: 22.27%;box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);" />
     <h1>Scriptural</h1>
     <p style="opacity: 0.7;">v{$version}</p>
     {#if $special.splashText}
@@ -88,7 +88,7 @@
             </span>
         </p>
     {:else if votd}
-        <p class="votd" style="padding-top: 30px" data-title="Verse of the Day [votd.org]">
+        <p class="votd" style="padding-top: 14px" data-title="Verse of the Day [votd.org]">
             <Link url="https://votd.org/">
                 {votd}
             </Link>
@@ -105,7 +105,7 @@
                     >
                     <span class="words">
                         <span class="label">{step.label}</span>
-                        <span class="hint">{step.hint}</span>
+                        {#if !step.done}<span class="hint">{step.hint}</span>{/if}
                     </span>
                 </button>
             {/each}
@@ -113,7 +113,7 @@
         </div>
     {/if}
 
-    <span style="padding-top: 30px" class="buttons">
+    <span style="padding-top: 14px" class="buttons">
         <MaterialButton icon="search" title="main.quick_search" on:click={() => quickSearchActive.set(true)}>
             <T id="main.quick_search" />
         </MaterialButton>
@@ -136,7 +136,7 @@
 
 <style>
     h1 {
-        font-size: 4em;
+        font-size: 2.4em;
         overflow: initial;
     }
 
@@ -145,7 +145,7 @@
     }
 
     .ready {
-        margin-top: 30px;
+        margin-top: 20px;
         display: flex;
         flex-direction: column;
         align-items: stretch;

@@ -7,6 +7,7 @@ import { getLayoutRef } from "../../components/helpers/show"
 import { startShow } from "../../components/helpers/showActions"
 import { loadShows } from "../../components/helpers/setShow"
 import { shows, showsCache, textCache } from "../../stores"
+import { findSection } from "./sections"
 import { bestSlide, SongDetector, SongIndex } from "./songDetection"
 
 let detector: SongDetector | null = null
@@ -69,4 +70,32 @@ export async function followSong(showId: string, recent: string): Promise<boolea
     if (index === null || index === live) return false
     await startShow(showId, index)
     return true
+}
+
+/** the song that is up goes to its chorus, bridge or verse; null when it has none */
+export async function showSection(name: string, number?: number): Promise<string | null> {
+    const showId = liveShowId()
+    if (!showId || showId === "temp") return null
+    await loadShows([showId])
+    const show = get(showsCache)[showId]
+    if (!show) return null
+    const slides = getLayoutRef(showId)
+        .map((ref, index) => ({ index, id: ref.id, group: ref.type === "parent" ? show.slides[ref.id]?.group || show.slides[ref.id]?.globalGroup || "" : "" }))
+        .filter((slide) => slide.group)
+    const index = findSection(slides, name, number, liveSlideIndex() ?? -1)
+    if (index === null) return null
+    await startShow(showId, index)
+    return slides.find((slide) => slide.index === index)?.group || name
+}
+
+/** to a slide of the song that is up, from 1 */
+export async function showSlide(slide: number | "last"): Promise<number> {
+    const showId = liveShowId()
+    if (!showId || showId === "temp") return 0
+    await loadShows([showId])
+    const total = getLayoutRef(showId).length
+    const wanted = slide === "last" ? total : slide
+    if (wanted < 1 || wanted > total) return 0
+    await startShow(showId, wanted - 1)
+    return wanted
 }

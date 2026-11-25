@@ -4,7 +4,7 @@
     import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
-    import { ai, aiSmartAction, aiSttStatus, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript } from "../../../stores"
+    import { ai, aiSmartAction, aiSttStatus, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript, transcriptLog } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import type { AiSuggestion } from "../../../../types/ai/Ai"
     import { getFirstActiveOutput } from "../../../components/helpers/output"
@@ -12,7 +12,6 @@
     import { Transcript } from "../../stt/transcript"
 
     import { createEventDispatcher } from "svelte"
-    import CopilotPreview from "./CopilotPreview.svelte"
     import { onScreenTitle } from "./onScreen"
 
     const dispatch = createEventDispatcher<{ listen: void }>()
@@ -41,6 +40,28 @@
     function onTranscriptScroll() {
         if (!transcriptElem || autoScrollTimer) return
         transcriptPinned = transcriptElem.scrollHeight - transcriptElem.scrollTop - transcriptElem.clientHeight < 40
+    }
+
+    const time = (at: number) => new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    const SHOWN_LINES = 400
+    $: shownLines = $transcriptLog.slice(-SHOWN_LINES)
+
+    function toLatest() {
+        transcriptPinned = true
+        scrollToBottom()
+    }
+
+    const UNDO_MS = 10_000
+    let undoClear: (() => void) | null = null
+    let undoTimer: NodeJS.Timeout | null = null
+    function clearLog() {
+        undoClear = Transcript.clear()
+        if (undoTimer) clearTimeout(undoTimer)
+        undoTimer = setTimeout(() => (undoClear = null), UNDO_MS)
+    }
+    function putBack() {
+        undoClear?.()
+        undoClear = null
     }
 
     // SUGGESTIONS
@@ -80,9 +101,20 @@
 </script>
 
 <div class="columns">
-    <CopilotPreview />
-
     <section class="heard">
+        {#if $transcriptLog.length || undoClear}
+            <div class="log-head">
+                <p>{undoClear ? "Cleared" : state === "listening" ? "Live" : "Transcription"}</p>
+                {#if undoClear}
+                    <MaterialButton small style="padding: 4px 10px;" on:click={putBack}>Undo</MaterialButton>
+                {/if}
+                {#if $transcriptLog.length}
+                    {#if !transcriptPinned}<MaterialButton small style="padding: 4px 10px;" on:click={toLatest}>Latest</MaterialButton>{/if}
+                    <MaterialButton small style="padding: 4px 10px;" on:click={() => Transcript.copy()}>Copy</MaterialButton>
+                    <MaterialButton small style="padding: 4px 10px;" on:click={clearLog}>Clear</MaterialButton>
+                {/if}
+            </div>
+        {/if}
         <div class="card-body">
             {#if state === "error"}
                 <div class="message">
@@ -94,16 +126,13 @@
                     <div class="spinner"></div>
                     <p><T id="ai.processing" /></p>
                 </div>
-            {:else if $sttTranscript.finalized || $sttTranscript.unprocessed}
+            {:else if $transcriptLog.length || $sttTranscript.unprocessed}
                 <div class="transcript-box" bind:this={transcriptElem} on:scroll={onTranscriptScroll}>
-                    <p>
-                        {$sttTranscript.finalized}{#if $sttTranscript.unprocessed}{" "}<span class="interim">{$sttTranscript.unprocessed}</span>{/if}
-                    </p>
-
-                    {#if $sttTranscript.finalized}
-                        <div class="transcript-actions">
-                            <MaterialButton icon="copy" title="actions.copy" style="padding: 10px;" on:click={() => Transcript.copy()} />
-                        </div>
+                    {#each shownLines as line}
+                        <p><time>{time(line.at)}</time>{line.text}</p>
+                    {/each}
+                    {#if $sttTranscript.unprocessed}
+                        <p><time>now</time><span class="interim">{$sttTranscript.unprocessed}</span></p>
                     {/if}
                 </div>
             {:else if state === "inactive"}
@@ -113,7 +142,7 @@
                 </div>
             {:else}
                 <Center faded>
-                    <p>{state === "loading" ? "Getting ready to listen…" : $ai.matthias?.name === false ? "Listening. Words appear here as they are spoken." : "Listening. You can say “Matthias, John three sixteen”."}</p>
+                    <p style="white-space: initial;padding: 0 20px;">{state === "loading" ? "Getting ready to listen…" : $ai.matthias?.name === false ? "Listening. Words appear here as they are spoken." : "Listening. You can say “Matthias, John three sixteen”."}</p>
                 </Center>
             {/if}
         </div>
@@ -163,33 +192,12 @@
         min-height: 0;
         display: flex;
     }
-    .columns > :global(.preview) {
-        flex: 0 0 54%;
-        border-inline-end: 1px solid var(--primary-lighter);
-    }
-
     .heard {
         flex: 1;
         min-width: 0;
         min-height: 0;
         display: flex;
         flex-direction: column;
-    }
-
-    /* narrow window: the preview stays on top, small, so the words keep the room */
-    @media (max-width: 820px) {
-        .columns {
-            flex-direction: column;
-        }
-        .columns > :global(.preview) {
-            flex: 0 0 auto;
-            border-inline-end: none;
-            border-bottom: 1px solid var(--primary-lighter);
-        }
-        .columns > :global(.preview .frame) {
-            max-width: 300px;
-            margin: 0 auto;
-        }
     }
 
     .card-body {
@@ -233,12 +241,24 @@
     .transcript-box p {
         white-space: initial;
         overflow-wrap: anywhere;
-        padding: 12px 48px 12px 16px;
+        padding: 6px 16px;
     }
-    .transcript-actions {
-        position: absolute;
-        bottom: 8px;
-        right: 10px;
+    .transcript-box time {
+        margin-inline-end: 8px;
+        font-size: 0.8em;
+        color: var(--muted-text);
+        font-variant-numeric: tabular-nums;
+    }
+    .log-head {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 8px 4px 16px;
+        border-bottom: 1px solid var(--primary-lighter);
+    }
+    .log-head p {
+        flex: 1;
+        color: var(--muted-text);
     }
     .interim {
         opacity: 0.55;

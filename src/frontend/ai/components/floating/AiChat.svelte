@@ -11,6 +11,9 @@
     import { addChatMessage, chatSessions, getLLMManager } from "../../llm/llmManager"
     import { getSlideChatSystemPrompt } from "../../llm/prompts"
     import { ChatAction, chatActionLabels } from "../../manager/ChatAction"
+    import MatthiasExamples from "../MatthiasExamples.svelte"
+    import { Matthias, matthiasStatus, matthiasSteps } from "../../voice/matthiasAgent"
+    import { tick } from "svelte"
     import AiRing from "./AiRing.svelte"
 
     export let sessionKey: string = ""
@@ -39,7 +42,8 @@
 
     // the copilot's own chat runs the app; the others design one slide
     $: isAgent = activeSessionKey === "default"
-    let steps: { tool: string; ok: boolean }[] = []
+    $: working = isAgent ? $matthiasStatus?.state === "working" : isSending
+    $: if (chatMessages.length || working) void tick().then(scrollToBottomChat)
     const stepLabels: { [key: string]: string } = {
         get_live_state: "Checked the screen",
         get_transcript: "Read what was said",
@@ -54,17 +58,17 @@
         add_song: "Added a song",
         present_song: "Showed a song",
         control_screen: "Changed the screen",
+        open_plan: "Opened a plan",
+        show_plan_item: "Showed a plan item",
+        show_section: "Went to a part of the song",
+        set_bible_version: "Changed the Bible version",
+        show_overlay: "Changed an overlay",
+        open_page: "Opened a page",
         list_plans: "Looked at the plans",
         create_plan: "Made a plan",
         add_to_plan: "Added to the plan",
         speaker_timer: "Changed the speaker timer"
     }
-    const examples = ["Put up John 3:16", "What is on screen?", "Make a plan for Sunday with Amazing Grace", "Show the verse they just quoted"]
-    function tryExample(example: string) {
-        chatInput = example
-        sendChatMessage()
-    }
-
     $: chatMessages = $chatSessions[activeSessionKey] || []
 
     onMount(() => {
@@ -97,9 +101,7 @@
         setTimeout(scrollToBottomChat)
 
         try {
-            steps = []
-            const systemPrompt = isAgent ? undefined : getSlideChatSystemPrompt(targetType, getEditItems())
-            const res = await llm.sendMessage(activeSessionKey, inputPrompt, { systemPrompt, onStep: (tool, ok) => (steps = [...steps, { tool, ok }]) })
+            const res = await llm.sendMessage(activeSessionKey, inputPrompt, { systemPrompt: getSlideChatSystemPrompt(targetType, getEditItems()) })
             if (!res) addChatMessage(activeSessionKey, "assistant", "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot, then try again.")
             if (res?.action && res.action.type === "APPLY_TO_SLIDE") {
                 ChatAction.handle(res.action)
@@ -143,21 +145,17 @@
         <MaterialButton class="popup-reset" icon="delete" title="Clear" on:click={clearChat} white />
     {/if} -->
 
-    {#if $ai?.llm?.provider && $ai?.llm?.provider !== "none"}
+    {#if isAgent || ($ai?.llm?.provider && $ai?.llm?.provider !== "none")}
         <div class="chat-messages">
             {#if chatMessages.length === 0}
-                <Center faded>
+                <Center faded={!isAgent}>
                     <div class="empty-state">
-                        <Icon id="ai" size={2.2} gradient />
+                        {#if !isAgent}<Icon id="ai" size={2.2} gradient />{/if}
                         <p class="placeholder">
-                            {#if isAgent}Ask Matthias to run the service{:else}<T id="chat.ask" />{/if}
+                            {#if isAgent}Type what you want done, or try one of these{:else}<T id="chat.ask" />{/if}
                         </p>
                         {#if isAgent}
-                            <div class="examples">
-                                {#each examples as example}
-                                    <MaterialButton variant="outlined" small on:click={() => tryExample(example)}>{example}</MaterialButton>
-                                {/each}
-                            </div>
+                            <MatthiasExamples clickable on:ask={(e) => Matthias.ask(e.detail, true, true)} />
                         {/if}
                     </div>
                 </Center>
@@ -179,9 +177,9 @@
                         {/if}
                     </div>
                 {/each}
-                {#if isSending}
+                {#if working}
                     <div class="chat-message assistant placeholder">
-                        {#each steps as step}
+                        {#each isAgent ? $matthiasSteps : [] as step}
                             <p class:failed={!step.ok}>{step.ok ? stepLabels[step.tool] || step.tool : `${stepLabels[step.tool] || step.tool}: did not work`}</p>
                         {/each}
                         <p><T id="ai.processing" /></p>
@@ -189,10 +187,10 @@
                 {/if}
             {/if}
         </div>
-        <div class="chat-input-row">
-            <input type="text" class="chat-input" placeholder={translateText("chat.type_message")} bind:value={chatInput} on:keydown={handleChatKeyDown} />
-            <MaterialButton icon="send" title="chat.send" on:click={sendChatMessage} disabled={!chatInput.trim() || isSending} />
-        </div>
+        {#if !isAgent}<div class="chat-input-row">
+                <input type="text" class="chat-input" placeholder={translateText("chat.type_message")} bind:value={chatInput} on:keydown={handleChatKeyDown} />
+                <MaterialButton icon="send" title="chat.send" on:click={sendChatMessage} disabled={!chatInput.trim() || isSending} />
+            </div>{/if}
     {:else}
         <Center faded>
             <p class="placeholder">Choose a model in Settings, Live Copilot, to use the chat.</p>
@@ -206,11 +204,9 @@
         flex-direction: column;
         align-items: center;
         gap: 12px;
-        opacity: 0.8;
     }
 
     .placeholder {
-        font-style: italic;
         font-size: 0.95rem;
     }
 
@@ -231,13 +227,6 @@
         max-height: none;
         width: 100%;
         max-width: none;
-    }
-    .examples {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 6px;
-        max-width: 520px;
     }
     .failed {
         color: #ff9d9d;

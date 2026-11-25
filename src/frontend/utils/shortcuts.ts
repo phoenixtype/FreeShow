@@ -3,6 +3,7 @@ import { OUTPUT } from "../../types/Channels"
 import { Main } from "../../types/IPC/Main"
 import type { ShowType } from "../../types/Show"
 import type { DrawerTabIds, TopViews } from "../../types/Tabs"
+import { askMatthias } from "../ai/liveCopilot"
 import { clearAudio } from "../audio/audioFading"
 import { AudioPlayer } from "../audio/audioPlayer"
 import { menuClick } from "../components/context/menuClick"
@@ -45,6 +46,7 @@ const ctrlKeys = {
     e: () => activePopup.set("export"),
     i: (e: KeyboardEvent) => (e.altKey ? importFromClipboard() : activePopup.set("import")),
     n: () => createNew(),
+    j: () => askMatthias(),
     h: () => (get(activeDrawerTab) === "scripture" ? "" : activePopup.set("history")),
     m: () =>
         audioChannelsData.update((a) => {

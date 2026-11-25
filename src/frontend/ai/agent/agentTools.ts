@@ -5,27 +5,39 @@
 
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { activeProject, aiSuggestions, outLocked, projects, shows, showsCache, sttTranscript, ai } from "../../stores"
-import { addToProject, createProject, getClearedState, getPlainText, playMedia, startScripture, toggleSttListening } from "../../components/actions/apiHelper"
+import { activeProject, aiSuggestions, outLocked, overlays, projects, scriptures, shows, showsCache, sttTranscript, ai } from "../../stores"
+import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
+import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { getOutputSlideText } from "../../components/actions/apiGet"
-import { getFirstActiveOutput } from "../../components/helpers/output"
+import { getFirstActiveOutput, setOutput, toggleOutputs } from "../../components/helpers/output"
 import { loadShows } from "../../components/helpers/setShow"
 import { getLayoutRef } from "../../components/helpers/show"
 import { startShow } from "../../components/helpers/showActions"
-import { clearAll, clearSlide } from "../../components/output/clear"
+import { clearAll, clearBackground, clearOverlays, clearSlide, restoreOutput } from "../../components/output/clear"
 import { nextProgramSegment, playPauseSpeaker, startProgram } from "../../components/drawer/timers/speakerTimerActions"
 import { convertText } from "../../converters/txt"
 import { ANON_KEY, FUNCTIONS_URL } from "../../scriptural/connection"
+import { setActiveScripture } from "../../converters/bible"
 import { copilotListening } from "../liveCopilot"
 import { stepScreen } from "./stepScreen"
 import { onScreenTitle } from "../components/floating/onScreen"
+import { openProject } from "../../components/show/project"
 import { readPassage } from "../scripture/passage"
+import { liveShowId, showSection } from "../songs/librarySongs"
+import { PAGES } from "../voice/matthias"
+import { matchVersion } from "../voice/versions"
+import { isHeld, setAgentMode } from "./control"
+import { openPage } from "./openPage"
+import { nextPlanItem, planItems, showPlanItem } from "./planItems"
+import { currentScripture, presentPassage } from "./presentPassage"
 
 export interface AgentTool {
     name: string
     description: string
     inputSchema: { type: "object"; properties: Record<string, any>; required?: string[] }
     readOnly?: boolean
+    /** changes what the room sees, so not while the operator is moving the screen */
+    screen?: boolean
     /** not offered to the in-app chat or listed to outside agents: used by the app's own server */
     internal?: boolean
     run: (args: any) => Promise<unknown> | unknown
@@ -52,7 +64,7 @@ async function until(done: () => boolean, timeoutMs = 6000): Promise<boolean> {
     return done()
 }
 
-function liveState() {
+export function liveState() {
     const output = getFirstActiveOutput()
     const slide = output?.out?.slide
     const cleared = getClearedState()
@@ -81,7 +93,7 @@ function liveState() {
         showing: slide ? { kind: slide.id === "temp" ? "scripture" : "presentation", title: onScreenTitle(slide, get(shows)), ...(total ? { slide: (slide.index ?? 0) + 1, slides: total } : {}), words: scriptureWords || plain(words) || words } : null,
         background: output?.out?.background ? output.out.background.name || output.out.background.path || output.out.background.id || "" : null,
         openPlan: get(projects)[get(activeProject) || ""]?.name || null,
-        copilot: { on: !!get(ai).enabled, listening: get(copilotListening), agentMode: !!get(ai).matthias?.agentMode }
+        copilot: { on: !!get(ai).enabled, listening: get(copilotListening), agentMode: !!get(ai).matthias?.agentMode, operatorHasScreen: isHeld() }
     }
 }
 
@@ -125,6 +137,23 @@ export async function searchBible(query: string, version: string) {
     return results.map((r: any) => ({ reference: r.reference, text: r.text, version: r.version }))
 }
 
+/** the new version's name; what is on screen changes with it */
+export async function changeVersion(name: string): Promise<string> {
+    const list = Object.entries(get(scriptures)).map(([id, s]) => ({ id, names: [s?.name, s?.customName, (s as any)?.scripturalVersion, (s as any)?.abbreviation, getShortBibleName(s?.name || "")].filter(Boolean) as string[] }))
+    const id = matchVersion(name, list)
+    if (!id) throw new ToolError(`There is no ${name.toUpperCase()} Bible here`)
+    const { reference } = currentScripture()
+    const label = get(scriptures)[id]?.customName || get(scriptures)[id]?.name || name
+    const chapter = reference?.chapters?.[reference.chapters.length - 1]
+    const verses = reference?.verses?.[reference.verses.length - 1] || []
+    const up = getFirstActiveOutput()?.out?.slide?.id === "temp"
+    if (reference?.book && chapter && verses.length && up) {
+        requireUnlocked()
+        await presentPassage(`${reference.book}.${chapter}.${verses.join(",")}`, id)
+    } else setActiveScripture(id)
+    return label
+}
+
 export const agentTools: AgentTool[] = [
     {
         name: "get_live_state",
@@ -151,6 +180,7 @@ export const agentTools: AgentTool[] = [
         name: "show_found",
         description: "Put one of the Live Copilot's found passages or songs (an id from get_transcript) on screen.",
         inputSchema: { type: "object", properties: { id: text("The id from get_transcript") }, required: ["id"] },
+        screen: true,
         run: async ({ id }) => {
             requireUnlocked()
             const found = get(aiSuggestions).find((s) => s.id === id)
@@ -176,7 +206,7 @@ export const agentTools: AgentTool[] = [
         description: "Let the app lead the screen by itself from what it hears (scripture, songs, clearing up), or hand it back to the operator.",
         inputSchema: { type: "object", properties: { on: { type: "boolean" } }, required: ["on"] },
         run: ({ on }) => {
-            ai.update((a) => ({ ...a, matthias: { ...(a.matthias || {}), agentMode: !!on } }))
+            setAgentMode(!!on)
             return { agentMode: !!on }
         }
     },
@@ -202,12 +232,13 @@ export const agentTools: AgentTool[] = [
         name: "show_scripture",
         description: "Put a passage on screen in the church's open Bible.",
         inputSchema: { type: "object", properties: { reference: text('Such as "John 3:16" or "Romans 8:28-30"') }, required: ["reference"] },
+        screen: true,
         run: async ({ reference }) => {
             requireUnlocked()
             const passage = await readPassage(String(reference))
             if (!passage) throw new ToolError(`${reference} was not found in the open Bible. Check the reference, or open a Bible in the Scripture drawer.`)
             const before = JSON.stringify(getFirstActiveOutput()?.out?.slide || null)
-            await startScripture({ reference: String(reference) })
+            await presentPassage(String(reference))
             const shown = await until(() => getFirstActiveOutput()?.out?.slide?.id === "temp" && JSON.stringify(getFirstActiveOutput()?.out?.slide) !== before)
             // asking for what is already up changes nothing, and that is fine
             const live = liveState()
@@ -256,6 +287,7 @@ export const agentTools: AgentTool[] = [
         name: "present_song",
         description: "Put a song or presentation on screen, from its first slide or a given one.",
         inputSchema: { type: "object", properties: { name: text("Name or id"), slide: { type: "integer", description: "Slide number, from 1" } }, required: ["name"] },
+        screen: true,
         run: async ({ name, slide }) => {
             requireUnlocked()
             const found = findByName(get(shows), name)
@@ -270,17 +302,22 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "control_screen",
-        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. lock stops anything changing the screen.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_all", "lock", "unlock"] } }, required: ["command"] },
+        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. screen_on and screen_off switch the projector window. lock stops anything changing the screen.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "restore", "screen_on", "screen_off", "lock", "unlock"] } }, required: ["command"] },
+        screen: true,
         run: async ({ command }) => {
             if (command === "lock" || command === "unlock") {
                 outLocked.set(command === "lock")
                 return liveState()
             }
             requireUnlocked()
-            if (command === "next" || command === "previous") stepScreen(command)
+            if (command === "next" || command === "previous") await stepScreen(command)
             else if (command === "clear_words") clearSlide()
+            else if (command === "clear_background") clearBackground()
+            else if (command === "clear_overlays") clearOverlays()
             else if (command === "clear_all") clearAll(true)
+            else if (command === "restore") restoreOutput()
+            else if (command === "screen_on" || command === "screen_off") toggleOutputs(null, { state: command === "screen_on" })
             else throw new ToolError(`Unknown command "${command}".`)
             await settle(900)
             return liveState()
@@ -311,13 +348,98 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "add_to_plan",
-        description: "Add a song or presentation to a service plan.",
-        inputSchema: { type: "object", properties: { plan: text("Plan name or id"), song: text("Song name or id") }, required: ["plan", "song"] },
-        run: ({ plan, song }) => {
+        description: "Add songs or presentations to a service plan, in order. Several at once in songs.",
+        inputSchema: { type: "object", properties: { plan: text("Plan name or id"), song: text("One song, by name or id"), songs: { type: "array", items: { type: "string" }, description: "Several songs, by name or id" } }, required: ["plan"] },
+        run: ({ plan, song, songs }) => {
             const target = findByName(get(projects), plan)
-            const found = findByName(get(shows), song)
-            addToProject({ projectId: target.id, id: found.id })
-            return { plan: target.name, added: found.name, items: get(projects)[target.id].shows.length }
+            const wanted: string[] = [...(song ? [song] : []), ...(songs || [])].map(String)
+            if (!wanted.length) throw new ToolError("Say which songs.")
+            const added: string[] = []
+            const notAdded: string[] = []
+            for (const name of wanted) {
+                try {
+                    const found = findByName(get(shows), name)
+                    addToProject({ projectId: target.id, id: found.id })
+                    added.push(found.name)
+                } catch (err) {
+                    notAdded.push(err instanceof ToolError ? err.message : name)
+                }
+            }
+            if (!added.length) throw new ToolError(notAdded.join(" "))
+            return { plan: target.name, added, ...(notAdded.length ? { notAdded } : {}), items: get(projects)[target.id].shows.length }
+        }
+    },
+    {
+        name: "open_plan",
+        description: "Open a service plan for the operator.",
+        inputSchema: { type: "object", properties: { plan: text("Plan name or id") }, required: ["plan"] },
+        run: ({ plan }) => {
+            const found = findByName(get(projects), plan)
+            openProject(found.id, false)
+            return { open: found.name, items: planItems().map((item) => item.label) }
+        }
+    },
+    {
+        name: "show_plan_item",
+        description: 'Put an item of the open plan on screen: "start" for the first, "next", "previous", or its name.',
+        inputSchema: { type: "object", properties: { item: text("start, next, previous, or the item's name") }, required: ["item"] },
+        screen: true,
+        run: async ({ item }) => {
+            requireUnlocked()
+            const items = planItems()
+            if (!items.length) throw new ToolError("No plan is open, or it has nothing in it.")
+            const wanted = String(item).trim().toLowerCase()
+            const found = wanted === "start" || wanted === "next" || wanted === "previous" ? nextPlanItem(wanted) : items[items.findIndex((i) => i.label.toLowerCase() === wanted)]
+            if (!found) throw new ToolError(wanted === "next" ? "That was the last item." : `The plan has: ${items.map((i) => i.label).join("; ")}.`)
+            await showPlanItem(found)
+            await settle(900)
+            return { shown: found.label, next: nextPlanItem("next")?.label || null }
+        }
+    },
+    {
+        name: "show_section",
+        description: "Go to a part of the song that is on screen: chorus, bridge, verse 2.",
+        inputSchema: { type: "object", properties: { section: text("chorus, verse, bridge, tag, intro, outro"), number: { type: "integer", description: "Which one, from 1" } }, required: ["section"] },
+        screen: true,
+        run: async ({ section, number }) => {
+            requireUnlocked()
+            if (!liveShowId() || liveShowId() === "temp") throw new ToolError("No song is on screen.")
+            const shown = await showSection(String(section), number ? Number(number) : undefined)
+            if (!shown) throw new ToolError(`The song has no ${section}${number ? ` ${number}` : ""}.`)
+            return { shown }
+        }
+    },
+    {
+        name: "set_bible_version",
+        description: "Change the church's open Bible version. The passage on screen changes with it.",
+        inputSchema: { type: "object", properties: { version: text("Such as KJV, NLT or New Living Translation") }, required: ["version"] },
+        screen: true,
+        run: async ({ version }) => {
+            const label = await changeVersion(String(version))
+            return { version: label }
+        }
+    },
+    {
+        name: "show_overlay",
+        description: "Put one of the church's overlays (a logo, a notice, a timer) on screen, or take it off. Leave name out to list them.",
+        inputSchema: { type: "object", properties: { name: text("Overlay name or id"), on: { type: "boolean" } } },
+        screen: true,
+        run: ({ name, on }) => {
+            if (!name) return { overlays: Object.values(get(overlays)).map((overlay) => overlay.name) }
+            requireUnlocked()
+            const found = findByName(get(overlays) as any, name)
+            const showing = (getFirstActiveOutput()?.out?.overlays || []).includes(found.id)
+            if (showing !== (on !== false)) setOutput("overlays", found.id, true)
+            return { overlay: found.name, on: on !== false }
+        }
+    },
+    {
+        name: "open_page",
+        description: "Take the operator to a page or a library tab of the app. Changes nothing on screen.",
+        inputSchema: { type: "object", properties: { page: { type: "string", enum: [...PAGES] } }, required: ["page"] },
+        run: ({ page }) => {
+            openPage(page)
+            return { open: page }
         }
     },
     {
@@ -347,6 +469,8 @@ export const agentTools: AgentTool[] = [
 
 export const listAgentTools = () => agentTools.filter((tool) => !tool.internal).map(({ name, description, inputSchema, readOnly }) => ({ name, description, inputSchema, readOnly: !!readOnly }))
 
+export const changesScreen = (name: string) => !!agentTools.find((tool) => tool.name === name)?.screen
+
 /** runs a tool; an answer is always { ok, ... } so a caller never has to catch */
 export async function runAgentTool(name: string, args: any): Promise<{ ok: boolean; result?: unknown; error?: string }> {
     const tool = agentTools.find((t) => t.name === name)
@@ -358,7 +482,7 @@ export async function runAgentTool(name: string, args: any): Promise<{ ok: boole
     for (const [key, value] of Object.entries(given)) {
         const expected = tool.inputSchema.properties[key]
         if (!expected || value === null) continue
-        const right = expected.type === "integer" ? Number.isInteger(Number(value)) : typeof value === expected.type
+        const right = expected.type === "array" ? Array.isArray(value) : expected.type === "integer" ? Number.isInteger(Number(value)) : typeof value === expected.type
         if (!right) return { ok: false, error: `"${key}" should be a ${expected.type}.` }
         if (expected.enum && !expected.enum.includes(value)) return { ok: false, error: `"${key}" should be one of: ${expected.enum.join(", ")}.` }
     }

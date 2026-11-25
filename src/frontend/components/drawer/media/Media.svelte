@@ -650,8 +650,8 @@
             </div>
         {:else}
             <div class={specialTabs.includes(active || "") ? "" : "context #media"} style="display: contents;">
-                <Center style="opacity: 0.2;">
-                    <Icon id="noImage" size={5} white />
+                <Center faded>
+                    <p style="white-space: initial;">Nothing here yet. Add a folder at the left, or look in Online for backgrounds.</p>
                 </Center>
             </div>
         {/if}

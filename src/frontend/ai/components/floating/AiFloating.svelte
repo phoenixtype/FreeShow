@@ -1,40 +1,42 @@
 <script lang="ts">
-    import { bubbleBottom } from "./bubblePosition"
-    import { onDestroy } from "svelte"
-    import { fade } from "svelte/transition"
+    import { onDestroy, onMount } from "svelte"
+    import { fly } from "svelte/transition"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import Tabs from "../../../components/main/Tabs.svelte"
-    import { activePage, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, language, mediaDownloads, settingsTab, sttTempDisabled, sttTranscript } from "../../../stores"
-    import { audioLevelStore, resolveSttEngine, SpeechToText } from "../../stt/stt"
-    import { copilotListening } from "../../liveCopilot"
+    import { activePage, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, focusMode, language, mediaDownloads, resized, settingsTab, sttTempDisabled } from "../../../stores"
+    import { resolveSttEngine, SpeechToText } from "../../stt/stt"
+    import { copilotListening, copilotOpen, copilotState, type CopilotState } from "../../liveCopilot"
+    import { AiManager } from "../../manager/AiManager"
     import AiChat from "./AiChat.svelte"
-    import AiRing from "./AiRing.svelte"
     import AiTranscription from "./AiTranscription.svelte"
-    import AiVisual from "./AiVisual.svelte"
     import MatthiasStatus from "./MatthiasStatus.svelte"
     import { NAME } from "../../voice/matthias"
-    import { setAgentMode } from "../../voice/matthiasAgent"
+    import { matthiasStatus } from "../../voice/matthiasAgent"
+    import CopilotPreview from "./CopilotPreview.svelte"
+    import MatthiasInput from "./MatthiasInput.svelte"
+    import ScreenControl from "./ScreenControl.svelte"
     import SmartAction from "./SmartAction.svelte"
 
-    let state: "loading" | "inactive" | "error" | "listening" | "processing" = "loading"
+    let state: CopilotState = "loading"
+    $: copilotState.set(state)
 
     // Active tab state
     let activeTab: "transcription" | "chat" = "transcription"
-    // the chat acts on the app (show a passage, add or present a song) once a model is chosen
-    $: hasModel = !!$ai.llm?.provider && $ai.llm.provider !== "none"
-    $: tabs = {
-        transcription: { name: "ai.transcription", icon: "microphone" },
-        ...(hasModel ? { chat: { name: `Ask ${NAME}`, icon: "chat" } } : {})
+    const tabs = {
+        transcription: { name: "Heard", icon: "microphone" },
+        chat: { name: "Requests", icon: "chat" }
     }
-    $: if (!hasModel && activeTab === "chat") activeTab = "transcription"
 
-    let isOpen = false
+    // moves made by hand are seen from the start, so it never takes the screen from someone using it
+    onMount(() => AiManager.listenToOutput())
+
+    $: isOpen = $copilotOpen
     function toggleExpand() {
         // close any visible actions
         aiSmartAction.set(null)
 
-        setTimeout(() => (isOpen = !isOpen))
+        setTimeout(() => copilotOpen.update((open) => !open))
 
         if (!$sttTempDisabled) enableListening()
     }
@@ -45,49 +47,6 @@
     $: if (state !== "listening" && currentlyDownloading) {
         if (currentlyDownloading.size < downloadingCount) enableListening()
         downloadingCount = currentlyDownloading.size
-    }
-
-    // word confirmation animation updates
-    let wordConfirmTick = 0
-    let wordConfirmDurationMs = 260
-    let previousWordCount = -1
-    let burstWords = 0
-    let burstTimer: NodeJS.Timeout | null = null
-    $: updateWordConfirmation($sttTranscript.finalized, $sttTranscript.unprocessed)
-
-    function updateWordConfirmation(finalizedText: string, unprocessedText: string) {
-        const fullText = (finalizedText + (finalizedText && unprocessedText ? " " : "") + unprocessedText).trim()
-        const nextCount = countRegisteredWords(fullText)
-
-        if (previousWordCount < 0) {
-            previousWordCount = nextCount
-            return
-        }
-
-        const newWords = nextCount - previousWordCount
-        previousWordCount = nextCount
-        if (newWords <= 0) return
-
-        burstWords += newWords
-        if (!burstTimer) {
-            // merge nearby rapid words
-            burstTimer = setTimeout(flushWordPulseBurst, 120)
-        }
-    }
-
-    function flushWordPulseBurst() {
-        const wordsInBurst = burstWords
-        burstWords = 0
-        burstTimer = null
-        if (!wordsInBurst) return
-
-        wordConfirmDurationMs = Math.min(800, 260 + Math.max(0, wordsInBurst - 1) * 120)
-        wordConfirmTick += 1
-    }
-
-    function countRegisteredWords(text: string) {
-        const words = text.match(/\S+/g)
-        return words?.length || 0
     }
 
     // STATE & SYNCHRONIZATION
@@ -153,16 +112,29 @@
         SpeechToText.stopCapture()
     }
 
-    $: audioLevel = $audioLevelStore
-
     onDestroy(() => {
         copilotListening.set(false)
-        if (burstTimer) clearTimeout(burstTimer)
+        copilotState.set("inactive")
+        copilotOpen.set(false)
+        if (retryTimer) clearTimeout(retryTimer)
         if (state !== "inactive") SpeechToText.disable()
     })
 
-    // the top bar's Live Copilot button
-    $: if ($activeTriggerFunction === "open_live_copilot" && !isOpen) toggleExpand()
+    // leading by itself, it also gets its own microphone back
+    const RETRY_MS = [5000, 15_000, 30_000, 60_000]
+    let retries = 0
+    let retryTimer: NodeJS.Timeout | null = null
+    $: if (state === "listening") retries = 0
+    $: if (state === "error" && $ai.matthias?.agentMode && !$sttTempDisabled && !retryTimer) {
+        retryTimer = setTimeout(
+            () => {
+                retryTimer = null
+                retries++
+                if (state === "error" && $ai.matthias?.agentMode && !$sttTempDisabled) void enableListening()
+            },
+            RETRY_MS[Math.min(retries, RETRY_MS.length - 1)]
+        )
+    }
 
     // LISTEN TOGGLE
     $: if ($activeTriggerFunction.startsWith("toggle_stt_listening:")) {
@@ -199,141 +171,92 @@
         if (isEnabled && micDeviceId) state = result.ok ? "listening" : "error"
     }
 
-    // Escape closes the panel and nothing else: it must not also clear the screen
+    // the app's own preview stays in view beside the panel; without it, the panel brings one
+    let innerWidth = 1440
+    $: needsPreview = $focusMode || innerWidth < 1180 || $resized.rightPanel < 100
+
+    // Escape in the panel leaves its box and nothing else. Anywhere else it clears the screen, as always.
+    let panel: HTMLElement | undefined
     function onKeydown(e: KeyboardEvent) {
-        if (!isOpen || e.key !== "Escape") return
+        if (!isOpen || e.key !== "Escape" || !panel?.contains(document.activeElement)) return
         e.preventDefault()
         e.stopImmediatePropagation()
-        toggleExpand()
+        ;(document.activeElement as HTMLElement)?.blur()
     }
 
     function openSettings() {
-        isOpen = false
         settingsTab.set("ai")
         activePage.set("settings")
     }
 </script>
 
-<svelte:window on:keydown|capture={onKeydown} />
+<svelte:window bind:innerWidth on:keydown|capture={onKeydown} />
 
-{#if isOpen}
-    <div class="backdrop" on:mousedown|self={toggleExpand} transition:fade={{ duration: 250 }}></div>
-{/if}
+{#if !isOpen}
+    <SmartAction listening={isListening} />
+{:else}
+    <!-- beside the app, not over it: everything stays usable while it works -->
+    <aside class="panel" bind:this={panel} aria-label={NAME} transition:fly={{ x: 60, duration: 160 }}>
+        <header>
+            <h2>{NAME}</h2>
+            <span class="listening">{isListening ? "Listening" : state === "error" ? ($ai.matthias?.agentMode ? "Microphone problem, trying again" : "Microphone problem") : "Not listening"}</span>
+            <MaterialToggleSwitch label="" title="Listen" checked={isListening} disabled={state !== "inactive" && state !== "listening"} on:change={() => toggleListening()} small />
+            <MaterialButton icon="settings" title="menu.settings" style="padding: 10px;" on:click={openSettings} />
+            <MaterialButton icon="close" title="actions.close" style="padding: 10px;" on:click={toggleExpand} />
+        </header>
 
-{#if !isOpen && state !== "inactive"}
-    <SmartAction />
-{/if}
+        <ScreenControl listening={isListening} />
+        {#if needsPreview}<CopilotPreview />{/if}
 
-<div class="speech-widget {isOpen ? 'is-open' : 'is-closed'}" style={isOpen ? "" : `bottom: ${$bubbleBottom}px;`}>
-    <AiRing {state} {audioLevel} borderRadius={isOpen ? "20px" : "50%"} opacity={isOpen ? 0.98 : state === "inactive" ? 0.8 : 0.4} fill {wordConfirmTick} {wordConfirmDurationMs}>
-        {#if !isOpen}
-            <AiVisual {state} on:click={toggleExpand} />
+        <div class="tabs"><Tabs {tabs} bind:active={activeTab} /></div>
+        {#if activeTab === "transcription" || $matthiasStatus?.state === "hearing"}<MatthiasStatus />{/if}
+        {#if activeTab === "transcription"}
+            <AiTranscription {state} on:listen={() => toggleListening(true)} />
         {:else}
-            <div class="modal-view" transition:fade={{ duration: 100 }}>
-                <div class="card-header">
-                    <Tabs {tabs} bind:active={activeTab} />
-
-                    <div class="headerActions">
-                        {#if activeTab === "transcription"}
-                            <span class="listening">Agent mode</span>
-                            <MaterialToggleSwitch label="" title="Lead the screen by itself" checked={!!$ai.matthias?.agentMode} style="margin-right: 12px;" on:change={(e) => setAgentMode(e.detail)} small />
-                            <span class="listening">{isListening ? "Listening" : state === "error" ? "Microphone problem" : "Not listening"}</span>
-                            <MaterialToggleSwitch label="" checked={isListening} disabled={state !== "inactive" && state !== "listening"} style="margin-right: 5px;" on:change={() => toggleListening()} small />
-                        {/if}
-
-                        <MaterialButton icon="settings" title="menu.settings" style="padding: 10px;" on:click={openSettings} />
-
-                        <MaterialButton class="popup-close" icon="close" iconSize={1.2} title="actions.close" style="padding: 8px;" on:click={toggleExpand} />
-                    </div>
-                </div>
-
-                <MatthiasStatus />
-                {#if activeTab === "transcription"}
-                    <AiTranscription {state} on:listen={() => toggleListening(true)} />
-                {:else if activeTab === "chat"}
-                    <AiChat sessionKey="default" />
-                {/if}
-            </div>
+            <AiChat sessionKey="default" />
         {/if}
-    </AiRing>
-</div>
+
+        <MatthiasInput on:sent={() => (activeTab = "chat")} />
+    </aside>
+{/if}
 
 <style>
-    .backdrop {
+    /* MainLayout makes room for it (--copilot-width), except in a narrow window */
+    .panel {
         position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.45);
-        z-index: 5000;
-    }
-
-    .speech-widget {
-        position: fixed;
-        z-index: 5000;
-        font-family:
-            system-ui,
-            -apple-system,
-            sans-serif;
-        transition:
-            top 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-            left 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-            right 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-            bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-            width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-            height 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-            transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .speech-widget.is-closed {
-        bottom: 45px;
-        right: 45px;
-        width: 62px;
-        height: 62px;
-        transform: translate(0, 0);
-    }
-    .speech-widget.is-open {
-        bottom: 50%;
-        right: 50%;
-        transform: translate(50%, 50%);
-        width: 1060px;
-        height: 620px;
-        max-width: 94vw;
-        max-height: 88vh;
-    }
-
-    .modal-view {
+        inset-block: 0;
+        inset-inline-end: 0;
+        width: var(--copilot-width);
+        z-index: 4000;
         display: flex;
         flex-direction: column;
-        height: 100%;
+        background-color: var(--primary-darker);
+        border-inline-start: 1px solid var(--primary-lighter);
     }
 
-    .card-header {
-        padding: 5px 10px 5px 15px;
+    header {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        gap: 4px;
+        min-height: 40px;
+        padding-inline: 12px 4px;
         border-bottom: 1px solid var(--primary-lighter);
-        background-color: rgb(0 0 0 / 0.1);
     }
-
-    .card-header :global(.tabs) {
-        background-color: transparent;
+    h2 {
+        flex: 1;
+        font-size: 1.05em;
+        font-weight: 600;
     }
-    .card-header :global(.tabs button) {
-        padding: 8px 12px;
-    }
-    .card-header :global(.tabs button.isActive) {
-        background-color: rgb(0 0 0 / 0.15) !important;
-    }
-
     .listening {
-        font-size: 0.9em;
-        opacity: 0.7;
-        margin-inline-end: 8px;
+        font-size: 0.85em;
+        color: var(--muted-text);
+        margin-inline-end: 4px;
     }
 
-    .headerActions {
-        display: flex;
-        align-items: center;
-        gap: 2px;
+    .tabs {
+        border-block: 1px solid var(--primary-lighter);
+    }
+    .tabs :global(.tabs) {
+        background-color: transparent;
     }
 </style>

@@ -7,7 +7,7 @@
 // This file only understands words. It decides nothing about the screen.
 
 import { distance } from "../scripture/nearestBook"
-import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
+import { normalizeNumberWords, parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 
 export const NAME = "Matthias"
 
@@ -52,13 +52,27 @@ export type Request =
     | { type: "lock"; on: boolean }
     | { type: "agent"; on: boolean }
     | { type: "listen"; on: false }
-    | { type: "slide"; direction: "next" | "previous" }
+    | { type: "slide"; direction: "next" | "previous"; count?: number }
+    | { type: "goto-slide"; slide: number | "last" }
+    | { type: "section"; name: string; number?: number }
+    | { type: "again" }
+    | { type: "before"; kind?: "scripture" | "song" }
+    | { type: "clear-layer"; layer: "background" | "overlays" }
+    | { type: "plan"; step: "start" | "next" | "previous" }
+    | { type: "open-plan"; name: string }
+    | { type: "add-to-plan"; what: string }
+    | { type: "timer"; command: "start" | "next" | "play_pause" }
+    | { type: "page"; page: PageName }
+    | { type: "tell"; about: "screen" | "next" | "help" }
     | { type: "result"; direction: "next" | "previous" }
     | { type: "version"; name: string }
     | { type: "song"; name: string }
     | { type: "search"; query: string; topic?: boolean }
     | { type: "show"; what: string }
     | { type: "unknown"; words: string }
+
+export const PAGES = ["show", "edit", "stage", "draw", "settings", "songs", "scripture", "media", "audio", "overlays", "templates", "calendar"] as const
+export type PageName = (typeof PAGES)[number]
 
 const SHOW = "show(?: me| us)?|put up|foot up|put on|put|bring up|pull up|pool up|open(?: up)?|go to|turn to|take (?:me|us) to|give (?:me|us)|display|read|let us see|let's see|let us read|let's read|project"
 const FIND = "find(?: me| us)?|fine|search(?: for| the bible for| scripture for)?|look up|look for|where does (?:it|the bible|scripture) say|where is it written|which verse|what verse|what does the bible say about|what does scripture say about|what scripture"
@@ -93,9 +107,36 @@ const strip = (text: string) =>
             .replace(/^(?:e |en |and |a |is |du |u |would |should )+(?=next|show|sho|put|find|clear|turn|sing)/, "")
             .trim()
     )
-        .replace(/^(?:please|can you|could you|would you|will you|kindly|now|uh|um|so)\s+/g, "")
-        .replace(/\s+(?:please|thank you|thanks|for us|on the screen|on screen)$/g, "")
+        .replace(POLITE, "")
+        .replace(/(?:\s+(?:please|thank you|thanks|sir|ma|for us|for me|on the screen|on screen|right now|now|quickly))+$/g, "")
         .trim()
+const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead and|(?:can|could|would|will) you(?: please| kindly)?|(?:can|could|may) (?:we|i) (?:have|get|see)|i(?:'d| would) like(?: you)? to(?: see| have)?|i (?:want|need)(?: you)? to(?: see| have)?|we (?:want|need)(?: you)? to(?: see| have)?|we need|help (?:me|us)(?: to)?)\s+)+/g
+
+// one after another: "put up Psalm 23 then clear the screen"
+const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
+const AND = /\s*,?\s+and\s+/i
+// what may follow a bare "and": never an open request, "and" is an ordinary word in those
+const FOLLOWS = ["clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent"]
+
+/** the requests in what was said, in order; one that is not understood keeps it all together */
+export function parseRequests(spoken: string): Request[] {
+    const whole = () => [parseRequest(spoken)]
+    const parts = spoken.split(THEN).filter((part) => part.trim())
+    if (parts.length > 1) {
+        const requests = parts.flatMap((part) => parseRequests(part))
+        return requests.some((request) => request.type === "unknown") ? whole() : requests
+    }
+
+    const and = spoken.split(AND)
+    if (and.length < 2) return whole()
+    for (let i = and.length - 1; i > 0; i--) {
+        const first = parseRequest(and.slice(0, i).join(" and "))
+        const last = parseRequest(and.slice(i).join(" and "))
+        if (["unknown", "search"].includes(first.type) || !FOLLOWS.includes(last.type)) continue
+        return [...parseRequests(and.slice(0, i).join(" and ")), last]
+    }
+    return whole()
+}
 
 /** what was asked, in the order that plain commands win over open ones */
 export function parseRequest(spoken: string): Request {
@@ -106,7 +147,7 @@ export function parseRequest(spoken: string): Request {
     return meant ? parseWords(meant) : request
 }
 
-const COMMANDS = ["clear the screen", "clear everything", "next verse", "previous verse", "next chapter", "previous chapter", "next slide", "previous slide", "another one", "bring it back", "take it down", "lock the screen", "unlock the screen", "turn the screen on", "turn the screen off", "take over", "stand down", "stop listening"]
+const COMMANDS = ["clear the screen", "clear everything", "next verse", "previous verse", "next chapter", "previous chapter", "next slide", "previous slide", "another one", "bring it back", "take it down", "lock the screen", "unlock the screen", "turn the screen on", "turn the screen off", "start the service", "next item", "previous item", "take over", "stand down", "stop listening"]
 function nearestCommand(words: string): string | null {
     const said = words.replace(/ /g, "")
     if (said.length < 7) return null
@@ -124,6 +165,10 @@ function parseWords(t: string): Request {
     if (/^(?:turn|switch) (?:the )?screens? off$|^(?:turn|switch) off (?:the )?screens?$/.test(t)) return { type: "screen", on: false }
     if (/^(?:clear|hear|clean|clay) (?:all|everything)$|^(?:go )?(?:black|blank)(?: the screen| screen)?$/.test(t)) return { type: "clear", all: true }
     if (/^(?:(?:clear|hear|clean|wipe)(?: (?:the|that|it|this))?(?: screen| words| verse| scripture| off)?|take (?:it|that|this) (?:down|off)|remove (?:it|that|this)|hide (?:it|that|this))$/.test(t)) return { type: "clear", all: false }
+    const layer = t.match(/^(?:clear|remove|hide|take (?:off|down)) (?:the )?(background|overlays?)$/)
+    if (layer) return { type: "clear-layer", layer: layer[1] === "background" ? "background" : "overlays" }
+    if (/^(?:show|put up|read|repeat|give us) (?:it|that|this)(?: one)? again$|^(?:repeat|again|once more|one more time)(?: (?:it|that|this))?$/.test(t)) return { type: "again" }
+    if (/^(?:(?:go )?back to|show|bring back|put up) (?:the )?(?:(?:previous|last) (?:scripture|passage|song)|one before|what was up before|what we had before)(?: again)?$|^(?:previous|last) (?:scripture|passage)$/.test(t)) return { type: "before", ...(/scripture|passage/.test(t) ? { kind: "scripture" } : /song/.test(t) ? { kind: "song" } : {}) }
     if (/^(?:bring|put) (?:it|that|this) back(?: up)?$|^undo$|^restore(?: it| the screen)?$/.test(t)) return { type: "restore" }
     if (/^(?:stop listening|be quiet|go to sleep|mute)$/.test(t)) return { type: "listen", on: false }
     if (/^(?:pause|stand down|hands off|stop|let me drive|manual mode|agent mode off|turn off agent mode)$/.test(t)) return { type: "agent", on: false }
@@ -131,6 +176,35 @@ function parseWords(t: string): Request {
 
     if (/^(?:next|another|the other|a different) (?:result|one|match|passage)$|^not that one$|^(?:wrong one|something else)$/.test(t)) return { type: "result", direction: "next" }
     if (/^(?:previous|last|first) (?:result|match)$/.test(t)) return { type: "result", direction: "previous" }
+    const n = normalizeNumberWords(t)
+    const steps = n.match(/^(?:go |move |skip )?(?:(next|forward|ahead|on|back|previous|last) )?(\d{1,2}) (slides?|verses?|lines?)(?: (forward|ahead|on|back|backwards?))?$/)
+    if (steps && (steps[1] || steps[4])) return { type: "slide", direction: /back|previous|last/.test(steps[1] || steps[4]) ? "previous" : "next", count: Math.max(1, Math.min(20, Number(steps[2]))) }
+    const slide = n.match(/^(?:go |move |jump |back )*(?:to )?(?:the )?(?:(first|last) slide|slide (?:number )?(\d{1,3}))$/)
+    if (slide) return { type: "goto-slide", slide: slide[1] === "last" ? "last" : slide[1] ? 1 : Number(slide[2]) }
+    const section = n.match(/^(?:(?:go|jump|move|take us|back|sing|repeat|show|play)(?: back)?(?: us)? )?(?:to )?(?:the )?(pre ?-?chorus|chorus|bridge|refrain|intro|outro|ending|tag|hook)(?: (\d))?(?: again| one more time| once more)?$/)
+    if (section) return { type: "section", name: section[1].replace(/[ -]/g, ""), ...(section[2] ? { number: Number(section[2]) } : {}) }
+    const songVerse = n.match(/^(?:(?:sing|repeat) )(?:the )?verse (\d)(?: again)?$/) || n.match(/^(?:sing |go to )?(?:the )?(first|second|third|fourth|fifth) verse of (?:the|this) song$/)
+    if (songVerse) return { type: "section", name: "verse", number: Number(songVerse[1]) || ["first", "second", "third", "fourth", "fifth"].indexOf(songVerse[1]) + 1 }
+
+    if (/^(?:start|begin) (?:the )?(?:service|plan|program|programme)$|^(?:go to |show )?(?:the )?first (?:item|thing)(?: in the (?:plan|service))?$/.test(t)) return { type: "plan", step: "start" }
+    if (/^(?:go to |show |move to )?(?:the )?next (?:item|thing|song|one in the (?:plan|service)|in the (?:plan|service))(?: (?:in|on) the (?:plan|service|list))?$/.test(t)) return { type: "plan", step: "next" }
+    if (/^(?:go (?:back )?to |show )?(?:the )?previous (?:item|thing|song)(?: (?:in|on) the (?:plan|service|list))?$/.test(t)) return { type: "plan", step: "previous" }
+    const plan = t.match(/^open (?:the )?(?:plan|project|service)(?: called| named| for)? (.+)$|^open (?:the )?(.+) (?:plan|project)$/)
+    if (plan) return { type: "open-plan", name: plan[1] || plan[2] }
+    const add = t.match(/^(?:add|put) (?:the song )?(.+?) (?:to|in|into|on) (?:the |this |our |today's )?(?:plan|project|service|set ?list)$/)
+    if (add) return { type: "add-to-plan", what: add[1] }
+    // anything else about a plan is for the model, not for the screen
+    if (/\b(?:plan|project|set ?list)\b/.test(t) && !/^(?:find|search|what does)/.test(t)) return { type: "unknown", words: t }
+    if (/^start (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "start" }
+    if (/^(?:next|go to the next) (?:segment|speaker)$/.test(t)) return { type: "timer", command: "next" }
+    if (/^(?:pause|stop|resume|continue) (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "play_pause" }
+
+    if (/^what(?:'s| is)(?: showing| up)?(?: on)?(?: the)?(?: screen| up| showing)$|^what is (?:up|showing)$/.test(t) || /^what(?:'s| is)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }
+    if (/^what(?:'s| is|s) (?:next|coming(?: up)?(?: next)?)$/.test(t)) return { type: "tell", about: "next" }
+    if (/^(?:help|what can you do|what can i (?:say|ask))$/.test(t)) return { type: "tell", about: "help" }
+    const page = t.match(new RegExp(`^(?:open|go to|switch to|take me to)(?: up)?(?: the| my)? (${PAGES.join("|")}|song library|library|bible)(?: page| tab| view| screen)?$`))
+    if (page) return { type: "page", page: ({ "song library": "songs", library: "songs", bible: "scripture" } as Record<string, PageName>)[page[1]] || (page[1] as PageName) }
+
     if (/^next (?:slide|line|part)$|^(?:go )?forward$/.test(t)) return { type: "slide", direction: "next" }
     if (/^(?:previous|last) (?:slide|line|part)$/.test(t)) return { type: "slide", direction: "previous" }
 
@@ -193,3 +267,9 @@ export function matchTitle<T extends { name: string }>(spoken: string, list: T[]
     if (scored[1] && scored[1].score === scored[0].score && plainWords(scored[1].item.name).join(" ") !== plainWords(scored[0].item.name).join(" ")) return null
     return scored[0].item
 }
+
+// asks or makes rather than shows: a passage or song named in it is not to be put up
+const NOT_SHOWING = /^(?:who|what|why|how|when|where|which|is|are|was|does|do|did|make|create|add|build|write|plan|explain|tell|list|remove|delete|rename|change|set|prepare|compare|summari[sz]e)\b/i
+const MOST_WORDS = 9
+/** short enough, and said so that a passage or title in it can be what is wanted on screen */
+export const namesWhatToShow = (words: string) => !NOT_SHOWING.test(words.trim()) && !/\b(?:plan|project|set ?list)\b/i.test(words) && words.trim().split(/\s+/).length <= MOST_WORDS

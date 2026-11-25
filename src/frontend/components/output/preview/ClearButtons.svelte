@@ -138,11 +138,13 @@
         {/if}
     </span>
 
+    {#if !$labelsDisabled}<p class="only">Or clear only</p>{/if}
     <span class="group">
         {#if outputContent?.type !== "pdf" && outputContent?.type !== "ppt"}
             <div class="combinedButton">
-                <MaterialButton style="padding: 0.3em 0.6em;{styleBackground ? 'opacity: 0.5;cursor: default;' : ''}" disabled={($outLocked || backgroundCleared) && !styleBackground} title={$outLocked || backgroundCleared ? "" : "clear.background [F1]"} on:click={() => clear("background")} red>
+                <MaterialButton style="padding: 0.3em 0;flex-direction: column;gap: 2px;{styleBackground ? 'opacity: 0.5;cursor: default;' : ''}" disabled={($outLocked || backgroundCleared) && !styleBackground} title={$outLocked || backgroundCleared ? "" : "clear.background [F1]"} on:click={() => clear("background")} red>
                     <Icon id="image" size={1.2} white />
+                    {#if !$labelsDisabled}<span class="caption">Media</span>{/if}
                 </MaterialButton>
                 {#if !allCleared}
                     <MaterialButton style="padding: {activeClear === 'background' ? 0 : 2}px !important;min-height: 15px;border-left: 0 !important;" isActive={activeClear === "background"} disabled={backgroundCleared} on:click={() => openPreview("background")} title="preview.background">
@@ -156,10 +158,11 @@
 
         {#if getMediaLayerType(outBackground.path || "", backgroundData) !== "foreground" || !slideCleared}
             <div class="combinedButton">
-                <MaterialButton style="padding: 0.3em 0.6em;" disabled={$outLocked || slideCleared} title="clear.slide  [F2]" on:click={() => clear("slide")} red>
+                <MaterialButton style="padding: 0.3em 0;flex-direction: column;gap: 2px;" disabled={$outLocked || slideCleared} title="clear.slide  [F2]" on:click={() => clear("slide")} red>
                     <!-- PDFs are visually the background layer as it is toggled by the style "Background" layer, but it behaves as a slide in the code -->
                     <!-- display recording icon here if a slide recoring is playing -->
                     <Icon id={isScripture ? "scripture" : outputContent?.type === "pdf" ? "image" : "slide"} size={1.2} white />
+                    {#if !$labelsDisabled}<span class="caption">Words</span>{/if}
                 </MaterialButton>
                 {#if !allCleared}
                     <MaterialButton style="padding: {activeClear === 'slide' ? 0 : 2}px !important;min-height: 15px;" isActive={activeClear === "slide"} disabled={slideCleared} on:click={() => openPreview("slide")} title="preview.slide">
@@ -172,8 +175,9 @@
         {/if}
 
         <div class="combinedButton">
-            <MaterialButton style="padding: 0.3em 0.6em;{lockedOverlay ? 'opacity: 0.5;cursor: default;' : ''}" disabled={$outLocked || (overlayCleared && effectsCleared)} title={lockedOverlay ? "" : "clear.overlays [F3]"} on:click={() => clear("overlays")} red>
+            <MaterialButton style="padding: 0.3em 0;flex-direction: column;gap: 2px;{lockedOverlay ? 'opacity: 0.5;cursor: default;' : ''}" disabled={$outLocked || (overlayCleared && effectsCleared)} title={lockedOverlay ? "" : "clear.overlays [F3]"} on:click={() => clear("overlays")} red>
                 <Icon id="overlays" size={1.2} white />
+                {#if !$labelsDisabled}<span class="caption">Overlays</span>{/if}
             </MaterialButton>
             {#if !allCleared}
                 <MaterialButton style="padding: {activeClear === 'overlays' ? 0 : 2}px !important;min-height: 15px;" isActive={activeClear === "overlays"} disabled={overlayCleared} on:click={() => openPreview("overlays")} title="preview.overlays">
@@ -185,8 +189,9 @@
         </div>
 
         <div class="combinedButton">
-            <MaterialButton style="padding: 0.3em 0.6em;" disabled={$outLocked || audioCleared} title="clear.audio [F4]" on:click={() => clear("audio")} red>
+            <MaterialButton style="padding: 0.3em 0;flex-direction: column;gap: 2px;" disabled={$outLocked || audioCleared} title="clear.audio [F4]" on:click={() => clear("audio")} red>
                 <Icon id={audioIcon} size={1.2} white />
+                {#if !$labelsDisabled}<span class="caption">Audio</span>{/if}
             </MaterialButton>
             {#if !allCleared}
                 <MaterialButton style="padding: {activeClear === 'audio' ? 0 : 2}px !important;min-height: 15px;" isActive={activeClear === "audio"} disabled={audioCleared} on:click={() => openPreview("audio")} title="preview.audio">
@@ -199,8 +204,9 @@
 
         {#if outputContent?.type !== "pdf"}
             <div class="combinedButton">
-                <MaterialButton style="padding: 0.3em 0.6em;{isTimer ? 'opacity: 0.9;' : ''}" disabled={$outLocked || (slideTimerCleared && activeClear !== "nextTimer")} title="{isTimer ? 'actions.stop_timers' : `clear.${Object.keys($overlayTimers).length ? 'timer' : 'nextTimer'}`}{presentationControllersKeysDisabled() ? ' [F5]' : ''}" on:click={() => (isTimer ? activeTimers.set([]) : clear("nextTimer"))} red>
+                <MaterialButton style="padding: 0.3em 0;flex-direction: column;gap: 2px;{isTimer ? 'opacity: 0.9;' : ''}" disabled={$outLocked || (slideTimerCleared && activeClear !== "nextTimer")} title="{isTimer ? 'actions.stop_timers' : `clear.${Object.keys($overlayTimers).length ? 'timer' : 'nextTimer'}`}{presentationControllersKeysDisabled() ? ' [F5]' : ''}" on:click={() => (isTimer ? activeTimers.set([]) : clear("nextTimer"))} red>
                     <Icon id={isTimer ? "timer" : "clock"} size={1.2} white />
+                    {#if !$labelsDisabled}<span class="caption">Timer</span>{/if}
                 </MaterialButton>
                 {#if !allCleared}
                     <MaterialButton style="padding: 2px !important;min-height: 15px;border-right: 0 !important;" isActive={activeClear === "nextTimer"} disabled={slideTimerCleared && activeClear !== "nextTimer"} on:click={() => openPreview("nextTimer")} title="preview.nextTimer">
@@ -252,7 +258,19 @@
         border-left: 1px solid var(--primary-lighter) !important;
     }
 
+    .only {
+        padding: 4px 8px 0;
+        font-size: 11px;
+        text-align: center;
+        color: var(--muted-text);
+    }
+    .caption {
+        font-size: 11px;
+        line-height: 1.2;
+    }
+
     .combinedButton {
+        flex-basis: 0;
         display: flex;
         flex-direction: column;
         flex-grow: 1;

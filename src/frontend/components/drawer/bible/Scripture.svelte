@@ -23,7 +23,7 @@
     import TextInput from "../../inputs/TextInput.svelte"
     import Loader from "../../main/Loader.svelte"
     import Center from "../../system/Center.svelte"
-    import { createScriptureShow, formatBibleText, getShortBibleName, getVerseIdParts, getVersePartLetter, joinRange, loadJsonBible, moveSelection, outputIsScripture, playScripture, sanitizeVerseText, scriptureRangeSelect, sortScriptureSelection, splitText, swapPreviewBible } from "./scripture"
+    import { createScriptureShow, formatBibleText, getShortBibleName, getVerseIdParts, getVersePartLetter, joinRange, loadJsonBible, moveSelection, outputIsScripture, playScripture, sanitizeVerseText, scriptureDrawerOpen, scriptureRangeSelect, sortScriptureSelection, splitText, swapPreviewBible } from "./scripture"
 
     export let active: string | null
     export let searchValue: string
@@ -510,7 +510,11 @@
 
     /// SELECTION ///
 
-    onMount(() => selected.set({ id: "scripture", data: [] }))
+    onMount(() => {
+        selected.set({ id: "scripture", data: [] })
+        scriptureDrawerOpen.set(true)
+        return () => scriptureDrawerOpen.set(false)
+    })
 
     let previousSelection: (number | string)[] = []
     let isSelected = false

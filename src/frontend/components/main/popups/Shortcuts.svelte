@@ -19,7 +19,7 @@
         "popup.history": `${ctrl} + h`,
         "edit._title_italic": `${ctrl} + i`,
         "actions.import": `${ctrl} + i`,
-        // "": `${ctrl} + j`,
+        "Tell Matthias what to do": `${ctrl} + j`,
         // "": `${ctrl} + k`,
         "preview._lock": `${ctrl} + l`,
         "actions.mute": `${ctrl} + m`,

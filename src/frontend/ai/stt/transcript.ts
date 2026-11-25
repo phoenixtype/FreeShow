@@ -1,5 +1,5 @@
 import { get } from "svelte/store"
-import { ai, sttTranscript } from "../../stores"
+import { ai, sttTranscript, transcriptLog, type TranscriptLine } from "../../stores"
 import { newToast } from "../../utils/common"
 import { Matthias } from "../voice/matthiasAgent"
 import { AiManager } from "../manager/AiManager"
@@ -53,9 +53,11 @@ export class Transcript {
         if (this.interimTimeout) clearTimeout(this.interimTimeout)
         this.interimTimeout = null
 
+        if (!part.interim && textPart) this.log(textPart, !!part.glue)
+
         // words said to Matthias are a request, not the sermon: marked as read, and not searched
         const { finalized, unprocessed } = get(sttTranscript)
-        if (Matthias.hear(`${finalized.slice(-MATTHIAS_CHARS)} ${unprocessed}`.trim(), Math.max(0, this.heardChars - MATTHIAS_CHARS), !part.interim)) {
+        if (Matthias.hear(`${finalized.slice(-MATTHIAS_CHARS)} ${unprocessed}`.trim(), Math.max(0, this.heardChars - Math.min(MATTHIAS_CHARS, finalized.length)), !part.interim)) {
             this.getTranscriptChunk()
             this.wordsSinceRequest = 0
             return
@@ -72,8 +74,38 @@ export class Transcript {
         }
     }
 
+    // a line runs until the speaker pauses, or it is long enough to read
+    private static readonly LINE_GAP_MS = 4000
+    private static readonly LINE_CHARS = 220
+    private static readonly MAX_LINES = 3000
+    private static lastPart = 0
+    private static log(text: string, glue: boolean) {
+        const now = Date.now()
+        const joins = now - this.lastPart < this.LINE_GAP_MS
+        this.lastPart = now
+        transcriptLog.update((lines) => {
+            const last = lines[lines.length - 1]
+            if (last && (glue || (joins && last.text.length < this.LINE_CHARS))) return [...lines.slice(0, -1), { ...last, text: last.text + (glue ? "" : " ") + text }]
+            return [...lines, { at: now, text }].slice(-this.MAX_LINES)
+        })
+    }
+
+    /** empties the log and what is searched; the answer puts the log back */
+    static clear(): () => void {
+        const lines: TranscriptLine[] = get(transcriptLog)
+        transcriptLog.set([])
+        sttTranscript.set({ finalized: "", unprocessed: "" })
+        if (this.interimTimeout) clearTimeout(this.interimTimeout)
+        this.interimTimeout = null
+        this.resetState()
+        this.lastPart = 0
+        return () => transcriptLog.update((since) => [...lines, ...since].slice(-this.MAX_LINES))
+    }
+
     static copy() {
-        const text = get(sttTranscript).finalized
+        const text = get(transcriptLog)
+            .map((line) => `${new Date(line.at).toLocaleTimeString()}  ${line.text}`)
+            .join("\n")
         if (!text) return
 
         navigator.clipboard.writeText(text)

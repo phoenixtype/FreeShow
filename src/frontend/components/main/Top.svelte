@@ -1,6 +1,6 @@
 <script lang="ts">
     import { slide } from "svelte/transition"
-    import { activeEdit, activePage, activePopup, activeProfile, activeProject, activeShow, cloudUsers, dictionary, drawSettings, drawTool, os, outputDisplay, outputs, paintCache, profiles, saved, settingsTab, shows } from "../../stores"
+    import { activeEdit, activePage, activePopup, activeProfile, activeProject, activeShow, ai, cloudUsers, dictionary, drawSettings, drawTool, os, outputDisplay, outputs, paintCache, profiles, saved, settingsTab, shows } from "../../stores"
     import { getCloudUsers } from "../../utils/cloudSync"
     import { translateText } from "../../utils/language"
     import { DEFAULT_DISPLAY_NAME } from "../../utils/SocketHelper"
@@ -11,9 +11,14 @@
     import Button from "../inputs/Button.svelte"
     import TopButton from "../inputs/TopButton.svelte"
     import MaterialButton from "../inputs/MaterialButton.svelte"
-    import { openLiveCopilot } from "../../ai/liveCopilot"
+    import { copilotOpen, copilotState, openLiveCopilot } from "../../ai/liveCopilot"
 
     export let isWindows = false
+
+    // room for every button to say what it is
+    let innerWidth = 0
+    $: room = innerWidth - ($ai.enabled && $copilotOpen ? 360 : 0)
+    $: wide = room >= 1520
 
     $: show = $shows[$activeShow?.id || ""]
     $: showProfile = profile?.access.shows || {}
@@ -77,6 +82,8 @@
     }
 </script>
 
+<svelte:window bind:innerWidth />
+
 {#if users.length}
     <div class="users" style="{isWindows ? 'top: 25px;' : ''}width: calc(17px + ((22px - 5px) * {users.length}));" data-title={translateText("settings.connections")}>
         {#each users as user, i}
@@ -114,14 +121,20 @@
         <TopButton id="stage" />
     </span>
     <span class="side" style="justify-content: flex-end;">
-        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title={translateText("settings.ai", $dictionary)} on:click={openLiveCopilot}>
+        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title="{translateText('settings.ai', $dictionary)} [Ctrl+J]" isActive={$ai.enabled && $copilotOpen} on:click={openLiveCopilot}>
             <Icon id="ai" size={1.5} white />
-            <span class="copilot-label"><T id="settings.ai" /></span>
+            {#if $ai.enabled && $copilotState !== "inactive"}<span class="state {$copilotState}" role="img" aria-label={$copilotState === "error" ? "Microphone problem" : $copilotState === "listening" ? "Listening" : "Getting ready"}></span>{/if}
+            <span class="copilot-label"
+                >{#if $ai.enabled && $ai.matthias?.agentMode}Agent mode on{:else}<T id="settings.ai" />{/if}</span
+            >
         </MaterialButton>
-        <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel />
-        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1em;" title="Account" icon="profiles" iconSize={1.4} on:click={() => activePopup.set("church_library")} />
+        <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel={!wide} />
+        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1em;" title="Account" on:click={() => activePopup.set("church_library")}>
+            <Icon id="profiles" size={1.4} white />
+            {#if wide}<span>Account</span>{/if}
+        </MaterialButton>
         {#if !settingsDisabled}
-            <TopButton id="settings" hideLabel />
+            <TopButton id="settings" hideLabel={!wide} />
         {/if}
 
         <!-- <MaterialButton id="output_window_button" class="context #output display {$outputDisplay ? 'on' : 'off'}" title="menu.{$outputDisplay ? (confirm ? 'again_confirm' : '_title_display_stop') : '_title_display'} [Ctrl+O]" style={$outputDisplay || disableClick ? "" : "border-bottom: 2px solid var(--secondary);"} on:click={toggleOutput} disabled={(!$outputDisplay && !physicalOutputWindows.length) || disableClick} red={$outputDisplay}>
@@ -151,6 +164,7 @@
             {:else}
                 <Icon id="outputs" size={1.6} white />
             {/if}
+            {#if room >= 1200 && !confirm}<span class="present">{$outputDisplay ? "Stop" : "Present"}</span>{/if}
 
             {#if $outputDisplay && confirm}
                 <div class="click_again" transition:slide>
@@ -169,6 +183,23 @@
         .copilot-label {
             display: none;
         }
+    }
+
+    .state {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--muted-text);
+    }
+    .state.listening {
+        background-color: var(--connected);
+    }
+    .state.error {
+        background-color: var(--disconnected);
+    }
+    .top .present {
+        margin-inline-start: 8px;
     }
 
     .top {

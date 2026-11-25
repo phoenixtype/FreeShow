@@ -4,12 +4,15 @@
     import { getShortBibleName } from "../../../components/drawer/bible/scripture"
     import Icon from "../../../components/helpers/Icon.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
-    import { aiSmartAction, scriptures } from "../../../stores"
+    import { ai, aiSmartAction, scriptures } from "../../../stores"
     import { translateText } from "../../../utils/language"
+    import ScreenControl from "./ScreenControl.svelte"
     import MatthiasStatus from "./MatthiasStatus.svelte"
     import { matthiasStatus } from "../../voice/matthiasAgent"
     import AiRing from "./AiRing.svelte"
     import ConfidenceMeter from "./ConfidenceMeter.svelte"
+
+    export let listening = true
 
     $: smartAction = $aiSmartAction
 </script>
@@ -26,11 +29,11 @@
 {/if} -->
 
 {#if $matthiasStatus}
-    <div class="ticker-wrap" style="bottom: calc({$bubbleBottom}px + (62px / 2));" transition:fly={{ x: 45 + 62 / 2, duration: 200 }}>
-        <div class="pill"><AiRing opacity={0.95} borderRadius="30px"><div style="margin-right: calc((62px / 2) - 4px);"><MatthiasStatus /></div></AiRing></div>
+    <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;" transition:fly={{ x: 40, duration: 200 }}>
+        <div class="pill"><AiRing opacity={0.95} borderRadius="30px"><div><MatthiasStatus /></div></AiRing></div>
     </div>
 {:else if smartAction}
-    <div class="ticker-wrap" style="bottom: calc({$bubbleBottom}px + (62px / 2));" transition:fly={{ x: 45 + 62 / 2, duration: 200 }}>
+    <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;" transition:fly={{ x: 40, duration: 200 }}>
         <!-- border-radius: 50px 10px 10px 50px; -->
         <MaterialButton
             style="padding: 0;border-radius: 50px;"
@@ -45,7 +48,7 @@
         >
             <!-- borderRadius="20px 10px 10px 20px" -->
             <AiRing opacity={0.85}>
-                <div class="suggestion" style="margin-right: calc((62px / 2) - 4px);">
+                <div class="suggestion">
                     {#if smartAction?.action === "presented"}
                         <Icon id="check" white />
                         <p>Presented:</p>
@@ -82,19 +85,20 @@
             </AiRing>
         </MaterialButton>
     </div>
+{:else if $ai.matthias?.agentMode}
+    <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;">
+        <AiRing opacity={0.95} borderRadius="30px"><div><ScreenControl {listening} /></div></AiRing>
+    </div>
 {/if}
 
 <style>
-    /* on the closed bubble's row, to its left (bubble: 62px at 45px/45px) */
     .ticker-wrap {
         display: flex;
         max-width: 60vw;
 
         position: fixed;
-        /* right: 112px; */
-        right: calc(45px + (62px / 2));
-        bottom: calc(45px + (62px / 2));
-        transform: translateY(50%);
+        right: 16px;
+        bottom: 16px;
         z-index: 4998;
 
         /* the ring's inner card is opaque; the drop shadow lifts it off whatever panel is behind */

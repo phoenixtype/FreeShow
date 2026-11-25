@@ -58,7 +58,7 @@ const TENS: Record<string, number> = {
 
 /** "twenty three" → "23", "one hundred nineteen" → "119". Only rewrites
  *  number words; leaves everything else untouched. */
-function normalizeNumberWords(text: string): string {
+export function normalizeNumberWords(text: string): string {
     const tokens = text.split(" ")
     const out: string[] = []
     let i = 0

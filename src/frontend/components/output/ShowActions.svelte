@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { Output } from "../../../types/Output"
     import type { LayoutRef } from "../../../types/Show"
-    import { activeEdit, activePage, activePopup, activeShow, outLocked, popupData, showsCache } from "../../stores"
+    import { stepScreen } from "../../ai/agent/stepScreen"
+    import { activeEdit, activePage, activePopup, activeShow, labelsDisabled, outLocked, popupData, showsCache } from "../../stores"
     import Icon from "../helpers/Icon.svelte"
     import { refreshOut, setOutput } from "../helpers/output"
     import { OutputHelper } from "../helpers/OutputHelper"
@@ -16,6 +17,10 @@
 
     $: outSlide = currentOutput?.out?.slide
     $: length = ref?.length || 0
+
+    // a passage steps verse by verse
+    $: isPassage = outSlide?.id === "temp"
+    const step = (direction: "next" | "previous") => (isPassage ? stepScreen(direction) : OutputHelper.advanceOutputs(direction))
 
     // transition
     $: slideData = $showsCache && outSlide && outSlide.id !== "temp" ? getLayoutRef(outSlide.id)[outSlide.index!]?.data : null
@@ -87,25 +92,30 @@
 </script>
 
 <span class="group">
-    <MaterialButton title="preview._previous_slide [Arrow Left]" disabled={$outLocked || outSlide?.id === "temp" || (outSlide ? (outSlide.index || 0) < 1 && (linesIndex || 0) < 1 : !layoutLength)} on:click={() => OutputHelper.advanceOutputs("previous")}>
+    <MaterialButton title="preview._previous_slide [Arrow Left]" disabled={$outLocked || (!isPassage && (outSlide ? (outSlide.index || 0) < 1 && (linesIndex || 0) < 1 : !layoutLength))} on:click={() => step("previous")}>
         <Icon id="previous" size={1.2} />
+        {#if !$labelsDisabled}<span class="caption">Previous</span>{/if}
     </MaterialButton>
-    <MaterialButton title="preview._next_slide [Arrow Right]" disabled={$outLocked || outSlide?.id === "temp" || (outSlide ? (outSlide.index || 0) + 1 >= length && (linesIndex || 0) + 1 >= (maxLines || 0) : !layoutLength)} on:click={() => OutputHelper.advanceOutputs("next")}>
+    <MaterialButton title="preview._next_slide [Arrow Right]" disabled={$outLocked || (!isPassage && (outSlide ? (outSlide.index || 0) + 1 >= length && (linesIndex || 0) + 1 >= (maxLines || 0) : !layoutLength))} on:click={() => step("next")}>
         <Icon id="next" size={1.2} />
+        {#if !$labelsDisabled}<span class="caption">Next</span>{/if}
     </MaterialButton>
 
     {#if shouldRefresh}
         <MaterialButton title="preview._update [Ctrl+R]" disabled={$outLocked} on:click={() => refreshOut()}>
             <Icon id="refresh" size={1.1} />
+            {#if !$labelsDisabled}<span class="caption">Refresh</span>{/if}
         </MaterialButton>
     {:else}
         <MaterialButton title="preview._start [Space]" disabled={$outLocked || !shouldPlay || ($activePage === "edit" && ($activeEdit.type === "template" || $activeEdit.type === "effect"))} on:click={playCurrent}>
             <Icon id="play" size={1.2} white />
+            {#if !$labelsDisabled}<span class="caption">Start</span>{/if}
         </MaterialButton>
     {/if}
 
     <MaterialButton title={($outLocked ? "preview._unlock" : "preview._lock") + " [Ctrl+L]"} on:click={() => outLocked.set(!$outLocked)} red={$outLocked}>
         <Icon id={$outLocked ? "locked" : "unlocked"} size={1.1} white={$outLocked} />
+        {#if !$labelsDisabled}<span class="caption">{$outLocked ? "Unlock" : "Lock"}</span>{/if}
     </MaterialButton>
     <MaterialButton
         title="popup.transition"
@@ -115,6 +125,7 @@
         }}
     >
         <Icon size={1.2} id="transition" white={!!customTransition} />
+        {#if !$labelsDisabled}<span class="caption">Transition</span>{/if}
     </MaterialButton>
 </span>
 
@@ -128,6 +139,13 @@
         flex-grow: 1;
         /* height: 40px; */
 
-        padding: 0.4em 0.8em !important;
+        flex-basis: 0;
+        flex-direction: column;
+        gap: 2px;
+        padding: 0.4em 0 !important;
+    }
+    .caption {
+        font-size: 11px;
+        line-height: 1.2;
     }
 </style>

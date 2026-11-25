@@ -36,6 +36,22 @@ describe("runAgentChat", () => {
         expect(answer?.content).toMatch(/more steps/)
     })
 
+    it("stops when told to, runs nothing refused, and does not repeat a failure", async () => {
+        expect((await runAgentChat(history, { run, stopped: () => true, ask: async () => ({ tool: "show_scripture" }) }))?.content).toBe("Stopped.")
+        expect(run).not.toHaveBeenCalled()
+        let asked = 0
+        const answer = await runAgentChat(history, { run, refuse: () => "Leave the screen to them.", ask: async () => (asked++, { tool: "show_scripture", arguments: "{}" }) })
+        expect(run).not.toHaveBeenCalled()
+        expect(asked).toBe(2)
+        expect(answer?.content).toBe("Leave the screen to them.")
+    })
+
+    it("tells the model what the app looks like", async () => {
+        let prompt = ""
+        await runAgentChat(history, { run, context: "The app now: {}", ask: async (p) => ((prompt = p), { content: "ok" }) })
+        expect(prompt).toContain("The app now")
+    })
+
     it("has no answer when the model has none", async () => {
         expect(await runAgentChat(history, { run, ask: async () => null })).toBeNull()
     })

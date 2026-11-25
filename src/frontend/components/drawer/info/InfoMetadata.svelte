@@ -1,6 +1,5 @@
 <script lang="ts">
     import { translateText } from "../../../utils/language"
-    import { dateToString } from "../../helpers/time"
     import Link from "../../inputs/Link.svelte"
 
     export let title: string | undefined
@@ -35,7 +34,7 @@
                 <span class:default={typeof data.value === "string" ? data.value.includes(".") : false}>
                     {#if data.value}
                         {#if data.type === "date"}
-                            {dateToString(data.value)}
+                            {new Date(data.value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                         {:else if data.type === "url" && typeof data.value === "string"}
                             <Link url={data.value}>{removeExtra(data.value)}</Link>
                         {:else if typeof data.value === "string"}

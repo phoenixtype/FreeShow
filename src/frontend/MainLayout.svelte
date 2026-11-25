@@ -1,5 +1,6 @@
 <script lang="ts">
     import AiFloating from "./ai/components/floating/AiFloating.svelte"
+    import { copilotOpen } from "./ai/liveCopilot"
     import { customActionActivation } from "./components/actions/actions"
     import DrawTabs from "./components/draw/DrawTabs.svelte"
     import Navigation from "./components/edit/Navigation.svelte"
@@ -31,7 +32,7 @@
     }
 </script>
 
-<div class="column">
+<div class="column" class:docked={$ai.enabled && $copilotOpen}>
     {#if !$focusMode}
         <Top {isWindows} />
     {/if}
@@ -138,6 +139,15 @@
     .column {
         flex-direction: column;
         height: 100%;
+    }
+
+    .column {
+        --copilot-width: 360px;
+    }
+    @media screen and (min-width: 1180px) {
+        .column.docked {
+            padding-inline-end: var(--copilot-width);
+        }
     }
 
     .row {

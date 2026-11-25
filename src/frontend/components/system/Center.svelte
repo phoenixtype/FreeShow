@@ -17,7 +17,7 @@
         width: 100%;
         overflow-y: auto;
         flex-direction: column;
-        justify-content: center;
+        justify-content: safe center;
         align-items: center;
         text-align: center;
     }

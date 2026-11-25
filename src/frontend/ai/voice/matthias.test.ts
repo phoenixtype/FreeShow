@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { findCalls, matchTitle, parseRequest } from "./matthias"
+import { findCalls, matchTitle, namesWhatToShow, parseRequest, parseRequests } from "./matthias"
 
 const calls = (words: string) => findCalls(words).map((c) => c.request)
 
@@ -87,5 +87,59 @@ describe("matchTitle", () => {
     it("does not guess", () => {
         expect(matchTitle("great", list)).toBeNull()
         expect(matchTitle("oceans", list)).toBeNull()
+    })
+})
+
+describe("parseRequests", () => {
+    const types = (words: string) => parseRequests(words).map((r) => r.type)
+    it("takes apart what was asked in one breath", () => {
+        expect(types("put up Psalm 23 then clear the screen")).toEqual(["show", "clear"])
+        expect(types("next verse and then lock the screen")).toEqual(["navigate", "lock"])
+        expect(types("show John 3:16 and read it in the NLT")).toEqual(["show", "version"])
+        expect(types("sing Amazing Grace, and go to the chorus")).toEqual(["song", "section"])
+    })
+    it("leaves an and that belongs to the words", () => {
+        expect(types("sing Trust and Obey")).toEqual(["song"])
+        expect(types("show first and second Samuel")).toEqual(["show"])
+        expect(types("find the verse about love and take it down")).toEqual(["search"])
+        expect(types("show the passage where he rose and then went away")).toHaveLength(1)
+    })
+})
+
+describe("more that can be asked", () => {
+    it("is polite or not", () => {
+        for (const words of ["please can you show John 3 16", "I want you to show John 3 16 please", "could you kindly show John 3 16 for us", "go ahead and show John 3 16 now"]) expect(parseRequest(words)).toEqual({ type: "show", what: "john 3 16" })
+        expect(parseRequest("can we have the next verse please").type).not.toBe("show")
+    })
+    it("parts of a song, slides and steps", () => {
+        expect(parseRequest("take us back to the chorus")).toEqual({ type: "section", name: "chorus" })
+        expect(parseRequest("the bridge again")).toEqual({ type: "section", name: "bridge" })
+        expect(parseRequest("pre-chorus")).toEqual({ type: "section", name: "prechorus" })
+        expect(parseRequest("go to slide five")).toEqual({ type: "goto-slide", slide: 5 })
+        expect(parseRequest("last slide")).toEqual({ type: "goto-slide", slide: "last" })
+        expect(parseRequest("go back two verses")).toEqual({ type: "slide", direction: "previous", count: 2 })
+        expect(parseRequest("next three slides")).toEqual({ type: "slide", direction: "next", count: 3 })
+    })
+    it("the plan, the timer and the app", () => {
+        expect(parseRequest("start the service")).toEqual({ type: "plan", step: "start" })
+        expect(parseRequest("next item in the plan")).toEqual({ type: "plan", step: "next" })
+        expect(parseRequest("open the plan Sunday morning")).toEqual({ type: "open-plan", name: "sunday morning" })
+        expect(parseRequest("add Amazing Grace to the plan")).toEqual({ type: "add-to-plan", what: "amazing grace" })
+        expect(parseRequest("put John 3 16 in the plan").type).toBe("add-to-plan")
+        expect(parseRequest("start the timer")).toEqual({ type: "timer", command: "start" })
+        expect(parseRequest("open settings")).toEqual({ type: "page", page: "settings" })
+        expect(parseRequest("what's on the screen?")).toEqual({ type: "tell", about: "screen" })
+        expect(parseRequest("what's next")).toEqual({ type: "tell", about: "next" })
+    })
+    it("goes back over what was shown", () => {
+        expect(parseRequest("show that again")).toEqual({ type: "again" })
+        expect(parseRequest("go back to the last scripture")).toEqual({ type: "before", kind: "scripture" })
+        expect(parseRequest("clear the background")).toEqual({ type: "clear-layer", layer: "background" })
+    })
+    it("tells what is to be shown from what is only spoken of", () => {
+        expect(namesWhatToShow("John three sixteen")).toBe(true)
+        expect(namesWhatToShow("put John 3 16 in the plan")).toBe(false)
+        expect(namesWhatToShow("who wrote John 3 16")).toBe(false)
+        expect(namesWhatToShow("make a plan with John 3 16")).toBe(false)
     })
 })
