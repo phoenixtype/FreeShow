@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>How to use it: Scriptural Project</title>
+        <meta name="description" content="A friendly tour of Scriptural Project: songs, scripture, service plans, Matthias, the speaker timer, the stage screen and your church library." />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="canonical" href="https://project.scriptural.online/guide" />
+        <meta name="theme-color" content="#080808" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Scriptural Project" />
+        <meta property="og:title" content="How to use it: Scriptural Project" />
+        <meta property="og:description" content="A friendly tour of Scriptural Project: songs, scripture, service plans, Matthias, the speaker timer, the stage screen and your church library." />
+        <meta property="og:url" content="https://project.scriptural.online/guide" />
+        <meta property="og:image" content="https://project.scriptural.online/og.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <script>
+            try {
+                const theme = localStorage.getItem("theme")
+                if (theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark")
+            } catch {}
+        </script>
+        <style>
+            :root {
+                --background: hsl(36 30% 97%);
+                --card: hsl(36 25% 94%);
+                --border: hsl(36 15% 87%);
+                --foreground: hsl(30 8% 12%);
+                --muted: hsl(30 5% 40%);
+                color-scheme: light;
+            }
+            .dark {
+                --background: hsl(0 0% 3%);
+                --card: hsl(0 0% 9%);
+                --border: hsl(0 0% 18%);
+                --foreground: hsl(0 0% 97%);
+                --muted: hsl(0 0% 74%);
+                color-scheme: dark;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--background);
+                color: var(--foreground);
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+                line-height: 1.6;
+                -webkit-font-smoothing: antialiased;
+            }
+            main {
+                max-width: 680px;
+                margin: 0 auto;
+                padding: 72px 24px 48px;
+            }
+            img {
+                width: 56px;
+                height: 56px;
+                border-radius: 14px;
+            }
+            h1 {
+                font-size: 2.25rem;
+                font-weight: 700;
+                letter-spacing: -0.025em;
+                line-height: 1.15;
+                margin: 28px 0 12px;
+            }
+            h2 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin: 40px 0 8px;
+            }
+            h3 {
+                font-size: 1rem;
+                font-weight: 600;
+                margin: 24px 0 4px;
+            }
+            p,
+            li {
+                color: var(--muted);
+            }
+            p {
+                margin: 0 0 16px;
+            }
+            ul,
+            ol {
+                margin: 0 0 16px;
+                padding-left: 22px;
+            }
+            li {
+                margin-bottom: 6px;
+            }
+            b {
+                color: var(--foreground);
+            }
+            a {
+                color: var(--foreground);
+            }
+            hr {
+                border: 0;
+                border-top: 1px solid var(--border);
+                margin: 40px 0;
+            }
+            code {
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 0.875em;
+                background: var(--card);
+                padding: 1px 6px;
+                border-radius: 6px;
+                color: var(--foreground);
+            }
+            pre {
+                background: var(--card);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 14px 16px;
+                overflow-x: auto;
+                margin: 0 0 16px;
+            }
+            pre code {
+                background: none;
+                padding: 0;
+                font-size: 0.8125rem;
+                line-height: 1.6;
+            }
+            .toc {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 24px 0 0;
+            }
+            .toc a {
+                padding: 6px 14px;
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                text-decoration: none;
+                font-size: 0.875rem;
+            }
+            .say {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 0 16px;
+            }
+            .say span {
+                padding: 4px 12px;
+                border-radius: 999px;
+                background: var(--card);
+                border: 1px solid var(--border);
+                font-size: 0.875rem;
+                color: var(--foreground);
+            }
+            footer {
+                font-size: 0.8125rem;
+                color: var(--muted);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <a href="/"><img src="/icon.png" alt="Scriptural Project" /></a>
+            <h1>How to use Scriptural Project</h1>
+            <p>Everything you need to run a meeting, in the order most churches meet it. You do not need to read it all. Pick the part you need.</p>
+            <div class="toc"><a href="#start">Get started</a><a href="#songs">Songs</a><a href="#scripture">Scripture</a><a href="#plans">Service plans</a><a href="#matthias">Matthias</a><a href="#screens">Screens</a><a href="#library">Church library</a><a href="#agents">AI agents</a></div>
+
+            <h2 id="start">Get started</h2>
+            <ol>
+                <li><b>Download</b> the app for your computer from the <a href="/">home page</a> and open it.</li>
+                <li><b>Set up your screens.</b> The app puts the words on the projector or TV, and keeps the operator's page on your own screen.</li>
+                <li><b>Add your songs.</b> Type them in, or bring in a library (see Songs).</li>
+                <li><b>Try a verse.</b> Say or type “John 3:16” and watch it come up.</li>
+            </ol>
+            <p>Everything works without an account. An account is only for the shared church library.</p>
+
+            <h2 id="songs">Songs</h2>
+            <p>Songs are kept as sections, such as Verse 1 and Chorus, and the order they are sung. A chorus sung three times is stored once.</p>
+            <ul>
+                <li><b>Bring a library in</b> from EasyWorship, ProPresenter and others, using the import options in the app.</li>
+                <li><b>Type a song</b> with a title and its words. Put a label like <code>Chorus</code> on its own line to start a section.</li>
+                <li><b>Show a song</b> by clicking its section, or tell Matthias “Back to the chorus”.</li>
+            </ul>
+            <p>To load a whole church of songs at once, the <a href="/church-setup">setup command</a> does it in one go.</p>
+
+            <h2 id="scripture">Scripture</h2>
+            <p>Every public-domain Bible is included. Licensed versions such as the NIV and NKJV are available on request with a plan.</p>
+            <ul>
+                <li><b>Listen:</b> the Live Copilot hears the preacher and brings up the verse as it is read. It can show the verse by itself, or wait for your click.</li>
+                <li><b>Ask:</b> “John three sixteen”, “Read that in the NLT”, or “Find the verse about being anxious”.</li>
+                <li><b>Move on:</b> “Next verse” steps the screen while the preacher keeps going.</li>
+            </ul>
+            <p>Speech is turned into text on your own computer.</p>
+
+            <h2 id="plans">Service plans</h2>
+            <p>A plan is the order of your meeting: songs, scripture, pictures, videos and notes. Build it ahead of time, then run it with one button, or say “Start the service” and “Next item”.</p>
+            <ul>
+                <li>Add anything you can show to a plan, and drag to reorder.</li>
+                <li>Taking an item off a plan never deletes the song or file. If you remove one by mistake, Ctrl+Z (Cmd+Z on a Mac) brings it back.</li>
+            </ul>
+
+            <h2 id="matthias">Matthias, your assistant</h2>
+            <p>Matthias does what you ask, by voice or by typing, and can do several things one after another. Its panel sits beside the app, so you can keep working while it helps.</p>
+            <div class="say"><span>John three sixteen</span><span>Read that in the NLT</span><span>Find the verse about being anxious</span><span>Sing Amazing Grace</span><span>Back to the chorus</span><span>Start the service</span><span>Five minute countdown</span><span>Clear the screen</span></div>
+            <h3>Let it lead</h3>
+            <p>Turn on <b>Agent mode</b> in Matthias settings and it runs the screen by itself. Move anything by hand and it waits for you. Say “Take over” to hold the screen, “Stand down” to hand it back. Locking the screen stops everything.</p>
+
+            <h2 id="screens">Screens, timer and remote</h2>
+            <ul>
+                <li><b>Backgrounds:</b> hundreds made for churches, with loops and worship pads. <a href="/loops">Download the video loops</a> to keep your own copy.</li>
+                <li><b>Speaker timer:</b> a countdown only the speaker sees.</li>
+                <li><b>Stage screen:</b> what is up, what is next, and the time, for the platform.</li>
+                <li><b>Phone remote:</b> move the slides from anywhere in the room.</li>
+                <li><b>Clear and restore:</b> blank the screen and bring it back, with a button or by voice.</li>
+            </ul>
+
+            <h2 id="library">Church library</h2>
+            <p>The church library keeps your songs, media and plans in one place and copies them to every computer, so the sound desk and the front match. Songs stay usable offline once copied.</p>
+            <ol>
+                <li>In the app, open <b>Import</b>, then <b>Church library</b>.</li>
+                <li>Sign in with your email. We send a code. There is no password.</li>
+                <li>Type your church's name to start it, or enter an invite code to join one.</li>
+                <li>Use <b>Invite someone</b> to bring in your worship team. The code works for 14 days.</li>
+                <li>Press <b>Sync songs</b> to bring this computer up to date.</li>
+            </ol>
+            <p>The free plan covers 3 people and 500 songs. See <a href="/pricing">plans</a>. Moving a whole church in at once? Follow <a href="/church-setup">Set up a church from the command line</a>.</p>
+
+            <h2 id="agents">Other AI assistants</h2>
+            <p>If you use Claude Code or another AI agent, it can run the app too: find scripture, build plans, show a song, start the timer. In the app, open <b>Settings</b>, then <b>Connection</b>, then <b>AI agents</b>, turn it on and copy the command. It answers only on your own computer and needs the token you copied. It never deletes a song, plan or file.</p>
+
+            <hr />
+            <footer>
+                <p><a href="/">Home</a> · <a href="/guide">Using the app</a> · <a href="/loops">Video loops</a> · <a href="/church-setup">Set up a church</a> · <a href="/pricing">Plans</a></p>
+            </footer>
+        </main>
+    </body>
+</html>
