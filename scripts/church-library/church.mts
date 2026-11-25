@@ -1,6 +1,6 @@
 // Sets up a church in the library and loads all its assets from one folder, as
-// the person signed in: no admin key. A church's owner or editor may do all of
-// this under the library's own row-level security rules. Safe to run again:
+// the person signed in: no admin key. Part of the Church and Multi-campus plans:
+// the database refuses bulk loading for a free church (a platform admin may). Safe to run again:
 // the church is found by name, songs are matched on their source id, media on
 // title and size.
 //
@@ -131,6 +131,13 @@ async function findChurch(nameOrId: string): Promise<{ id: string; name: string 
     return rows[0] || null
 }
 
+const PAID_ONLY = "Setting up a church from the command line is part of the Church and Multi-campus plans. On the free plan, add songs in the app. Plans: https://project.scriptural.online/pricing"
+
+/** Asked of the database, which makes the same check again when anything is written. */
+async function mayBulkImport(churchId: string | null): Promise<boolean> {
+    return (await api<boolean>("/rest/v1/rpc/can_bulk_import", { body: churchId ? { target: churchId } : {} })) === true
+}
+
 async function setup(name: string): Promise<string> {
     // churches the signed-in person belongs to; one with this name is theirs to add to
     const existing = await findChurch(name)
@@ -151,7 +158,7 @@ async function importSongs(churchId: string, folder: string, files: string[]) {
     const rows: any[] = []
     const skipped: string[] = []
     // every row carries every key: a bulk insert needs them identical
-    const row = (clean: any, source: string, sourceId: string) => ({ church_id: churchId, source, source_id: sourceId, authors: null, copyright: null, ccli: null, ...JSON.parse(JSON.stringify(clean)) })
+    const row = (clean: any, source: string, sourceId: string) => ({ source, source_id: sourceId, authors: null, copyright: null, ccli: null, ...JSON.parse(JSON.stringify(clean)) })
 
     for (const songsDb of files.filter((f) => basename(f) === "Songs.db" && existsSync(join(f, "..", "SongWords.db")))) {
         const dir = join(songsDb, "..")
@@ -172,7 +179,7 @@ async function importSongs(churchId: string, folder: string, files: string[]) {
     console.log(`songs: ${rows.length} ready${skipped.length ? `, ${skipped.length} without words (${skipped.slice(0, 10).join("; ")}${skipped.length > 10 ? "; ..." : ""})` : ""}`)
     if (dryRun) return
     for (let i = 0; i < rows.length; i += 200) {
-        await api("/rest/v1/songs?on_conflict=church_id,source,source_id", { body: rows.slice(i, i + 200), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } })
+        await api("/rest/v1/rpc/bulk_import_songs", { body: { target: churchId, song_rows: rows.slice(i, i + 200) } })
         process.stdout.write(`  ${Math.min(i + 200, rows.length)}/${rows.length}\r`)
     }
 }
@@ -200,7 +207,7 @@ async function importMedia(churchId: string, folder: string, files: string[]) {
         const id = randomUUID()
         const path = `${churchId}/${id}/${storageName(basename(m.file))}`
         await api(`/storage/v1/object/church-media/${path.split("/").map(encodeURIComponent).join("/")}`, { raw: readFileSync(m.file), headers: { "Content-Type": m.mime, "x-upsert": "false" } })
-        await api("/rest/v1/media", { body: { id, church_id: churchId, kind: m.kind, title, storage_path: path, mime_type: m.mime, bytes }, headers: { Prefer: "return=minimal" } })
+        await api("/rest/v1/rpc/bulk_register_media", { body: { target: churchId, media_id: id, media_kind: m.kind, media_title: title, media_path: path, media_mime: m.mime, file_bytes: bytes } })
         uploaded++
         process.stdout.write(`  ${uploaded + already}/${list.length}\r`)
     }
@@ -208,6 +215,7 @@ async function importMedia(churchId: string, folder: string, files: string[]) {
 }
 
 async function load(churchId: string, folder: string) {
+    if (!dryRun && !(await mayBulkImport(churchId))) fail(PAID_ONLY)
     if (!existsSync(folder) || !statSync(folder).isDirectory()) fail(`${folder} is not a folder`)
     const files = walk(folder)
     await importSongs(churchId, folder, files)
@@ -222,6 +230,8 @@ if (command === "login") {
     const [invite] = await api<{ code: string; expires_at: string }[]>("/rest/v1/church_invites?select=code,expires_at", { body: { church_id: found.id, role, created_by: await userId() }, headers: { Prefer: "return=representation" } })
     console.log(`invite code ${invite.code} (${role}), valid until ${invite.expires_at.slice(0, 10)}. Type it under Join in Settings > Church library.`)
 } else if (command === "setup") {
+    // a church that does not exist yet is on the free plan: only a platform admin may fill it in bulk
+    if (from && !dryRun && !(await findChurch(church!)) && !(await mayBulkImport(null))) fail(PAID_ONLY)
     const id = dryRun ? "dry-run" : await setup(church!)
     if (from) await load(id, from)
 } else {
