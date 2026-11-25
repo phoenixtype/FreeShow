@@ -63,6 +63,8 @@
         show_section: "Went to a part of the song",
         set_bible_version: "Changed the Bible version",
         show_overlay: "Changed an overlay",
+        show_picture_or_video: "Showed a picture or video",
+        control_sound: "Changed the sound",
         open_page: "Opened a page",
         list_plans: "Looked at the plans",
         create_plan: "Made a plan",

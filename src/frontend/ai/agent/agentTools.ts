@@ -5,16 +5,17 @@
 
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { activeProject, aiSuggestions, outLocked, overlays, projects, scriptures, shows, showsCache, sttTranscript, ai } from "../../stores"
+import { activeProject, aiSuggestions, audioChannelsData, outLocked, overlays, projects, scriptures, shows, showsCache, sttTranscript, ai } from "../../stores"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
+import { clearAudio } from "../../audio/audioFading"
 import { getOutputSlideText } from "../../components/actions/apiGet"
 import { getFirstActiveOutput, setOutput, toggleOutputs } from "../../components/helpers/output"
 import { loadShows } from "../../components/helpers/setShow"
 import { getLayoutRef } from "../../components/helpers/show"
 import { startShow } from "../../components/helpers/showActions"
 import { clearAll, clearBackground, clearOverlays, clearSlide, restoreOutput } from "../../components/output/clear"
-import { nextProgramSegment, playPauseSpeaker, startProgram } from "../../components/drawer/timers/speakerTimerActions"
+import { addSpeakerTime, nextProgramSegment, playPauseSpeaker, setSpeakerDuration, startProgram } from "../../components/drawer/timers/speakerTimerActions"
 import { convertText } from "../../converters/txt"
 import { ANON_KEY, FUNCTIONS_URL } from "../../scriptural/connection"
 import { setActiveScripture } from "../../converters/bible"
@@ -24,9 +25,10 @@ import { onScreenTitle } from "../components/floating/onScreen"
 import { openProject } from "../../components/show/project"
 import { readPassage } from "../scripture/passage"
 import { liveShowId, showSection } from "../songs/librarySongs"
-import { PAGES } from "../voice/matthias"
+import { matchTitle, PAGES } from "../voice/matthias"
 import { matchVersion } from "../voice/versions"
 import { isHeld, setAgentMode } from "./control"
+import { mediaList } from "./mediaLibrary"
 import { openPage } from "./openPage"
 import { nextPlanItem, planItems, showPlanItem } from "./planItems"
 import { currentScripture, presentPassage } from "./presentPassage"
@@ -434,6 +436,31 @@ export const agentTools: AgentTool[] = [
         }
     },
     {
+        name: "show_picture_or_video",
+        description: "Put one of the church's pictures or videos on screen by name. Leave name out to list them.",
+        inputSchema: { type: "object", properties: { name: text("Its name") } },
+        screen: true,
+        run: ({ name }) => {
+            const list = mediaList()
+            if (!name) return { media: list.slice(0, 100).map(({ name, kind }) => ({ name, kind })) }
+            requireUnlocked()
+            const item = matchTitle(String(name), list)
+            if (!item) throw new ToolError(`Nothing named "${name}" was found.`)
+            playMedia({ path: item.id })
+            return { shown: item.name }
+        }
+    },
+    {
+        name: "control_sound",
+        description: "The sound the app is playing: stop it, or mute and unmute it.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["stop", "mute", "unmute"] } }, required: ["command"] },
+        run: ({ command }) => {
+            if (command === "stop") clearAudio("", { clearPlaylist: true, commonClear: true })
+            else audioChannelsData.update((a) => ({ ...a, main: { ...(a.main || {}), isMuted: command === "mute" } }))
+            return "Done."
+        }
+    },
+    {
         name: "open_page",
         description: "Take the operator to a page or a library tab of the app. Changes nothing on screen.",
         inputSchema: { type: "object", properties: { page: { type: "string", enum: [...PAGES] } }, required: ["page"] },
@@ -444,9 +471,16 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "speaker_timer",
-        description: "The speaker's countdown: start the program, go to its next segment, or play and pause it.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["start", "next", "play_pause"] } }, required: ["command"] },
-        run: ({ command }) => {
+        description: "The speaker's countdown: start the program, go to its next segment, play and pause it, set it to a number of minutes and start it, or add minutes.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["start", "next", "play_pause", "set", "add"] }, minutes: { type: "integer", description: "For set and add" } }, required: ["command"] },
+        run: ({ command, minutes }) => {
+            if ((command === "set" || command === "add") && !(Number(minutes) > 0)) throw new ToolError("Say how many minutes.")
+            if (command === "add") return addSpeakerTime(Number(minutes) * 60)
+            if (command === "set") {
+                setSpeakerDuration(Number(minutes) * 60)
+                playPauseSpeaker()
+                return "Done."
+            }
             if (command === "start") startProgram()
             else if (command === "next") nextProgramSegment()
             else if (command === "play_pause") playPauseSpeaker()

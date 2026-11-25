@@ -2,13 +2,15 @@ import { beforeEach, expect, it, vi } from "vitest"
 
 vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
-    return { activeProject: writable("p"), ai: writable({}), aiSuggestions: writable([]), outLocked: writable(false), projects: writable({ p: { name: "Sunday", shows: [] } }), shows: writable({ a: { name: "Amazing Grace" } }), sttTranscript: writable({ finalized: "", unprocessed: "" }) }
+    return { activeProject: writable("p"), ai: writable({}), aiSuggestions: writable([]), audioChannelsData: writable({}), outLocked: writable(false), overlays: writable({ l: { name: "Logo" } }), projects: writable({ p: { name: "Sunday", shows: [] } }), shows: writable({ a: { name: "Amazing Grace" } }), sttTranscript: writable({ finalized: "", unprocessed: "" }) }
 })
-vi.mock("../../components/actions/apiHelper", () => ({ addToProject: vi.fn(), toggleSttListening: vi.fn() }))
+vi.mock("../../components/actions/apiHelper", () => ({ addToProject: vi.fn(), playMedia: vi.fn(), toggleSttListening: vi.fn() }))
 const screen = vi.hoisted(() => ({ slide: { id: "temp" } as { id: string } | null }))
-vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ out: { slide: screen.slide } }), toggleOutputs: vi.fn() }))
+vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ out: { slide: screen.slide } }), setOutput: vi.fn(), toggleOutputs: vi.fn() }))
+vi.mock("../../audio/audioFading", () => ({ clearAudio: vi.fn() }))
+vi.mock("../agent/mediaLibrary", () => ({ mediaList: () => [{ id: "/v/welcome.mp4", name: "welcome", kind: "video" }] }))
 vi.mock("../../components/output/clear", () => ({ clearBackground: vi.fn(), clearOverlays: vi.fn() }))
-vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ nextProgramSegment: vi.fn(), playPauseSpeaker: vi.fn(), startProgram: vi.fn() }))
+vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeakerTime: vi.fn(), nextProgramSegment: vi.fn(), setSpeakerDuration: vi.fn(), playPauseSpeaker: vi.fn(), startProgram: vi.fn() }))
 vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
 const chat = vi.hoisted(() => ({ run: vi.fn() }))
 vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))

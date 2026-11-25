@@ -3,12 +3,14 @@
 
 import { get, writable } from "svelte/store"
 import { uid } from "uid"
-import { addToProject, toggleSttListening } from "../../components/actions/apiHelper"
-import { getFirstActiveOutput, toggleOutputs } from "../../components/helpers/output"
+import { addToProject, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
+import { getFirstActiveOutput, setOutput, toggleOutputs } from "../../components/helpers/output"
 import { clearBackground, clearOverlays } from "../../components/output/clear"
-import { nextProgramSegment, playPauseSpeaker, startProgram } from "../../components/drawer/timers/speakerTimerActions"
+import { addSpeakerTime, nextProgramSegment, playPauseSpeaker, setSpeakerDuration, startProgram } from "../../components/drawer/timers/speakerTimerActions"
 import { openProject } from "../../components/show/project"
-import { activeProject, ai, aiSuggestions, outLocked, projects, shows, sttTranscript } from "../../stores"
+import { activeProject, ai, aiSuggestions, audioChannelsData, outLocked, overlays, projects, shows, sttTranscript } from "../../stores"
+import { clearAudio } from "../../audio/audioFading"
+import { mediaList } from "../agent/mediaLibrary"
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { changesScreen, changeVersion, liveState, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
 import { handMoves, setAgentMode } from "../agent/control"
@@ -198,6 +200,17 @@ export class Matthias {
                 else if (request.command === "next") nextProgramSegment()
                 else playPauseSpeaker()
                 return request.command === "start" ? "Timer started" : request.command === "next" ? "Next segment" : "Timer"
+            case "countdown":
+                if (request.add) addSpeakerTime(request.seconds)
+                else {
+                    setSpeakerDuration(request.seconds)
+                    playPauseSpeaker()
+                }
+                return request.add ? `Added ${spell(request.seconds)}` : `Timer: ${spell(request.seconds)}`
+            case "audio":
+                if (request.command === "stop") clearAudio("", { clearPlaylist: true, commonClear: true })
+                else audioChannelsData.update((a) => ({ ...a, main: { ...(a.main || {}), isMuted: request.command === "mute" } }))
+                return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : "Sound is on"
             case "unknown":
                 return this.think(asked)
         }
@@ -214,6 +227,25 @@ export class Matthias {
                 if (request.layer === "background") clearBackground()
                 else clearOverlays()
                 return "Cleared"
+            case "overlay": {
+                const overlay = matchTitle(request.name, nameList(get(overlays)))
+                // "take down the notice overlay" may be a song or slide after all
+                if (!overlay) throw new ToolError(`I do not know the overlay "${request.name}"`)
+                const showing = (getFirstActiveOutput()?.out?.overlays || []).includes(overlay.id)
+                if (showing !== request.on) setOutput("overlays", overlay.id, true)
+                return request.on ? `${overlay.name} is on` : `${overlay.name} is off`
+            }
+            case "media": {
+                const list = mediaList().filter((item) => !request.kind || item.kind === request.kind)
+                const item = matchTitle(request.name, list)
+                if (!item) {
+                    const show = matchTitle(request.name, songList())
+                    if (show) return this.present(show)
+                    throw new ToolError(`I do not know which ${request.kind === "video" ? "video" : "picture"} "${request.name}" is`)
+                }
+                playMedia({ path: item.id })
+                return item.name
+            }
             case "restore":
                 if (!AiManager.undoChange()) throw new ToolError("There is nothing to bring back")
                 return "Back on screen"
@@ -253,6 +285,10 @@ export class Matthias {
                 const scripture = slide?.id === "temp"
                 // "verse two" of a song that is up
                 if (slide && !scripture && request.command.type === "goto-verse") return this.section("verse", request.command.verse)
+                if (slide && !scripture && request.command.type === "first-chapter") {
+                    await AiManager.asOwnChange("", () => showSlide(1))
+                    return "From the top"
+                }
                 if (!scripture && request.command.type === "verse-step") {
                     const { delta } = request.command
                     await AiManager.asOwnChange("", () => stepScreen(delta > 0 ? "next" : "previous"))
@@ -422,4 +458,5 @@ const nameList = (items: { [id: string]: any }) =>
     Object.entries(items)
         .filter(([, item]) => item && !item.private && !item.deleted && !item.archived)
         .map(([id, item]) => ({ id, name: String(item.name || "") }))
+const spell = (seconds: number) => (seconds < 60 ? `${seconds} seconds` : `${seconds / 60} minute${seconds === 60 ? "" : "s"}`)
 const songList = () => nameList(get(shows))

@@ -111,7 +111,8 @@
     }
 </script>
 
-<div class="clear" data-title={translateText("guide_description.output_clear", $dictionary)}>
+<!-- nothing is up and nothing can come back: there is nothing to clear -->
+<div class="clear" class:empty={allCleared && audioCleared && !$outputCache} data-title={translateText("guide_description.output_clear", $dictionary)}>
     {#if !sceneCleared}
         <span class="group" style="border-bottom: 1px solid var(--primary-darker);">
             <div class="combinedButton">
@@ -228,6 +229,10 @@
 
     :global(.clearAll) {
         width: 100%;
+    }
+
+    .clear.empty {
+        display: none;
     }
 
     .faded {

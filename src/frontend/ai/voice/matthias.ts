@@ -61,6 +61,10 @@ export type Request =
     | { type: "plan"; step: "start" | "next" | "previous" }
     | { type: "open-plan"; name: string }
     | { type: "add-to-plan"; what: string }
+    | { type: "overlay"; name: string; on: boolean }
+    | { type: "media"; name: string; kind?: "image" | "video" }
+    | { type: "audio"; command: "stop" | "mute" | "unmute" }
+    | { type: "countdown"; seconds: number; add?: boolean }
     | { type: "timer"; command: "start" | "next" | "play_pause" }
     | { type: "page"; page: PageName }
     | { type: "tell"; about: "screen" | "next" | "help" }
@@ -116,7 +120,7 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent"]
+const FOLLOWS = ["clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
@@ -163,13 +167,27 @@ function parseWords(t: string): Request {
     if (/^(?:lock|hold|freeze)(?: the| that| it)?(?: screen| there)?$/.test(t)) return { type: "lock", on: true }
     if (/^(?:turn|switch) (?:the )?screens? on$|^(?:turn|switch) on (?:the )?screens?$/.test(t)) return { type: "screen", on: true }
     if (/^(?:turn|switch) (?:the )?screens? off$|^(?:turn|switch) off (?:the )?screens?$/.test(t)) return { type: "screen", on: false }
-    if (/^(?:clear|hear|clean|clay) (?:all|everything)$|^(?:go )?(?:black|blank)(?: the screen| screen)?$/.test(t)) return { type: "clear", all: true }
-    if (/^(?:(?:clear|hear|clean|wipe)(?: (?:the|that|it|this))?(?: screen| words| verse| scripture| off)?|take (?:it|that|this) (?:down|off)|remove (?:it|that|this)|hide (?:it|that|this))$/.test(t)) return { type: "clear", all: false }
+    if (/^(?:clear|hear|clean|clay) (?:all|everything)$|^(?:go )?(?:to )?(?:black|blank)(?: the screen| screen| out)?$|^(?:black|blank) (?:it|everything) out$|^remove everything$/.test(t)) return { type: "clear", all: true }
+    if (/^(?:(?:clear|hear|clean|wipe)(?: (?:the|that|it|this))?(?: screen| words| text| lyrics| verse| scripture| song| off)?|take (?:it|that|this|the (?:verse|scripture|song|words|lyrics|text|slide)) (?:down|off)|take (?:down|off) (?:the )?(?:verse|scripture|song|words|lyrics|text|slide)|remove (?:it|that|this)|hide (?:it|that|this))$/.test(t)) return { type: "clear", all: false }
     const layer = t.match(/^(?:clear|remove|hide|take (?:off|down)) (?:the )?(background|overlays?)$/)
     if (layer) return { type: "clear-layer", layer: layer[1] === "background" ? "background" : "overlays" }
-    if (/^(?:show|put up|read|repeat|give us) (?:it|that|this)(?: one)? again$|^(?:repeat|again|once more|one more time)(?: (?:it|that|this))?$/.test(t)) return { type: "again" }
+    if (/^(?:show|put up|read|repeat|give us|put) (?:it|that|this)(?: one)?(?: up)? again$|^(?:repeat|again|once more|one more time)(?: (?:it|that|this))?$/.test(t)) return { type: "again" }
     if (/^(?:(?:go )?back to|show|bring back|put up) (?:the )?(?:(?:previous|last) (?:scripture|passage|song)|one before|what was up before|what we had before)(?: again)?$|^(?:previous|last) (?:scripture|passage)$/.test(t)) return { type: "before", ...(/scripture|passage/.test(t) ? { kind: "scripture" } : /song/.test(t) ? { kind: "song" } : {}) }
     if (/^(?:bring|put) (?:it|that|this) back(?: up)?$|^undo$|^restore(?: it| the screen)?$/.test(t)) return { type: "restore" }
+    const overlay = t.match(/^(show|put up|put on|bring up|turn on|hide|remove|take down|take off|clear|turn off) (?:the |our )?(?:(logo|watermark)|(.+?) overlay)$/)
+    if (overlay) return { type: "overlay", name: overlay[2] || overlay[3], on: /^(?:show|put|bring|turn on)/.test(overlay[1]) }
+    const media = t.match(/^(?:show|play|put up|put on|bring up|start|run|project|display) (?:the |our )?(.+?) (video|clip|movie|picture|image|photo|background)$|^(?:change|set|switch) (?:the )?background to (?:the )?(.+)$/)
+    if (media && !/verse|chapter|\d/.test(t)) return { type: "media", name: media[1] || media[3], ...(/video|clip|movie/.test(media[2] || "") ? { kind: "video" } : /picture|image|photo/.test(media[2] || "") ? { kind: "image" } : {}) }
+    if (/^(?:stop|turn off|fade(?: out)?|kill|cut|end) (?:the )?(?:music|audio|sound|track|pads?)$/.test(t)) return { type: "audio", command: "stop" }
+    if (/^(?:mute|silence)(?: (?:the )?(?:music|audio|sound|track|speakers?|everything))$/.test(t)) return { type: "audio", command: "mute" }
+    if (/^unmute(?: (?:the )?(?:music|audio|sound|track|speakers?|everything))?$/.test(t)) return { type: "audio", command: "unmute" }
+    const clock = normalizeNumberWords(t)
+    const count = clock.match(/^(?:start|set|begin|put|run|give(?: (?:him|her|them|the (?:speaker|preacher|pastor)|pastor))?|set up) (?:a |an |the |up )*(?:(?:timer|countdown|clock)(?: (?:for|of|to))? )?(\d{1,3}|a|one|half an)[ -](minutes?|seconds?|hours?)(?: (?:timer|countdown|clock|for the (?:speaker|preacher|sermon)|to speak))?$/)
+    const more = clock.match(/^(?:add|give (?:him|her|them|the (?:speaker|preacher|pastor)|pastor)) (\d{1,2}|an?) (?:more |extra )?(minutes?|seconds?)(?: more| to the (?:timer|clock|countdown))?$/)
+    const span = (amount: string, unit: string) => (amount === "half an" ? 0.5 : Number(amount) || 1) * (unit.startsWith("hour") ? 3600 : unit.startsWith("min") ? 60 : 1)
+    if (more && /\b(?:add|more|extra)\b/.test(t)) return { type: "countdown", seconds: span(more[1], more[2]), add: true }
+    if (count) return { type: "countdown", seconds: span(count[1], count[2]) }
+
     if (/^(?:stop listening|be quiet|go to sleep|mute)$/.test(t)) return { type: "listen", on: false }
     if (/^(?:pause|stand down|hands off|stop|let me drive|manual mode|agent mode off|turn off agent mode)$/.test(t)) return { type: "agent", on: false }
     if (/^(?:resume|carry on|take over|you drive|lead|agent mode|agent mode on|turn on agent mode|continue by yourself)$/.test(t)) return { type: "agent", on: true }
@@ -177,6 +195,8 @@ function parseWords(t: string): Request {
     if (/^(?:next|another|the other|a different) (?:result|one|match|passage)$|^not that one$|^(?:wrong one|something else)$/.test(t)) return { type: "result", direction: "next" }
     if (/^(?:previous|last|first) (?:result|match)$/.test(t)) return { type: "result", direction: "previous" }
     const n = normalizeNumberWords(t)
+    if (/^(?:read on|keep (?:reading|going)|continue(?: reading| the reading)?|go on|move on)$/.test(t)) return { type: "navigate", command: { type: "verse-step", delta: 1 } }
+    if (/^(?:from the top|start (?:again|over|from the top)|back to the top|go back to the (?:start|beginning)|from the beginning|top of the song|start of the song)$/.test(t)) return { type: "navigate", command: { type: "first-chapter" } }
     const steps = n.match(/^(?:go |move |skip )?(?:(next|forward|ahead|on|back|previous|last) )?(\d{1,2}) (slides?|verses?|lines?)(?: (forward|ahead|on|back|backwards?))?$/)
     if (steps && (steps[1] || steps[4])) return { type: "slide", direction: /back|previous|last/.test(steps[1] || steps[4]) ? "previous" : "next", count: Math.max(1, Math.min(20, Number(steps[2]))) }
     const slide = n.match(/^(?:go |move |jump |back )*(?:to )?(?:the )?(?:(first|last) slide|slide (?:number )?(\d{1,3}))$/)
@@ -194,11 +214,12 @@ function parseWords(t: string): Request {
     const add = t.match(/^(?:add|put) (?:the song )?(.+?) (?:to|in|into|on) (?:the |this |our |today's )?(?:plan|project|service|set ?list)$/)
     if (add) return { type: "add-to-plan", what: add[1] }
     // anything else about a plan is for the model, not for the screen
-    if (/\b(?:plan|project|set ?list)\b/.test(t) && !/^(?:find|search|what does)/.test(t)) return { type: "unknown", words: t }
+    if (/\b(?:plan|project|set ?list)\b/.test(t) && !/^(?:find|search|what does|project)/.test(t)) return { type: "unknown", words: t }
     if (/^start (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "start" }
     if (/^(?:next|go to the next) (?:segment|speaker)$/.test(t)) return { type: "timer", command: "next" }
     if (/^(?:pause|stop|resume|continue) (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "play_pause" }
 
+    if (/^(?:what|which) (?:verse|scripture|passage|song) is (?:this|that|it|on|up|showing)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }
     if (/^what(?:'s| is)(?: showing| up)?(?: on)?(?: the)?(?: screen| up| showing)$|^what is (?:up|showing)$/.test(t) || /^what(?:'s| is)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }
     if (/^what(?:'s| is|s) (?:next|coming(?: up)?(?: next)?)$/.test(t)) return { type: "tell", about: "next" }
     if (/^(?:help|what can you do|what can i (?:say|ask))$/.test(t)) return { type: "tell", about: "help" }
@@ -212,7 +233,7 @@ function parseWords(t: string): Request {
     // "go to chapter 3 of Romans" names a book: that is a passage, not a step
     if (navigate && !/\bof [a-z]/.test(t)) return { type: "navigate", command: navigate }
 
-    const version = t.match(/^(?:use|switch to|change to|in|read (?:it |that |this )?in|show (?:it |that |this )?in|give (?:it )?(?:to )?(?:me|us) (?:it |that )?in|try)(?: the)? (.+?)(?: (?:version|translation|bible))?$/)
+    const version = t.match(/^(?:use|switch(?: it)? to|change(?: it| the version| the bible| the translation)? to|in|read (?:it |that |this )?in|show (?:it |that |this )?in|give (?:it )?(?:to )?(?:me|us) (?:it |that )?in|try)(?: the)? (.+?)(?: (?:version|translation|bible))?$/)
     if (version && /\b(?:use|switch|change|in|try)\b/.test(t) && !/\d|chapter|verse/.test(version[1])) return { type: "version", name: version[1] }
 
     const song = t.match(/^(?:sing|play|start|let us sing|let's sing|(?:(?:show|put up|bring up|open|project) )?(?:the )?(?:song|hymn|chorus))(?: the| called| song| hymn)* (.+)$/)
