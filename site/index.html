@@ -10,7 +10,19 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
         <link rel="canonical" href="https://project.scriptural.online/" />
-        <meta name="theme-color" content="#080808" />
+        <meta name="theme-color" content="#110f0e" />
+        <meta name="robots" content="max-image-preview:large" />
+        <link rel="preload" as="image" href="/backgrounds/jordanvalley.webp" type="image/webp" fetchpriority="high" />
+        <script>
+            // the same choice, under the same name, as scriptural.online
+            try {
+                const theme = localStorage.getItem("theme")
+                if (theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark")
+            } catch {}
+        </script>
+        <script type="application/ld+json">
+            { "@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Scriptural Project", "applicationCategory": "MultimediaApplication", "operatingSystem": "Windows, macOS, Linux", "url": "https://project.scriptural.online/", "description": "Put songs and scripture on screen in church meetings. Scriptural listens to the preacher and brings up each verse as it is read.", "publisher": { "@type": "Organization", "name": "Scriptural", "url": "https://scriptural.online/" } }
+        </script>
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Scriptural Project" />
         <meta property="og:title" content="Scriptural Project: songs and scripture for church meetings" />
@@ -23,135 +35,585 @@
         <meta property="og:image:alt" content="Scriptural Project: Psalm 23:1 on a church screen" />
         <meta name="twitter:card" content="summary_large_image" />
         <style>
-            @font-face {
-                font-family: "Inter";
-                src: url("/inter.woff2") format("woff2");
-                font-weight: 100 900;
-                font-display: swap;
-            }
+            /* Scriptural's own tokens: scriptural.online, light and dark */
             :root {
-                --background: #080808;
-                --card: #121212;
-                --border: #262626;
-                --foreground: #f7f7f7;
-                --muted: #bdbdbd;
+                --background: hsl(36 30% 97%);
+                --foreground: hsl(30 8% 12%);
+                --card: hsl(36 30% 97%);
+                --muted: hsl(36 20% 94%);
+                --muted-foreground: hsl(30 5% 40%);
+                --accent: hsl(36 20% 91%);
+                --border: hsl(36 15% 87%);
+                --ink: hsl(30 10% 6%);
+                --glow: hsl(35 54% 64% / 0.18);
+                color-scheme: light;
+            }
+            .dark {
+                --background: hsl(0 0% 3%);
+                --foreground: hsl(0 0% 97%);
+                --card: hsl(0 0% 7%);
+                --muted: hsl(0 0% 10.5%);
+                --muted-foreground: hsl(0 0% 74%);
+                --accent: hsl(0 0% 17%);
+                --border: hsl(0 0% 18%);
+                color-scheme: dark;
             }
             * {
                 box-sizing: border-box;
+            }
+            html {
+                scroll-behavior: smooth;
             }
             body {
                 margin: 0;
                 background: var(--background);
                 color: var(--foreground);
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
                 line-height: 1.55;
                 -webkit-font-smoothing: antialiased;
             }
-            main {
-                max-width: 640px;
-                margin: 0 auto;
-                padding: 72px 24px 48px;
+            a {
+                color: inherit;
             }
-            img {
-                width: 56px;
-                height: 56px;
-                border-radius: 14px;
+            h1,
+            h2,
+            h3,
+            p {
+                margin: 0;
+            }
+            h1,
+            h2 {
+                font-weight: 700;
+                letter-spacing: -0.025em;
+                line-height: 1.1;
+                text-wrap: balance;
+            }
+            :focus-visible {
+                outline: 2px solid currentColor;
+                outline-offset: 2px;
+            }
+            .wrap {
+                max-width: 64rem;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
+
+            header {
+                position: fixed;
+                inset: 0 0 auto;
+                z-index: 10;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 24px;
+                color: white;
+                border-bottom: 1px solid transparent;
+                transition:
+                    background-color 0.3s,
+                    color 0.3s;
+            }
+            header.scrolled {
+                background: color-mix(in srgb, var(--background) 95%, transparent);
+                backdrop-filter: blur(12px);
+                border-color: var(--border);
+                color: var(--foreground);
+            }
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 1.125rem;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                text-decoration: none;
+            }
+            header nav {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            header nav a,
+            header nav button {
+                display: grid;
+                place-items: center;
+                min-width: 40px;
+                min-height: 40px;
+                padding: 0 14px;
+                border: 0;
+                border-radius: 999px;
+                background: transparent;
+                color: inherit;
+                font: inherit;
+                font-size: 0.875rem;
+                font-weight: 500;
+                text-decoration: none;
+                cursor: pointer;
+            }
+            header nav button {
+                padding: 0;
+            }
+            header nav :is(a, button):hover {
+                background: rgb(127 127 127 / 0.2);
+            }
+            .moon,
+            .dark .sun {
+                display: none;
+            }
+            .dark .moon {
+                display: block;
+            }
+
+            .hero {
+                min-height: 100dvh;
+                display: grid;
+                align-items: center;
+                padding: 104px 0 64px;
+                background:
+                    radial-gradient(60% 50% at 70% 45%, var(--glow), transparent 70%),
+                    var(--ink);
+                color: white;
+            }
+            .hero .wrap {
+                width: 100%;
+                max-width: 72rem;
+                display: grid;
+                gap: 56px;
             }
             h1 {
-                font-size: 2.25rem;
-                font-weight: 600;
-                letter-spacing: -0.02em;
-                line-height: 1.15;
-                margin: 28px 0 12px;
+                font-size: 3rem;
+                letter-spacing: -0.05em;
+                line-height: 1;
             }
-            p {
-                color: var(--muted);
-                margin: 0 0 16px;
+            .lead {
+                max-width: 28rem;
+                margin: 20px 0 32px;
+                font-size: 1.125rem;
+                color: rgb(255 255 255 / 0.8);
             }
             .downloads {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 10px;
-                margin: 32px 0 12px;
+            }
+            .button,
+            .downloads a {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 48px;
+                padding: 0 28px;
+                border-radius: 999px;
+                border: 1px solid transparent;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                text-decoration: none;
+                transition: opacity 0.15s;
             }
             .downloads a {
-                display: inline-block;
-                padding: 10px 18px;
-                border-radius: 10px;
-                background: var(--foreground);
-                color: var(--background);
-                font-weight: 600;
-                text-decoration: none;
+                background: hsl(36 30% 97%);
+                color: hsl(30 8% 12%);
             }
             .downloads a.secondary {
+                min-height: 40px;
+                padding: 0 18px;
+                align-self: center;
                 background: transparent;
-                color: var(--foreground);
-                border: 1px solid var(--border);
-            }
-            .note {
+                color: white;
+                border-color: rgb(255 255 255 / 0.25);
                 font-size: 0.875rem;
             }
-            hr {
-                border: 0;
-                border-top: 1px solid var(--border);
-                margin: 40px 0;
+            .downloads a:hover {
+                opacity: 0.9;
+            }
+            .button {
+                min-height: 40px;
+                padding: 0 20px;
+                font-size: 0.875rem;
+                border-color: var(--border);
+                background: var(--background);
+            }
+            .button:hover {
+                background: var(--accent);
+            }
+            .small {
+                margin-top: 16px;
+                font-size: 0.75rem;
+                color: rgb(255 255 255 / 0.6);
+            }
+
+            /* the screen at the front of the room */
+            .screen {
+                position: relative;
+                aspect-ratio: 16 / 9;
+                border: 8px solid black;
+                border-radius: 20px;
+                overflow: hidden;
+                background: black;
+                box-shadow:
+                    0 0 0 1px rgb(255 255 255 / 0.15),
+                    0 30px 80px -20px rgb(0 0 0 / 0.8);
+            }
+            .slide {
+                position: absolute;
+                inset: 0;
+                display: grid;
+                place-content: center;
+                gap: 14px;
+                padding: 8%;
+                text-align: center;
+                background: linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.55)), var(--photo) center / 108%;
+                opacity: 0;
+                transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+            .slide.on {
+                opacity: 1;
+            }
+            .slide p {
+                font-size: clamp(1.1rem, 2.4vw, 1.75rem);
+                font-weight: 600;
+                line-height: 1.3;
+                text-wrap: balance;
+            }
+            .slide span {
+                font-size: 0.875rem;
+                font-weight: 600;
+                opacity: 0.85;
+            }
+            .said {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: fit-content;
+                max-width: 100%;
+                margin: 18px auto 0;
+                padding: 9px 18px;
+                border-radius: 999px;
+                border: 1px solid rgb(255 255 255 / 0.15);
+                background: rgb(255 255 255 / 0.06);
+                font-size: 0.9375rem;
+                color: rgb(255 255 255 / 0.85);
+            }
+
+            .feature {
+                display: grid;
+                gap: 40px;
+                padding-block: 64px;
+            }
+            .eyebrow {
+                margin-bottom: 12px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: var(--muted-foreground);
             }
             h2 {
-                font-size: 1.125rem;
+                font-size: 1.875rem;
+            }
+            .feature .text > p:not(.eyebrow) {
+                max-width: 28rem;
+                margin: 16px 0 24px;
+                color: var(--muted-foreground);
+            }
+            .card {
+                width: 100%;
+                max-width: 24rem;
+                margin: 0 auto;
+                border: 1px solid var(--border);
+                border-radius: 2rem;
+                background: var(--card);
+                overflow: hidden;
+                box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+                font-size: 0.9375rem;
+            }
+            .card .row {
+                padding: 14px 24px;
+                border-top: 1px solid var(--border);
+            }
+            .card .row:first-child {
+                border-top: 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 font-weight: 600;
-                margin: 0 0 8px;
             }
-            section + section {
-                margin-top: 24px;
+            .quiet {
+                color: var(--muted-foreground);
+                font-weight: 400;
+                font-size: 0.8125rem;
             }
-            a {
+            .now {
+                background: var(--muted);
+            }
+            .pills {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 20px 24px 24px;
+                border-top: 1px solid var(--border);
+            }
+            .pills span {
+                padding: 6px 14px;
+                border: 1px solid var(--border);
+                border-radius: 999px;
+                background: var(--muted);
+                font-size: 0.875rem;
+            }
+            .dot {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                margin-inline-end: 10px;
+                border-radius: 50%;
+                background: hsl(142 60% 42%);
+            }
+
+            .list {
+                display: grid;
+                padding: 0;
+                margin: 0;
+                list-style: none;
+                column-gap: 48px;
+            }
+            .list li {
+                display: flex;
+                gap: 16px;
+                padding: 18px 0;
+                border-top: 1px solid var(--border);
+            }
+            .list svg {
+                flex: none;
+                margin-top: 2px;
+            }
+            .list b {
+                display: block;
+                font-weight: 600;
+            }
+            .list a {
+                display: flex;
+                flex: 1;
+                gap: 16px;
+                text-decoration: none;
+            }
+            .list a:hover b {
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+            .list p {
+                font-size: 0.875rem;
+                color: var(--muted-foreground);
+            }
+            .also {
+                padding-block: 32px 64px;
+            }
+            .also + .also {
+                padding-top: 0;
+            }
+
+            footer {
+                border-top: 1px solid var(--border);
+                background: color-mix(in srgb, var(--muted) 40%, var(--background));
+                padding: 48px 0;
+                font-size: 0.875rem;
+                color: var(--muted-foreground);
+            }
+            footer .wrap {
+                display: grid;
+                gap: 20px;
+                text-align: center;
+            }
+            footer nav {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px 24px;
+            }
+            footer nav a {
+                text-decoration: none;
+            }
+            footer a:hover {
                 color: var(--foreground);
             }
-            footer {
-                font-size: 0.8125rem;
-                color: var(--muted);
+
+            @media (min-width: 768px) {
+                h1 {
+                    font-size: 4.5rem;
+                }
+                h2 {
+                    font-size: 2.25rem;
+                }
+                .lead {
+                    font-size: 1.25rem;
+                }
+                .hero .wrap {
+                    grid-template-columns: 1fr 1.1fr;
+                    align-items: center;
+                    gap: 48px;
+                }
+                .feature {
+                    grid-template-columns: 1fr 1fr;
+                    align-items: center;
+                    gap: 64px;
+                    padding-block: 96px;
+                }
+                .feature.flip .text {
+                    order: 2;
+                }
+                .list {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
+            @media (max-width: 767px) {
+                html {
+                    font-size: 17px;
+                }
+                .hero {
+                    text-align: center;
+                }
+                .lead {
+                    margin-inline: auto;
+                }
+                .downloads {
+                    justify-content: center;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    transition: none !important;
+                    scroll-behavior: auto !important;
+                }
             }
         </style>
     </head>
     <body>
+        <header id="top">
+            <a class="brand" href="/"><svg width="20" height="20" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="114" fill="#000"/><rect x="6" y="6" width="500" height="500" rx="108" fill="none" stroke="#fff" stroke-opacity="0.3" stroke-width="12"/><g transform="translate(106 106) scale(12.5)" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></g></svg> Scriptural Project</a>
+            <nav>
+                <button id="theme" aria-label="Light or dark">
+                    <span class="sun"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
+                    <span class="moon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+                </button>
+                <a href="/pricing">Plans</a>
+            </nav>
+        </header>
+
         <main>
-            <img src="/icon.png" alt="" />
-            <h1>Songs and scripture on screen, for church meetings</h1>
-            <p>Scriptural Project runs the screens in the room. It listens to the preacher and brings up each verse as it is read, so no one has to hunt for it.</p>
-
-            <div class="downloads" id="downloads">
-                <a class="secondary" href="https://github.com/phoenixtype/FreeShow/releases">All downloads</a>
-            </div>
-            <p class="note" id="version"></p>
-
-            <hr />
-
-            <section>
-                <h2>Hears the verse</h2>
-                <p>Say "John 3:16", quote it, or tell the story of the prodigal son. The verse comes up on screen, or waits for a click if you prefer.</p>
-            </section>
-            <section>
-                <h2>Follows the reading</h2>
-                <p>"Next verse", "go to chapter four" and "last verse" move the screen while the preacher keeps going.</p>
-            </section>
-            <section>
-                <h2>Runs on your computer</h2>
-                <p>Speech is turned into text on the computer itself. Songs, Bibles and media stay on it too.</p>
+            <section class="hero">
+                <div class="wrap">
+                    <div>
+                        <h1>God’s Word, up as it is read.</h1>
+                        <p class="lead">Songs and scripture on screen for church meetings. It listens to the preacher and brings up each verse, so no one has to hunt for it.</p>
+                        <div class="downloads" id="downloads">
+                            <a class="secondary" href="https://github.com/phoenixtype/FreeShow/releases">All downloads</a>
+                        </div>
+                        <p class="small">Free for Mac, Windows and Linux. <span id="version"></span></p>
+                    </div>
+                    <div aria-hidden="true">
+                        <div class="screen">
+                            <div class="slide on" style="--photo: url(/backgrounds/jordanvalley.webp)"><p>The LORD is my shepherd; I shall not want.</p><span>Psalm 23:1</span></div>
+                            <div class="slide" data-photo="/backgrounds/lakehermon.webp"><p>For God so loved the world, that he gave his only begotten Son.</p><span>John 3:16</span></div>
+                            <div class="slide" data-photo="/backgrounds/olivetview.webp"><p>Be still, and know that I am God.</p><span>Psalm 46:10</span></div>
+                        </div>
+                        <p class="said"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg><span id="said">“Turn with me to Psalm twenty-three”</span></p>
+                    </div>
+                </div>
             </section>
 
-            <hr />
-
-            <section>
-                <h2>Free, with plans for your team</h2>
-                <p>The app is free. A plan adds a shared church library, Scriptural AI and licensed Bible versions. <a href="/pricing">See plans</a>.</p>
+            <section class="wrap feature">
+                <div class="text">
+                    <p class="eyebrow">Listen</p>
+                    <h2>Hears the verse, and follows the reading</h2>
+                    <p>Say “John 3:16”, quote it, or tell the story of the prodigal son. It comes up, or waits for a click if you prefer. “Next verse” moves the screen while the preacher keeps going.</p>
+                </div>
+                <div class="card" aria-hidden="true">
+                    <div class="row"><span><span class="dot"></span>Listening</span><span class="quiet">Live</span></div>
+                    <div class="row quiet">“…and he arose, and came to his father. But when he was yet a great way off…”</div>
+                    <div class="row now"><b>Luke 15:20</b> <span class="quiet">On screen</span></div>
+                    <div class="row"><b>Luke 15:11</b> <span class="quiet">Likely</span></div>
+                </div>
             </section>
 
-            <hr />
+            <section class="wrap feature flip">
+                <div class="text">
+                    <p class="eyebrow">Ask</p>
+                    <h2>Tell Matthias what you want</h2>
+                    <p>Say the name, or type it. Matthias finds scripture, goes back to the chorus, runs the service plan and starts the timer, one after another if you ask for several.</p>
+                </div>
+                <div class="card" aria-hidden="true">
+                    <div class="row"><span>Matthias</span><span class="quiet">Say it or type it</span></div>
+                    <div class="pills"><span>John three sixteen</span><span>Read that in the NLT</span><span>Find the verse about being anxious</span><span>Back to the chorus</span><span>Start the service</span><span>Five minute countdown</span><span>Clear the screen</span></div>
+                </div>
+            </section>
 
-            <footer>
-                Built on <a href="https://freeshow.app">FreeShow</a>, free software under the GNU GPL v3. <a href="https://github.com/phoenixtype/FreeShow">Source code</a>. By <a href="https://scriptural.online">Scriptural</a>.
-            </footer>
+            <section class="wrap feature">
+                <div class="text">
+                    <p class="eyebrow">Lead</p>
+                    <h2>Let it lead, and step in any time</h2>
+                    <p>In agent mode Matthias runs the screen by itself. Move anything by hand and it waits for you. One button hands it back, and locking the screen stops everything.</p>
+                </div>
+                <div class="card" aria-hidden="true">
+                    <div class="row"><span><span class="dot"></span>Matthias is leading</span><span class="quiet">Agent mode</span></div>
+                    <div class="row quiet">You press Next</div>
+                    <div class="row now"><b>You have the screen</b> <span class="quiet">for 30 seconds</span></div>
+                    <div class="row quiet">Hand back, or keep it</div>
+                </div>
+            </section>
+
+            <section class="wrap also">
+                <p class="eyebrow">Also inside</p>
+                <ul class="list">
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        <div><b>Songs</b><p>Bring yours from EasyWorship, ProPresenter and others.</p></div>
+                    </li>
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                        <div><b>Service plans</b><p>Songs, scripture and media in the order of the meeting.</p></div>
+                    </li>
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+                        <div><b>Backgrounds</b><p>Hundreds made for churches, with loops and worship pads.</p></div>
+                    </li>
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        <div><b>Speaker timer</b><p>A countdown only the speaker sees.</p></div>
+                    </li>
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                        <div><b>Stage screen</b><p>What is up, what is next, and the time, for the platform.</p></div>
+                    </li>
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+                        <div><b>Phone remote</b><p>Move the slides from anywhere in the room.</p></div>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="wrap also">
+                <p class="eyebrow">For your church</p>
+                <ul class="list">
+                    <li>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <div><b>Runs on your computer</b><p>Speech is turned into text on the computer itself. Songs, Bibles and media stay on it too.</p></div>
+                    </li>
+                    <li>
+                        <a href="/pricing"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span><b>Free, with plans for your team</b><p>A plan adds a shared church library, Scriptural AI and licensed Bible versions.</p></span></a>
+                    </li>
+                </ul>
+            </section>
         </main>
+
+        <footer>
+            <div class="wrap">
+                <nav>
+                    <a href="https://scriptural.online">Scriptural</a>
+                    <a href="/pricing">Plans</a>
+                    <a href="https://github.com/phoenixtype/FreeShow/releases">All downloads</a>
+                    <a href="https://github.com/phoenixtype/FreeShow">Source code</a>
+                    <a href="https://scriptural.online/privacy">Privacy Policy</a>
+                    <a href="https://scriptural.online/terms">Terms of Service</a>
+                </nav>
+                <p>Built on <a href="https://freeshow.app">FreeShow</a>, free software under the GNU GPL v3. By <a href="https://scriptural.online">Scriptural</a>.</p>
+            </div>
+        </footer>
 
         <script>
             // Download links come from the newest published release, so a new version needs no edit here.
@@ -183,6 +645,33 @@
                     document.getElementById("version").textContent = `Version ${release.tag_name.replace(/^v/, "")}`
                 })
                 .catch(() => {})
+
+            const top_ = document.getElementById("top")
+            const onScroll = () => top_.classList.toggle("scrolled", scrollY > 50)
+            addEventListener("scroll", onScroll, { passive: true })
+            onScroll()
+
+            document.getElementById("theme").addEventListener("click", () => {
+                const dark = document.documentElement.classList.toggle("dark")
+                try {
+                    localStorage.setItem("theme", dark ? "dark" : "light")
+                } catch {}
+            })
+
+            // the screen turns to the next verse as it is said
+            const SAID = ["“Turn with me to Psalm twenty-three”", "“John three sixteen says…”", "“Be still, and know that I am God”"]
+            const slides = [...document.querySelectorAll(".slide")]
+            let current = 0
+            if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+                setInterval(() => {
+                    if (document.hidden) return
+                    slides[current].classList.remove("on")
+                    current = (current + 1) % slides.length
+                    const slide = slides[current]
+                    if (slide.dataset.photo) slide.style.setProperty("--photo", `url(${slide.dataset.photo})`)
+                    slide.classList.add("on")
+                    document.getElementById("said").textContent = SAID[current]
+                }, 4500)
         </script>
     </body>
 </html>
