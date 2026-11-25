@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte"
+    import { onMount, tick } from "svelte"
     import type { Draw, DrawLine } from "../../../types/Draw"
     import { draw, drawSettings, outputs, paintCache, paintCacheSlide, styles } from "../../stores"
     import { clone } from "../helpers/array"
@@ -14,6 +14,15 @@
 
     $: outputId = getFirstActiveOutput($outputs)?.id || ""
     $: resolution = getOutputResolution(outputId, $outputs, true, "", $styles)
+    // a canvas is wiped whenever its width or height is set, even to the same number, so the
+    // drawing must only follow the size and not every change in the outputs or styles
+    $: width = resolution.width
+    $: height = resolution.height
+    $: if (mounted && width && height) void tick().then(redrawAll)
+    function redrawAll() {
+        ctx?.clearRect(0, 0, width, height)
+        redraw()
+    }
 
     $: outSlide = $outputs[outputId]?.out?.slide
     $: outSlideId = (outSlide?.id || "") + (outSlide?.index || 0) + (outSlide?.layout || "")
@@ -151,7 +160,7 @@
     }
 </script>
 
-<canvas bind:this={canvas} width={resolution.width} height={resolution.height} />
+<canvas bind:this={canvas} {width} {height} />
 
 <style>
     canvas {

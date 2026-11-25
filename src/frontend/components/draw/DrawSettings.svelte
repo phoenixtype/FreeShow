@@ -77,6 +77,7 @@
     async function cleanUp() {
         const answer = await runAgentTool("clean_up_drawing", {})
         drawingNote = answer.ok ? "Drawing tidied." : answer.error || ""
+        setTimeout(() => (drawingNote = ""), 3000)
     }
 
     const update = (value: any, key: string) => {
@@ -187,5 +188,8 @@
         color: var(--text);
         opacity: 0.7;
         overflow-wrap: anywhere;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
     }
 </style>

@@ -5,7 +5,7 @@
 
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { activeProject, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, projects, scriptures, shows, showsCache, styles, sttTranscript, ai } from "../../stores"
+import { activePage, activeProject, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, projects, scriptures, shows, showsCache, styles, sttTranscript, ai } from "../../stores"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { clearAudio } from "../../audio/audioFading"
@@ -55,6 +55,16 @@ const none = { type: "object" as const, properties: {} }
 
 const requireUnlocked = () => {
     if (get(outLocked)) throw new ToolError("The screen is locked in the app. The operator has to unlock it first.")
+}
+
+/** saving a song or list opens it for the operator; Matthias adds quietly, so their page stays put */
+function addQuietly<T>(add: () => T): T {
+    const page = get(activePage)
+    try {
+        return add()
+    } finally {
+        if (get(activePage) !== page) activePage.set(page)
+    }
 }
 
 const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -284,7 +294,7 @@ export const agentTools: AgentTool[] = [
             if (!name || !String(lyrics).trim()) throw new ToolError("A song needs a title and its words.")
             const existing = Object.values(get(shows)).find((show) => show?.name?.trim().toLowerCase() === name.toLowerCase())
             if (existing) throw new ToolError(`"${existing.name}" is already in the library.`)
-            const { id } = convertText({ name, text: String(lyrics), category: "song", noFormatting: true, open: false })
+            const { id } = addQuietly(() => convertText({ name, text: String(lyrics), category: "song", noFormatting: true, open: false }))
             return { added: name, id }
         }
     },
@@ -353,7 +363,7 @@ export const agentTools: AgentTool[] = [
             if ("error" in list) throw new ToolError(list.error)
             const existing = Object.values(get(shows)).find((show) => show?.name?.trim().toLowerCase() === list.title.toLowerCase())
             if (existing) throw new ToolError(`"${existing.name}" is already in the library. Pick another title, or show that one.`)
-            const { id } = convertText({ name: list.title, text: list.text, category: null, noFormatting: true, open: false })
+            const { id } = addQuietly(() => convertText({ name: list.title, text: list.text, category: null, noFormatting: true, open: false }))
             return { made: list.title, id, points: list.count, next: "Use present_song with this name to put it on screen." }
         }
     },
