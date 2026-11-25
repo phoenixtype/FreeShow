@@ -14,6 +14,51 @@ export interface Resolution {
 }
 
 export const MAX_SHAPES = 60
+
+/** what can be drawn on request without a model: plain shapes, large and centred */
+export const SIMPLE_SHAPES = {
+    cross: [
+        {
+            type: "line",
+            points: [
+                [50, 10],
+                [50, 90]
+            ],
+            size: 2.5
+        },
+        {
+            type: "line",
+            points: [
+                [30, 34],
+                [70, 34]
+            ],
+            size: 2.5
+        }
+    ],
+    circle: [{ type: "circle", x: 50, y: 50, r: 22, size: 2 }],
+    arrow: [
+        {
+            type: "arrow",
+            points: [
+                [15, 50],
+                [85, 50]
+            ],
+            size: 2
+        }
+    ],
+    box: [{ type: "rect", x: 25, y: 20, w: 50, h: 60, size: 2 }],
+    line: [
+        {
+            type: "line",
+            points: [
+                [15, 50],
+                [85, 50]
+            ],
+            size: 2
+        }
+    ]
+} as const satisfies Record<string, readonly Shape[]>
+export type SimpleShape = keyof typeof SIMPLE_SHAPES
 const DEFAULT_COLOR = "#ffffff"
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 

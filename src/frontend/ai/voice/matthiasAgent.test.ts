@@ -24,7 +24,7 @@ vi.mock("../agent/openPage", () => ({ openPage: vi.fn() }))
 vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), removeFromOpenPlan: vi.fn(() => ({ plan: "Sunday", removed: "Amazing Grace" })), showPlanItem: vi.fn() }))
 vi.mock("../agent/stepScreen", () => ({ stepScreen: vi.fn() }))
 const model = vi.hoisted(() => ({ llm: null as any }))
-vi.mock("../llm/llmManager", () => ({ addChatMessage: vi.fn(), getChatHistory: () => [], getLLMManager: () => model.llm }))
+vi.mock("../llm/llmManager", () => ({ addChatMessage: vi.fn(), clearChatHistory: vi.fn(), getChatHistory: () => [], getLLMManager: () => model.llm }))
 vi.mock("../llm/prompts", () => ({ CHAT_RESPONSE_SCHEMA: {}, CHAT_SYSTEM_PROMPT: "" }))
 vi.mock("../songs/librarySongs", () => ({ showSection: vi.fn(async () => "Chorus"), showSlide: vi.fn(async () => 2) }))
 const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn(), findReference: vi.fn(async (w: string) => (/john/i.test(w) ? "John 3:16" : null)), navigateNow: vi.fn(async () => "John 3:17"), clearScreen: vi.fn(), undoChange: vi.fn(() => true), showAgain: vi.fn(async () => "John 3:16"), asOwnChange: vi.fn((_c: string, f: () => unknown) => f()) }))
@@ -35,8 +35,9 @@ import { addToProject } from "../../components/actions/apiHelper"
 import { ai, outLocked } from "../../stores"
 import { handMoves } from "../agent/control"
 import { showPlanItem } from "../agent/planItems"
+import { runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
-import { addChatMessage } from "../llm/llmManager"
+import { addChatMessage, clearChatHistory } from "../llm/llmManager"
 import { showSection } from "../songs/librarySongs"
 import { Matthias, matthiasStatus } from "./matthiasAgent"
 
@@ -191,4 +192,35 @@ it("takes a song off the plan, and says how to get it back", async () => {
 it("does not put up a passage for a sentence that only mentions one", async () => {
     await Matthias.ask("read me the words of Morning Hill without showing them")
     expect(manager.showReference).not.toHaveBeenCalled()
+})
+
+it("draws a plain shape, tidies and clears the drawing without a model", async () => {
+    vi.mocked(runAgentTool).mockResolvedValue({ ok: true, result: {} })
+    await Matthias.ask("draw a cross on the paint board", true, true)
+    expect(runAgentTool).toHaveBeenLastCalledWith("draw_on_screen", { shapes: expect.arrayContaining([expect.objectContaining({ type: "line" })]) })
+    expect(get(matthiasStatus)?.text).toBe("Drew a cross")
+    await Matthias.ask("clean up the drawing", true, true)
+    expect(runAgentTool).toHaveBeenLastCalledWith("clean_up_drawing", {})
+    await Matthias.ask("clear the drawing", true, true)
+    expect(runAgentTool).toHaveBeenLastCalledWith("clear_drawing", {})
+})
+
+it("says what a drawing needs when it is not a plain shape and there is no model", async () => {
+    await Matthias.ask("Draw what the preacher is describing", true, true)
+    expect(vi.mocked(addChatMessage).mock.calls[1][2]).toMatch(/needs an AI model/)
+})
+
+it("does not draw on a locked screen, and reports a drawing that failed", async () => {
+    outLocked.set(true)
+    await Matthias.ask("draw a cross")
+    expect(runAgentTool).not.toHaveBeenCalled()
+    outLocked.set(false)
+    vi.mocked(runAgentTool).mockResolvedValue({ ok: false, error: "There is no drawing to clean up." })
+    await Matthias.ask("clean up the drawing")
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: "There is no drawing to clean up." })
+})
+
+it("forgets the conversation and stops what is being done when the chat is cleared", () => {
+    Matthias.clearChat()
+    expect(clearChatHistory).toHaveBeenCalledWith("default")
 })

@@ -2,13 +2,15 @@
     import { createEventDispatcher } from "svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { NAME } from "../../voice/matthias"
-    import { Matthias, matthiasStatus } from "../../voice/matthiasAgent"
+    import { chatSessions } from "../../llm/llmManager"
+    import { Matthias, MATTHIAS_CHAT, matthiasStatus } from "../../voice/matthiasAgent"
     import { focusMatthias } from "../../liveCopilot"
 
     const dispatch = createEventDispatcher<{ sent: void }>()
 
     let words = ""
     let input: HTMLInputElement | undefined
+    $: hasChat = ($chatSessions[MATTHIAS_CHAT] || []).length > 0
     $: working = $matthiasStatus?.state === "working"
     $: if ($focusMatthias && input) {
         input.focus()
@@ -34,6 +36,9 @@
     <input type="text" bind:this={input} bind:value={words} on:keydown={onKeydown} placeholder="Tell {NAME} what to do" aria-label="Tell {NAME} what to do" />
     {#if working}
         <MaterialButton variant="outlined" small title="Stop what is being done" on:click={() => Matthias.stop()}>Stop</MaterialButton>
+    {/if}
+    {#if hasChat && !working}
+        <MaterialButton variant="outlined" small title="Clear the conversation" on:click={() => Matthias.clearChat()}>Clear chat</MaterialButton>
     {/if}
     <MaterialButton icon="send" title="chat.send" disabled={!words.trim()} on:click={send} />
 </div>

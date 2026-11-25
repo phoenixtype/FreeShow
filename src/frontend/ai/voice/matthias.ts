@@ -55,6 +55,8 @@ export type Request =
     | { type: "slide"; direction: "next" | "previous"; count?: number }
     | { type: "goto-slide"; slide: number | "last" }
     | { type: "section"; name: string; number?: number }
+    | { type: "draw"; shape: "cross" | "circle" | "arrow" | "box" | "line" }
+    | { type: "drawing"; command: "clean" | "clear" }
     | { type: "again" }
     | { type: "before"; kind?: "scripture" | "song" }
     | { type: "clear-layer"; layer: "background" | "overlays" }
@@ -123,7 +125,7 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan"]
+const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
@@ -172,6 +174,10 @@ function parseWords(t: string): Request {
     if (/^(?:turn|switch) (?:the )?screens? off$|^(?:turn|switch) off (?:the )?screens?$/.test(t)) return { type: "screen", on: false }
     if (/^(?:clear|hear|clean|clay) (?:all|everything)$|^(?:go )?(?:to )?(?:black|blank)(?: the screen| screen| out)?$|^(?:black|blank) (?:it|everything) out$|^remove everything$/.test(t)) return { type: "clear", all: true }
     if (/^(?:(?:clear|hear|clean|wipe)(?: (?:the|that|it|this))?(?: screen| words| text| lyrics| verse| scripture| song| off)?|take (?:it|that|this|the (?:verse|scripture|song|words|lyrics|text|slide)) (?:down|off)|take (?:down|off) (?:the )?(?:verse|scripture|song|words|lyrics|text|slide)|remove (?:it|that|this)|hide (?:it|that|this))$/.test(t)) return { type: "clear", all: false }
+    const sketch = t.match(/^(?:d?raw|daw|drew)(?: me| us)?(?: a| an| the| one)?(?: (?:picture|drawing|image|sketch) of)?(?: a| an| the)? (cross|circle|arrow|box|square|rectangle|line)(?: (?:on|in|onto|over) (?:the )?(?:paint ?board|paint|screen|drawing ?board|board|picture))?$/)
+    if (sketch) return { type: "draw", shape: ({ square: "box", rectangle: "box" } as Record<string, "box">)[sketch[1]] || (sketch[1] as "cross") }
+    if (/^(?:clean up|clean|tidy up|tidy|neaten|straighten)(?: up)?(?: the| my| this| that)? (?:drawing|paint|sketch|illustration)(?: up)?$/.test(t)) return { type: "drawing", command: "clean" }
+    if (/^(?:clear|erase|remove|delete|wipe|take down)(?: off)?(?: the| my| this| that)? (?:drawing|paint ?board|paint|sketch|illustration)$/.test(t)) return { type: "drawing", command: "clear" }
     const layer = t.match(/^(?:clear|remove|hide|take (?:off|down)) (?:the )?(background|overlays?)$/)
     if (layer) return { type: "clear-layer", layer: layer[1] === "background" ? "background" : "overlays" }
     if (/^(?:show|put up|read|repeat|give us|put) (?:it|that|this)(?: one)?(?: up)? again$|^(?:repeat|again|once more|one more time)(?: (?:it|that|this))?$/.test(t)) return { type: "again" }

@@ -13,11 +13,12 @@ import { clearAudio } from "../../audio/audioFading"
 import { mediaList } from "../agent/mediaLibrary"
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { changesScreen, changeVersion, liveState, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
+import { SIMPLE_SHAPES } from "../agent/illustration"
 import { handMoves, setAgentMode } from "../agent/control"
 import { openPage } from "../agent/openPage"
 import { nextPlanItem, removeFromOpenPlan, showPlanItem } from "../agent/planItems"
 import { stepScreen } from "../agent/stepScreen"
-import { addChatMessage, getChatHistory, getLLMManager } from "../llm/llmManager"
+import { addChatMessage, clearChatHistory, getChatHistory, getLLMManager } from "../llm/llmManager"
 import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT } from "../llm/prompts"
 import { AiManager } from "../manager/AiManager"
 import { showSection, showSlide } from "../songs/librarySongs"
@@ -32,7 +33,7 @@ export const matthiasStatus = writable<MatthiasStatus | null>(null)
 export const matthiasSteps = writable<{ tool: string; ok: boolean }[]>([])
 /** the one conversation with Matthias, spoken and typed */
 export const MATTHIAS_CHAT = "default"
-const HELP = 'You can ask for a passage ("John 3:16"), a song, "next verse", "back to the chorus", "read that in the NLT", "start the service", "next item", "add Amazing Grace to the plan", "clear the screen", "bring it back", or "take over".'
+const HELP = 'You can ask for a passage ("John 3:16"), a song, "next verse", "back to the chorus", "read that in the NLT", "start the service", "next item", "add Amazing Grace to the plan", "clear the screen", "draw a cross", "bring it back", or "take over".'
 
 const SHOWN_MS = 6000
 let statusTimer: ReturnType<typeof setTimeout> | null = null
@@ -119,6 +120,14 @@ export class Matthias {
         this.queue = Promise.resolve()
         matthiasSteps.set([])
         matthiasStatus.set(null)
+    }
+
+    /** a fresh conversation: what is being done stops, and what was said is forgotten */
+    static clearChat() {
+        this.stop()
+        this.results = []
+        this.resultIndex = 0
+        clearChatHistory(MATTHIAS_CHAT)
     }
 
     /** a request in words. Spoken ones (certain: plainly said to Matthias) are only written down when something came of them. */
@@ -228,6 +237,15 @@ export class Matthias {
             case "clear":
                 AiManager.clearScreen(request.all)
                 return "Cleared"
+            case "draw":
+            case "drawing": {
+                const tool = request.type === "draw" ? "draw_on_screen" : request.command === "clean" ? "clean_up_drawing" : "clear_drawing"
+                const args = request.type === "draw" ? { shapes: SIMPLE_SHAPES[request.shape] } : {}
+                let result: Awaited<ReturnType<typeof runAgentTool>> = { ok: false }
+                await AiManager.asOwnChange("", async () => (result = await runAgentTool(tool, args)))
+                if (!result.ok) throw new ToolError(result.error || "I could not draw that")
+                return request.type === "draw" ? `Drew a ${request.shape}` : request.command === "clean" ? "Drawing tidied" : "Drawing cleared"
+            }
             case "clear-layer":
                 if (request.layer === "background") clearBackground()
                 else clearOverlays()
@@ -410,6 +428,7 @@ export class Matthias {
 
         const llm = getLLMManager()
         if (!llm) {
+            if (/^(?:d?raw|daw|drew|sketch|illustrate)\b/i.test(words.trim())) throw new ToolError(`Drawing what is described needs an AI model: choose one in Settings, Live Copilot. Without one I can draw a cross, circle, arrow, box or line, clean up the drawing, and clear it.`)
             if (typed) throw new ToolError(`I did not understand that. ${HELP} For anything more, choose an AI model in Settings, Live Copilot.`)
             if (certain) throw new ToolError(`I did not catch that: ${words}`)
             return null

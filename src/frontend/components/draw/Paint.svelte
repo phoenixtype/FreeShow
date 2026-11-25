@@ -56,7 +56,7 @@
     })
 
     // a drawing set from outside (Matthias, or the operator's window): show it
-    $: if (mounted && $paintCache !== lines && !linkToSlide) showCached()
+    $: if (mounted && $paintCache !== lines) showCached()
     function showCached() {
         lines = $paintCache || []
         ctx?.clearRect(0, 0, resolution.width, resolution.height)

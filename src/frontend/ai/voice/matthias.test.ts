@@ -143,3 +143,23 @@ describe("more that can be asked", () => {
         expect(namesWhatToShow("make a plan with John 3 16")).toBe(false)
     })
 })
+
+describe("drawing", () => {
+    it("understands plain shapes, however they are asked for", () => {
+        expect(parseRequest("Draw a cross")).toEqual({ type: "draw", shape: "cross" })
+        expect(parseRequest("daw the picture of a cross on the paint board")).toEqual({ type: "draw", shape: "cross" })
+        expect(parseRequest("daw a cross on the paint board")).toEqual({ type: "draw", shape: "cross" })
+        expect(parseRequest("please draw a square")).toEqual({ type: "draw", shape: "box" })
+        expect(parseRequest("draw me an arrow on the screen")).toEqual({ type: "draw", shape: "arrow" })
+    })
+    it("tidies and clears the drawing, and leaves described drawings to the model", () => {
+        expect(parseRequest("clean up the drawing")).toEqual({ type: "drawing", command: "clean" })
+        expect(parseRequest("tidy the drawing")).toEqual({ type: "drawing", command: "clean" })
+        expect(parseRequest("clear the drawing")).toEqual({ type: "drawing", command: "clear" })
+        expect(parseRequest("clear the paint board")).toEqual({ type: "drawing", command: "clear" })
+        expect(parseRequest("Draw what the preacher is describing")).toMatchObject({ type: "unknown" })
+    })
+    it("does it in order with other requests", () => {
+        expect(parseRequests("clear the screen then draw a cross").map((r) => r.type)).toEqual(["clear", "draw"])
+    })
+})
