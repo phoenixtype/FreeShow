@@ -5,12 +5,14 @@
 
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { activeProject, aiSuggestions, audioChannelsData, outLocked, overlays, projects, scriptures, shows, showsCache, sttTranscript, ai } from "../../stores"
+import { activeProject, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, projects, scriptures, shows, showsCache, styles, sttTranscript, ai } from "../../stores"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { clearAudio } from "../../audio/audioFading"
 import { getOutputSlideText } from "../../components/actions/apiGet"
-import { getFirstActiveOutput, setOutput, toggleOutputs } from "../../components/helpers/output"
+import { getFirstActiveOutput, getOutputResolution, setOutput, toggleOutputs } from "../../components/helpers/output"
+import { setPaintLines } from "../../components/draw/paintLines"
+import { cleanUp, illustrate, MAX_SHAPES, toStrokes } from "./illustration"
 import { loadShows } from "../../components/helpers/setShow"
 import { getLayoutRef } from "../../components/helpers/show"
 import { startShow } from "../../components/helpers/showActions"
@@ -28,6 +30,7 @@ import { liveShowId, showSection } from "../songs/librarySongs"
 import { matchTitle, PAGES } from "../voice/matthias"
 import { matchVersion } from "../voice/versions"
 import { isHeld, setAgentMode } from "./control"
+import { listFromPoints } from "./listFromPoints"
 import { mediaList } from "./mediaLibrary"
 import { openPage } from "./openPage"
 import { nextPlanItem, planItems, removeFromOpenPlan, showPlanItem } from "./planItems"
@@ -300,6 +303,58 @@ export const agentTools: AgentTool[] = [
             await startShow(found.id, index)
             if (!(await until(() => getFirstActiveOutput()?.out?.slide?.id === found.id, 3000))) throw new ToolError("It did not reach the screen. Check that a screen is switched on.")
             return liveState().showing
+        }
+    },
+    {
+        name: "draw_on_screen",
+        description: `Draw a simple illustration over what is on screen, such as a cross, a path, a bridge or a flow of arrows for what is being preached. Coordinates are on a 0-100 grid (0,0 top left; 100,100 bottom right). Shapes: {"type":"line"|"arrow"|"path","points":[[x,y],...]}, {"type":"circle","x","y","r"}, {"type":"rect","x","y","w","h"}; each may have "color" (hex such as #ffffff) and "size" (pen width, 0.3-6). At most ${MAX_SHAPES} shapes. Keep it simple and readable from the back of the room. Set replace to false to add to the drawing already there.`,
+        inputSchema: { type: "object", properties: { shapes: { type: "array", items: { type: "object" }, description: "The shapes to draw" }, replace: { type: "boolean", description: "Start a new drawing (default true)" } }, required: ["shapes"] },
+        screen: true,
+        run: ({ shapes, replace }) => {
+            requireUnlocked()
+            const outputId = getFirstActiveOutput()?.id || ""
+            const { lines, drawn, skipped } = illustrate(shapes, getOutputResolution(outputId, get(outputs), true, "", get(styles)))
+            if (!drawn) throw new ToolError("None of those shapes could be drawn. Each needs numbers on the 0-100 grid; a line needs at least two points.")
+            setPaintLines(replace === false ? [...get(paintCache), ...lines] : lines)
+            return { drawn, ...(skipped ? { skipped } : {}), tip: "Say clean up the drawing to tidy it, or clear the drawing to remove it." }
+        }
+    },
+    {
+        name: "clean_up_drawing",
+        description: "Tidy the drawing on screen, whether the operator drew it by hand or Matthias did: wobble taken out, straight lines made straight, circles made round. Colours stay.",
+        inputSchema: none,
+        screen: true,
+        run: () => {
+            requireUnlocked()
+            const current = get(paintCache)
+            if (!toStrokes(current).length) throw new ToolError("There is no drawing to clean up.")
+            const outputId = getFirstActiveOutput()?.id || ""
+            setPaintLines(cleanUp(current, getOutputResolution(outputId, get(outputs), true, "", get(styles))))
+            return { strokes: toStrokes(get(paintCache)).length }
+        }
+    },
+    {
+        name: "clear_drawing",
+        description: "Remove the drawing from the screen.",
+        inputSchema: none,
+        screen: true,
+        run: () => {
+            requireUnlocked()
+            setPaintLines([])
+            return "Drawing cleared."
+        }
+    },
+    {
+        name: "make_list",
+        description: "Turn the main points of what was said into a list slide in the library, ready to show. Give a short title and 2 to 8 short points in the speaker's own words. It is saved as a presentation, and nothing goes on screen until present_song is used with its name.",
+        inputSchema: { type: "object", properties: { title: text("Short title"), points: { type: "array", items: { type: "string" }, description: "The points, each a few words" } }, required: ["title", "points"] },
+        run: ({ title, points }) => {
+            const list = listFromPoints(String(title), points)
+            if ("error" in list) throw new ToolError(list.error)
+            const existing = Object.values(get(shows)).find((show) => show?.name?.trim().toLowerCase() === list.title.toLowerCase())
+            if (existing) throw new ToolError(`"${existing.name}" is already in the library. Pick another title, or show that one.`)
+            const { id } = convertText({ name: list.title, text: list.text, category: null, noFormatting: true, open: false })
+            return { made: list.title, id, points: list.count, next: "Use present_song with this name to put it on screen." }
         }
     },
     {

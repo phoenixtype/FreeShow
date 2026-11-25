@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { drawSettings, drawTool, paintCache } from "../../stores"
+    import { ai, drawSettings, drawTool, paintCache } from "../../stores"
+    import { runAgentTool } from "../../ai/agent/agentTools"
+    import { Matthias } from "../../ai/voice/matthiasAgent"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
     import { clone } from "../helpers/array"
@@ -61,6 +63,22 @@
 
     $: tool = $drawTool
 
+    // what each tool does, in the words a volunteer would use
+    const hints: { [key: string]: string } = {
+        focus: "Hold the mouse on the screen preview to dim everything but a spot.",
+        pointer: "Hold the mouse on the screen preview to show a pointer.",
+        zoom: "Hold and drag on the screen preview to zoom in.",
+        particles: "Hold the mouse on the screen preview to scatter particles.",
+        fill: "Covers the whole screen with a colour.",
+        paint: "Hold the mouse and draw on the screen preview. What you draw shows on the screen."
+    }
+
+    let drawingNote = ""
+    async function cleanUp() {
+        const answer = await runAgentTool("clean_up_drawing", {})
+        drawingNote = answer.ok ? "Drawing tidied." : answer.error || ""
+    }
+
     const update = (value: any, key: string) => {
         drawSettings.update((a) => {
             a[tool][key] = value
@@ -100,6 +118,9 @@
 <Tabs tabs={{ tool: { name: "draw." + tool, icon: tool } }} active="tool" />
 
 <div class="main">
+    {#if hints[tool]}<p class="hint">{hints[tool]}</p>{/if}
+    {#if drawingNote && tool === "paint"}<p class="hint">{drawingNote}</p>{/if}
+
     {#each Object.entries($drawSettings[tool] || {}) as [key, value]}
         {@const hidden = key === "hold" && tool === "paint"}
 
@@ -121,12 +142,30 @@
 
 <FloatingInputs>
     {#if tool === "paint"}
+        <MaterialButton disabled={!$paintCache?.length} on:click={cleanUp}>
+            <Icon id="check" size={1.2} white />
+            Clean up
+        </MaterialButton>
+        {#if $ai.enabled}
+            <MaterialButton on:click={() => Matthias.ask("Draw what the preacher is describing", true, true)}>
+                <Icon id="ai" size={1.2} white />
+                Matthias, draw this
+            </MaterialButton>
+        {/if}
+
         <MaterialButton disabled={!$paintCache?.length} on:click={clearDrawing} red={!!$paintCache?.length}>
             <Icon id="clear" size={1.2} white />
             <T id="clear.drawing" />
         </MaterialButton>
 
         <div class="divider" />
+    {/if}
+
+    {#if tool !== "paint" && $ai.enabled}
+        <MaterialButton on:click={() => Matthias.ask("List the main points of what was said", true, true)}>
+            <Icon id="list" size={1.2} white />
+            List the points
+        </MaterialButton>
     {/if}
 
     <MaterialButton icon="reset" title="actions.reset" on:click={reset} />
@@ -140,5 +179,13 @@
         height: 100%;
 
         padding: 10px;
+    }
+
+    .hint {
+        margin: 0 0 10px;
+        font-size: 0.85em;
+        color: var(--text);
+        opacity: 0.7;
+        overflow-wrap: anywhere;
     }
 </style>

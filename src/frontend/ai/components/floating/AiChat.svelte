@@ -70,7 +70,11 @@
         list_plans: "Looked at the plans",
         create_plan: "Made a plan",
         add_to_plan: "Added to the plan",
-        speaker_timer: "Changed the speaker timer"
+        speaker_timer: "Changed the speaker timer",
+        draw_on_screen: "Drew on the screen",
+        clean_up_drawing: "Cleaned up the drawing",
+        clear_drawing: "Cleared the drawing",
+        make_list: "Made a list"
     }
     $: chatMessages = $chatSessions[activeSessionKey] || []
 

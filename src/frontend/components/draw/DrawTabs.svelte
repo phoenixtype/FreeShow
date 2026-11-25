@@ -30,7 +30,7 @@
     {#each tools as tool}
         <Button id="button" on:click={() => drawTool.set(tool)} active={$drawTool === tool} bold={false}>
             <Icon id={tool} right white={$drawTool === tool} />
-            <p style="margin: 5px;"><T id="draw.{tool}" /></p>
+            <p class="label"><T id="draw.{tool}" /></p>
         </Button>
     {/each}
 </div>
@@ -39,6 +39,16 @@
     .main :global(#button) {
         padding: 0.3em 0.8em;
         width: 100%;
+        min-width: 0;
+        justify-content: flex-start;
+    }
+
+    .label {
+        margin: 5px;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .main :global(button:nth-child(even)) {
