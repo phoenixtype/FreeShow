@@ -4,7 +4,9 @@ import { get } from "svelte/store"
 import { outputProjectItem } from "../../components/actions/apiHelper"
 import { getFirstActiveOutput } from "../../components/helpers/output"
 import { startShow } from "../../components/helpers/showActions"
+import { removeProjectItem } from "../../components/actions/apiHelper"
 import { activeProject, activeShow, projects, shows } from "../../stores"
+import { matchTitle } from "../voice/matthias"
 
 let lastShown: { plan: string; index: number } | null = null
 
@@ -29,6 +31,18 @@ export function nextPlanItem(step: "start" | "next" | "previous") {
     const current = currentIndex()
     if (step === "next") return items.find((item) => item.index > current) || null
     return [...items].reverse().find((item) => item.index < current) || null
+}
+
+/** takes an item off the open plan, and only off the plan: the song stays in the library, and Ctrl+Z brings it back */
+export function removeFromOpenPlan(what: string): { plan: string; removed: string } | { error: string } {
+    const planId = get(activeProject) || ""
+    const plan = get(projects)[planId]
+    if (!plan) return { error: "Open a plan first" }
+    const items = (plan.shows || []).map((item, index) => ({ id: String(index), name: item.name || get(shows)[item.id]?.name || "" })).filter((item) => item.name)
+    const found = matchTitle(what, items)
+    if (!found) return { error: `"${what}" is not in ${plan.name}${items.length ? `. It has: ${items.map((item) => item.name).join("; ")}` : ""}` }
+    removeProjectItem({ id: planId, index: Number(found.id) })
+    return { plan: plan.name, removed: found.name }
 }
 
 export type PlanItem = ReturnType<typeof planItems>[number]

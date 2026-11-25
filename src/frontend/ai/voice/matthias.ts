@@ -61,6 +61,7 @@ export type Request =
     | { type: "plan"; step: "start" | "next" | "previous" }
     | { type: "open-plan"; name: string }
     | { type: "add-to-plan"; what: string }
+    | { type: "remove-from-plan"; what: string }
     | { type: "overlay"; name: string; on: boolean }
     | { type: "media"; name: string; kind?: "image" | "video" }
     | { type: "audio"; command: "stop" | "mute" | "unmute" }
@@ -81,6 +82,8 @@ export type PageName = (typeof PAGES)[number]
 const SHOW = "show(?: me| us)?|put up|foot up|put on|put|bring up|pull up|pool up|open(?: up)?|go to|turn to|take (?:me|us) to|give (?:me|us)|display|read|let us see|let's see|let us read|let's read|project"
 const FIND = "find(?: me| us)?|fine|search(?: for| the bible for| scripture for)?|look up|look for|where does (?:it|the bible|scripture) say|where is it written|which verse|what verse|what does the bible say about|what does scripture say about|what scripture"
 
+const OPEN_SENTENCE = /\b(?:without|not|don't|dont|never|instead|except|only|but|because|then)\b|^(?:me|us) (?:the )?(?:words|lyrics|text|chords)\b/
+const MOST_NAME_WORDS = 7
 const NUMBER = "\\d|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thir|four|fif|six|seven|eigh|nine|twen|for|hundred"
 // what the speech model writes for these words said with a West African accent; safe here
 // because only words said straight to Matthias are read this way
@@ -120,7 +123,7 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay"]
+const FOLLOWS = ["clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
@@ -213,6 +216,8 @@ function parseWords(t: string): Request {
     if (plan) return { type: "open-plan", name: plan[1] || plan[2] }
     const add = t.match(/^(?:add|put) (?:the song )?(.+?) (?:to|in|into|on) (?:the |this |our |today's )?(?:plan|project|service|set ?list)$/)
     if (add) return { type: "add-to-plan", what: add[1] }
+    const take = t.match(/^(?:remove|take|delete|drop|take out) (?:the song |the )?(.+?) (?:out of|off|from) (?:the |this |our |today's )?(?:plan|project|service|set ?list)$/)
+    if (take) return { type: "remove-from-plan", what: take[1] }
     // anything else about a plan is for the model, not for the screen
     if (/\b(?:plan|project|set ?list)\b/.test(t) && !/^(?:find|search|what does|project)/.test(t)) return { type: "unknown", words: t }
     if (/^start (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "start" }
@@ -252,7 +257,9 @@ function parseWords(t: string): Request {
     }
 
     const show = t.match(new RegExp(`^(?:${SHOW})(?: the)? (.+)$`))
-    if (show) return { type: "show", what: show[1] }
+    // a long sentence, or one that says what NOT to do, is a request for the model, not a name to look up
+    if (show && !OPEN_SENTENCE.test(show[1]) && show[1].split(" ").length <= MOST_NAME_WORDS) return { type: "show", what: show[1] }
+    if (show) return { type: "unknown", words: t }
     return { type: "unknown", words: t }
 }
 

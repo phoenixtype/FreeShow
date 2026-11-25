@@ -4,7 +4,7 @@ vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
     return { activeProject: writable("p"), ai: writable({}), aiSuggestions: writable([]), audioChannelsData: writable({}), outLocked: writable(false), overlays: writable({ l: { name: "Logo" } }), projects: writable({ p: { name: "Sunday", shows: [] } }), shows: writable({ a: { name: "Amazing Grace" } }), sttTranscript: writable({ finalized: "", unprocessed: "" }) }
 })
-vi.mock("../../components/actions/apiHelper", () => ({ addToProject: vi.fn(), playMedia: vi.fn(), toggleSttListening: vi.fn() }))
+vi.mock("../../components/actions/apiHelper", () => ({ addToProject: vi.fn(), removeProjectItem: vi.fn(), playMedia: vi.fn(), toggleSttListening: vi.fn() }))
 const screen = vi.hoisted(() => ({ slide: { id: "temp" } as { id: string } | null }))
 vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ out: { slide: screen.slide } }), setOutput: vi.fn(), toggleOutputs: vi.fn() }))
 vi.mock("../../audio/audioFading", () => ({ clearAudio: vi.fn() }))
@@ -21,7 +21,7 @@ vi.mock("../agent/control", async () => {
     return { handMoves: writable(0), setAgentMode: (on: boolean) => ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } })) }
 })
 vi.mock("../agent/openPage", () => ({ openPage: vi.fn() }))
-vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), showPlanItem: vi.fn() }))
+vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), removeFromOpenPlan: vi.fn(() => ({ plan: "Sunday", removed: "Amazing Grace" })), showPlanItem: vi.fn() }))
 vi.mock("../agent/stepScreen", () => ({ stepScreen: vi.fn() }))
 const model = vi.hoisted(() => ({ llm: null as any }))
 vi.mock("../llm/llmManager", () => ({ addChatMessage: vi.fn(), getChatHistory: () => [], getLLMManager: () => model.llm }))
@@ -181,4 +181,14 @@ it("leaves the screen alone once the operator has moved it, and still does the r
     })
     await Matthias.ask("prepare something long", true, true)
     expect(refusals).toEqual(["", expect.stringMatching(/operator/), ""])
+})
+
+it("takes a song off the plan, and says how to get it back", async () => {
+    await Matthias.ask("take Amazing Grace off the plan")
+    expect(get(matthiasStatus)?.text).toMatch(/Took Amazing Grace off Sunday.*Ctrl\+Z/)
+})
+
+it("does not put up a passage for a sentence that only mentions one", async () => {
+    await Matthias.ask("read me the words of Morning Hill without showing them")
+    expect(manager.showReference).not.toHaveBeenCalled()
 })

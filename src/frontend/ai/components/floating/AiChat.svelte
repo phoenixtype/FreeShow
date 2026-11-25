@@ -59,6 +59,7 @@
         present_song: "Showed a song",
         control_screen: "Changed the screen",
         open_plan: "Opened a plan",
+        remove_from_plan: "Took an item off the plan",
         show_plan_item: "Showed a plan item",
         show_section: "Went to a part of the song",
         set_bible_version: "Changed the Bible version",

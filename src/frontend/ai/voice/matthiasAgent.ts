@@ -15,7 +15,7 @@ import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { changesScreen, changeVersion, liveState, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
 import { handMoves, setAgentMode } from "../agent/control"
 import { openPage } from "../agent/openPage"
-import { nextPlanItem, showPlanItem } from "../agent/planItems"
+import { nextPlanItem, removeFromOpenPlan, showPlanItem } from "../agent/planItems"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, getChatHistory, getLLMManager } from "../llm/llmManager"
 import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT } from "../llm/prompts"
@@ -194,6 +194,11 @@ export class Matthias {
                 if (!song) return this.think(asked)
                 addToProject({ projectId: get(activeProject)!, id: song.id })
                 return `Added ${song.name} to ${plan.name}`
+            }
+            case "remove-from-plan": {
+                const result = removeFromOpenPlan(request.what)
+                if ("error" in result) throw new ToolError(result.error)
+                return `Took ${result.removed} off ${result.plan}. Ctrl+Z brings it back`
             }
             case "timer":
                 if (request.command === "start") startProgram()
@@ -430,7 +435,8 @@ export class Matthias {
         if (stopped()) return null
         if (!answer) throw new ToolError("I could not get an answer. Check the internet connection and the model in Settings, Live Copilot.")
         if (typed && answer.action) {
-            addChatMessage(MATTHIAS_CHAT, "assistant", answer.content?.trim() || "Ready to add", answer.action)
+            // nothing is made until the button is pressed, whatever the model says it did
+            addChatMessage(MATTHIAS_CHAT, "assistant", "It is ready. Press the button to add it.", answer.action)
             return null
         }
         return answer.content?.trim() || (typed ? "Done" : null)

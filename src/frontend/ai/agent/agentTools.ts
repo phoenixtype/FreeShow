@@ -1,7 +1,7 @@
 // What an agent can do in the app. One list, used by the chat inside the app and
 // by outside agents through the app's own MCP server (src/electron/agent). Every
-// tool checks what it was given, says plainly what happened, and nothing here
-// deletes anything.
+// tool checks what it was given and says plainly what happened. Nothing here deletes a
+// song, a plan or a file; remove_from_plan only takes an item off a plan.
 
 import { get } from "svelte/store"
 import { uid } from "uid"
@@ -30,7 +30,7 @@ import { matchVersion } from "../voice/versions"
 import { isHeld, setAgentMode } from "./control"
 import { mediaList } from "./mediaLibrary"
 import { openPage } from "./openPage"
-import { nextPlanItem, planItems, showPlanItem } from "./planItems"
+import { nextPlanItem, planItems, removeFromOpenPlan, showPlanItem } from "./planItems"
 import { currentScripture, presentPassage } from "./presentPassage"
 
 export interface AgentTool {
@@ -369,6 +369,16 @@ export const agentTools: AgentTool[] = [
             }
             if (!added.length) throw new ToolError(notAdded.join(" "))
             return { plan: target.name, added, ...(notAdded.length ? { notAdded } : {}), items: get(projects)[target.id].shows.length }
+        }
+    },
+    {
+        name: "remove_from_plan",
+        description: "Take one item off the open service plan. The song stays in the library, and the operator can undo it with Ctrl+Z. Nothing else is ever deleted.",
+        inputSchema: { type: "object", properties: { item: text("The item's name") }, required: ["item"] },
+        run: ({ item }) => {
+            const result = removeFromOpenPlan(String(item))
+            if ("error" in result) throw new ToolError(result.error)
+            return { ...result, undo: "Ctrl+Z in the app brings it back" }
         }
     },
     {

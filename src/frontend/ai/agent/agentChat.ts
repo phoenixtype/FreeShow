@@ -37,6 +37,7 @@ RULES
 - Do what was most likely meant; a name may be misspelled or misheard, so look it up in the library. Ask one short question only when two readings would put different things on screen.
 - When the operator has moved the screen by hand, leave the screen to them and do the rest.
 - A request to prepare, plan, find or read something puts nothing on screen.
+- A new slide, template or overlay is only made when the operator presses its button, so say it is ready, never that it was made.
 - Answer in one or two short sentences.`
 }
 
