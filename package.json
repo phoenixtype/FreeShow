@@ -1,6 +1,6 @@
 {
     "name": "freeshow",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "productName": "Scriptural Project",
     "private": true,
     "main": "build/electron/index.js",
