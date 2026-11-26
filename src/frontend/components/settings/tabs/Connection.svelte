@@ -21,6 +21,7 @@
     import MaterialToggleSwitch from "../../inputs/MaterialToggleSwitch.svelte"
     import Tip from "../../main/Tip.svelte"
     import { stopPcoPlanChangeWatcher } from "../../../utils/pcoPlanSync"
+    import { providerAvailable } from "../../../values/keys"
 
     let ip = "localhost"
 
@@ -335,23 +336,29 @@
     <!-- No provider connected - show connection options -->
     <Title label="settings.content_provider" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("planningcenter")} style="flex: 1;" icon="login">
-            <T id="settings.connect_to" replace={["Planning Center"]} />
-        </MaterialButton>
-    </InputRow>
+    {#if providerAvailable("planningcenter")}
+        <InputRow>
+            <MaterialButton on:click={() => contentProviderConnect("planningcenter")} style="flex: 1;" icon="login">
+                <T id="settings.connect_to" replace={["Planning Center"]} />
+            </MaterialButton>
+        </InputRow>
+    {/if}
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("churchApps")} style="flex: 1;" icon="login">
-            <T id="settings.connect_to" replace={["ChurchApps"]} />
-        </MaterialButton>
-    </InputRow>
+    {#if providerAvailable("churchApps")}
+        <InputRow>
+            <MaterialButton on:click={() => contentProviderConnect("churchApps")} style="flex: 1;" icon="login">
+                <T id="settings.connect_to" replace={["ChurchApps"]} />
+            </MaterialButton>
+        </InputRow>
+    {/if}
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("amazinglife")} style="flex: 1;" icon="login">
-            <T id="settings.connect_to" replace={["APlay"]} />
-        </MaterialButton>
-    </InputRow>
+    {#if providerAvailable("amazinglife")}
+        <InputRow>
+            <MaterialButton on:click={() => contentProviderConnect("amazinglife")} style="flex: 1;" icon="login">
+                <T id="settings.connect_to" replace={["APlay"]} />
+            </MaterialButton>
+        </InputRow>
+    {/if}
 
     <InputRow>
         <MaterialButton on:click={() => contentProviderConnect("onstage")} style="flex: 1;" icon="login">

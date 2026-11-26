@@ -58,6 +58,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
         run: npm run release
 
   publish_linux:
@@ -86,6 +95,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
         run: npm run release
 
   # This needs it's own build
@@ -127,6 +145,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
           USE_SYSTEM_FPM: true
         run: npm run release
 
@@ -168,6 +195,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
           SECRET_CSC_LINK: ${{ secrets.CSC_LINK }}
           SECRET_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           SECRET_APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
@@ -188,6 +224,17 @@ jobs:
           fi
           npm run release
 
+      # a failed check keeps the release a draft (publish_release needs this job)
+      - name: Check the apps are notarized
+        run: |
+          shopt -s nullglob
+          apps=(dist/mac*/*.app)
+          [ ${#apps[@]} -gt 0 ] || { echo "No built app found to check"; exit 1; }
+          for app in "${apps[@]}"; do
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+          done
+
   publish_release:
     name: "Publish the draft"
     needs: [publish_windows, publish_linux, publish_linux_arm, publish_mac]
@@ -196,6 +243,16 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v5
+
+      # GPL-3.0: the source of what we ship sits beside the installers. The site's /licences/ links it.
+      - name: Attach the source code
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          git fetch --depth 1 origin "+refs/tags/v$version:refs/tags/v$version"
+          git archive --format=tar.gz --prefix="scriptural-project-$version/" -o "scriptural-project-$version-source.tar.gz" "v$version"
+          gh release upload "v$version" "scriptural-project-$version-source.tar.gz" --clobber
 
       # electron-builder uploads every installer to a draft; it goes public only when all four uploaded
       - name: Publish release

@@ -1,0 +1,50 @@
+name: Upstream trial merge
+# Once a week: would upstream FreeShow still merge and pass the unit tests?
+# The merge lives only on the runner. Nothing is committed or pushed.
+on:
+    schedule:
+        - cron: "0 12 * * 1" # Mondays, 12:00 UTC
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    trial_merge:
+        name: Merge upstream and test
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out Git repository
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Merge ChurchApps/FreeShow main
+              run: |
+                  git config user.name "trial merge"
+                  git config user.email "trial-merge@users.noreply.github.com"
+                  git fetch --no-tags https://github.com/ChurchApps/FreeShow.git main
+                  echo "Upstream commits not yet here: $(git rev-list --count HEAD..FETCH_HEAD)"
+                  if ! git merge --no-commit --no-ff FETCH_HEAD; then
+                      files=$(git diff --name-only --diff-filter=U)
+                      echo "::error::Upstream no longer merges cleanly. Merge it by hand. Conflicts in: $(echo $files)"
+                      { echo "### Merge conflicts with upstream"; echo "$files" | sed 's/^/- /'; } >> "$GITHUB_STEP_SUMMARY"
+                      exit 1
+                  fi
+
+            - name: Install Node.js and NPM
+              uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+
+            - name: Install libraries
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libfontconfig1-dev uuid-dev libltc-dev --fix-missing
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Unit tests on the merged code
+              run: npm run test:unit

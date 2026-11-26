@@ -1,54 +1,17 @@
-import { os, version, deviceId, isDev, activePage, activeDrawerTab } from "../stores"
+import { os, activePage, activeDrawerTab } from "../stores"
 import { get } from "svelte/store"
 
-const MEASUREMENT_ID = "G-CEE6P1QXG6"
-const API_SECRET = atob("YlVwZE42bXpRVjYyWDc2d0Z3OGMwZw==")
-const SESSION_ID = Date.now().toString()
-
-// Scriptural build: no usage is reported to anyone.
-const ANALYTICS_ENABLED = false
-
-function trackEvent(eventName: string, params?: Record<string, any>) {
-    if (!ANALYTICS_ENABLED || get(isDev)) return
-
-    const clientId = get(deviceId)
-    if (!clientId) return
-
-    const eventParams = {
-        session_id: SESSION_ID,
-        app_version: get(version),
-        engagement_time_msec: 1,
-        ...params
-    }
-
-    const payload = {
-        client_id: clientId,
-        events: [{ name: eventName, params: eventParams }]
-    }
-
-    fetch(`https://www.google-analytics.com/mp/collect?api_secret=${API_SECRET}&measurement_id=${MEASUREMENT_ID}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    })
-}
+// Scriptural build: no usage is reported to anyone, and there is no analytics account in the app.
+// The calls stay so upstream changes keep merging.
+function trackEvent(_eventName: string, _params?: Record<string, any>) {}
 
 export function startTracking() {
-    trackFirstOpenIfNeeded()
     trackEvent("session_start")
     trackAppLaunch()
 
     // listeners
     activePage.subscribe(trackPageView)
     activeDrawerTab.subscribe(trackDrawerView)
-}
-
-function trackFirstOpenIfNeeded() {
-    const key = "freeshow_first_open_sent"
-    if (!localStorage.getItem(key)) {
-        trackEvent("first_open")
-        localStorage.setItem(key, "1")
-    }
 }
 
 function trackAppLaunch() {

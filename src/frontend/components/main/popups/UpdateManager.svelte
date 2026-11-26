@@ -21,7 +21,8 @@
 
     function updateSpecial(value: any, key: string) {
         special.update((a) => {
-            if (!value) delete a[key]
+            // auto updates are on by default, so "off" has to be stored
+            if (!value && key !== "autoUpdates") delete a[key]
             else a[key] = value
 
             return a
@@ -60,7 +61,6 @@
     onMount(checkUpdates)
 
     $: isBeta = $version.includes("-beta")
-    $: versionsMatch = !!latestVersion && $version === latestVersion
 </script>
 
 <div class="settings">
@@ -74,7 +74,7 @@
     <MaterialToggleSwitch label="settings.auto_updates" checked={$special.autoUpdates} on:change={(e) => updateSpecial(e.detail, "autoUpdates")} />
 </div>
 
-{#if !loading && !versionsMatch && latestVersion}
+{#if hasUpdate}
     <div class="versions">
         <span class="value">v{$version}</span>
         <span class="label" style="color: var(--secondary);font-weight: bold;">→</span>
@@ -89,7 +89,7 @@
 {:else if !loading && !hasError}
     <div class="versions">
         <span class="label" style="color: var(--secondary);font-weight: bold;">✓</span>
-        <span class="value">v{latestVersion}</span>
+        <span class="value">v{$version}</span>
     </div>
 {/if}
 

@@ -7,6 +7,19 @@ interface UpdateData {
     hasUpdate: boolean
 }
 
+// "1.10.0" is newer than "1.9.9", and a release is newer than its own beta
+export function isNewerVersion(latest: string, current: string) {
+    if (!latest) return false
+    const [latestNumbers, latestPre = ""] = latest.split(/-(.*)/)
+    const [currentNumbers, currentPre = ""] = current.split(/-(.*)/)
+
+    const compare = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })
+    const numbers = compare(latestNumbers, currentNumbers)
+    if (numbers) return numbers > 0
+    if (!latestPre || !currentPre) return !latestPre && !!currentPre
+    return compare(latestPre, currentPre) > 0
+}
+
 export async function getUpdateData(currentVersion: string, includeBeta: boolean): Promise<UpdateData> {
     const response = await fetch("https://api.github.com/repos/phoenixtype/FreeShow/releases")
     const data = await response.json()
@@ -22,7 +35,7 @@ export async function getUpdateData(currentVersion: string, includeBeta: boolean
     return {
         latestVersion,
         changelog,
-        hasUpdate: !!latestVersion && currentVersion !== latestVersion
+        hasUpdate: isNewerVersion(latestVersion, currentVersion)
     }
 }
 

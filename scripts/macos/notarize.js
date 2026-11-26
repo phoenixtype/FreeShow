@@ -6,7 +6,7 @@ const { notarize } = require("@electron/notarize")
 exports.default = async function notarizing(context) {
     const { electronPlatformName, appOutDir } = context
     if (electronPlatformName !== "darwin") return
-    // unsigned builds (no Apple credentials in the environment) skip notarizing.
+    // local builds with no Apple credentials skip notarizing; CI fails, so an unnotarized app never ships.
     // An App Store Connect API key (APPLE_API_KEY = path to the .p8) notarizes
     // without an Apple ID app-specific password; the Apple ID path stays for CI.
     const appName = context.packager.appInfo.productFilename
@@ -22,7 +22,10 @@ exports.default = async function notarizing(context) {
             appleApiIssuer: process.env.APPLE_API_ISSUER
         })
     }
-    if (!process.env.APPLE_ID) return
+    if (!process.env.APPLE_ID) {
+        if (process.env.CI) throw new Error("Cannot notarize: no APPLE_API_KEY or APPLE_ID. Add the Apple secrets to the repository.")
+        return
+    }
 
     return await notarize({
         appBundleId,

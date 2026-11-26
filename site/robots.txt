@@ -1,0 +1,6 @@
+# Everyone is welcome, search and AI answer engines included.
+User-agent: *
+Allow: /
+Disallow: /download/
+
+Sitemap: https://project.scriptural.online/sitemap.xml

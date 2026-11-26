@@ -46,6 +46,7 @@
 <div class="main">
     <div class="text">
         <p>Scriptural for church meetings, by SyntaxReady.</p>
+        <p>Help and feedback: <Link url="mailto:support@scriptural.online?subject=Scriptural%20Project%20feedback">support@scriptural.online</Link></p>
         <p>
             Built on FreeShow by Kristoffer Vassbø and ChurchApps. Free software under the GNU GPL v3:
             <Link url="https://github.com/phoenixtype/FreeShow">source code</Link>

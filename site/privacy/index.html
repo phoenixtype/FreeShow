@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Privacy: Scriptural Project</title>
+        <meta name="description" content="What Scriptural Project keeps on your computer, what it sends when you use Scriptural AI, the church library or a plan, and who receives it." />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="canonical" href="https://project.scriptural.online/privacy/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Scriptural Project" />
+        <meta property="og:title" content="Privacy: Scriptural Project" />
+        <meta property="og:description" content="What Scriptural Project keeps on your computer, what it sends when you use Scriptural AI, the church library or a plan, and who receives it." />
+        <meta property="og:url" content="https://project.scriptural.online/privacy/" />
+        <meta property="og:image" content="https://project.scriptural.online/og.jpg" />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Scriptural Project: Psalm 23:1 on a church screen" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="theme-color" content="#080808" />
+        <script>
+            // the same choice, under the same name, as scriptural.online
+            try {
+                const theme = localStorage.getItem("theme")
+                if (theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark")
+            } catch {}
+        </script>
+        <link rel="stylesheet" href="/page.css" />
+        <link rel="stylesheet" href="/site.css" />
+    </head>
+    <body>
+        <header class="top">
+            <a href="/"><img src="/icon.png" alt="" /> Scriptural Project</a>
+            <nav aria-label="Main">
+                <a href="/guide/">Guide</a>
+                <a href="/pricing/">Plans</a>
+                <a href="/#downloads">Download</a>
+            </nav>
+        </header>
+        <main>
+            <h1>Privacy</h1>
+            <p>This covers the Scriptural Project app and this website. Last changed 26 November 2026.</p>
+
+            <h2>What stays on your computer</h2>
+            <ul>
+                <li>Listening happens on your computer. The audio is turned into text there and is not sent to us or anyone else.</li>
+                <li>Your songs, Bibles, media, service plans and settings are kept on your computer.</li>
+                <li>The app does not send us usage statistics.</li>
+            </ul>
+
+            <h2>When text leaves your computer</h2>
+            <ul>
+                <li>With Scriptural AI, the text you type or the transcript of what was said goes through our server to Anthropic or Google to be answered. We keep a count of requests and their cost, not the text.</li>
+                <li>With your own AI key, the text goes from your computer straight to the company whose key you use.</li>
+                <li>With neither, no transcript text is sent anywhere.</li>
+            </ul>
+
+            <h2>Accounts and the church library</h2>
+            <p>You only need an account for the church library and plans. We keep your email, your name if you give one, your church's name, who belongs to it, and the songs and files your church puts in the library. This is stored with Supabase. Members of your church can see the library and its members. Our own support staff can see account details to run the service.</p>
+
+            <h2>Payments</h2>
+            <p>Stripe takes payments. We never see or keep your card number. We keep the plan your church has and Stripe's reference for it.</p>
+
+            <h2>Other services you choose to use</h2>
+            <p>Searching online pictures and videos, opening online Bibles, connecting a planning service or using a remote over the internet sends what you ask for to that service, under its own privacy terms. The app also downloads updates and, if you turn on listening, its speech model.</p>
+
+            <h2>This website</h2>
+            <p>Our hosting company records ordinary request details, such as IP address, to deliver and protect the site. If we run adverts, cookies from Google, Meta or TikTok load only after you press Allow. You can change that with Cookie choices at the bottom of a page.</p>
+
+            <h2>Your choices</h2>
+            <p>Email <a href="mailto:support@scriptural.online">support@scriptural.online</a> to see, correct or delete what we hold about you or your church.</p>
+        </main>
+        <footer class="site-footer">
+            <nav aria-label="Site">
+                <a href="/">Home</a>
+                <a href="/guide/">Guide</a>
+                <a href="/loops/">Video loops</a>
+                <a href="/pricing/">Plans</a>
+                <a href="/licences/">Licences</a>
+                <a href="/privacy/">Privacy</a>
+                <a href="/terms/">Terms</a>
+                <a href="mailto:support@scriptural.online">support@scriptural.online</a>
+            </nav>
+        </footer>
+        <script src="/tags-config.js"></script>
+        <script src="/site.js"></script>
+    </body>
+</html>

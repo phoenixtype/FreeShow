@@ -1,5 +1,6 @@
 const { readdirSync, existsSync, lstatSync, unlinkSync, rmdirSync, readFileSync, writeFileSync, copyFileSync } = require("fs")
 const { join } = require("path")
+const { writeOwnKeys } = require("./ownKeys")
 
 // app build file paths
 const buildSveltePath = join(__dirname, "..", "public", "build")
@@ -56,6 +57,8 @@ function getPdfWorkerFile() {
 }
 
 if (process.env.NODE_ENV === "production") generateProdConfigs()
+// our own API keys, from GitHub secrets; postBuild empties the files again
+writeOwnKeys(process.env, process.env.NODE_ENV === "production")
 getPdfWorkerFile()
 
 // write release build repository info (currently for error reporting checks)

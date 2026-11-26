@@ -3,6 +3,7 @@ const { join } = require("path")
 
 const Terser = require("terser")
 const { ensureOpusBuild } = require("./opus")
+const { resetOwnKeys } = require("./ownKeys")
 // const HTMLMinifier = require("html-minifier")
 // const CleanCSS = require("clean-css")
 
@@ -161,6 +162,7 @@ function setProductionHTML() {
     await copyPublicFolderAndMinify(join(__dirname, "..", "public"), join(bundledElectronPath, "public"))
     setProductionHTML()
     removeTsConfigs()
+    resetOwnKeys()
 
     // fix for OPUS electron vs node env
     ensureOpusBuild()

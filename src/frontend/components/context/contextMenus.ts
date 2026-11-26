@@ -29,6 +29,7 @@ export const contextMenuItems: { [key: string]: ContextMenuItem } = {
     copy_id: { label: "actions.copy_id", icon: "copy", iconColor: "#97c7ff" },
     paste: { label: "actions.paste", icon: "paste", iconColor: "#97c7ff", shortcuts: ["Ctrl+V"] },
     docs: { label: "main.docs", icon: "document", external: true },
+    send_feedback: { label: "main.send_feedback", icon: "launch", external: true },
     quick_search: { label: "main.quick_search", icon: "search", shortcuts: ["Ctrl+G"] },
     quick_start_guide: { label: "guide.start", icon: "guide" },
     copy_diagnostics: { label: "main.copy_diagnostics", icon: "copy" },
@@ -243,7 +244,7 @@ export const contextMenuLayouts: { [key: string]: string[] } = {
     file: ["save", "import_more", "export_more", "SEPARATOR", "quit"],
     edit: ["undo", "redo", "history", "SEPARATOR", "cut", "copy", "paste", "delete", "SEPARATOR", "selectAll"], // , "cut"
     view: ["focus_mode", "fullscreen"], // , "resetZoom", "zoomIn", "zoomOut"
-    help: ["quick_search", "shortcuts", "docs", "quick_start_guide", "copy_diagnostics", "about"],
+    help: ["quick_search", "shortcuts", "docs", "quick_start_guide", "copy_diagnostics", "send_feedback", "about"],
     // MAIN
     // default: ["save", "settings", "history", "SEPARATOR", "about", "quit"],
     default: ["quick_search"],

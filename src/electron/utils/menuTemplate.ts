@@ -69,6 +69,7 @@ export function template(strings: Dictionary): any {
             { label: strings.main?.docs || "Docs", click: () => openURL("https://freeshow.app/docs") },
             { label: strings.guide?.start || "Quick start guide", click: () => mc("quick_start_guide") },
             { label: strings.main?.copy_diagnostics || "Copy diagnostics", click: () => mc("copy_diagnostics") },
+            { label: strings.main?.send_feedback || "Send feedback", click: () => openURL("mailto:support@scriptural.online?subject=Scriptural%20Project%20feedback") },
             { label: strings.main?.about || "About", click: () => mc("about") }
         ]
     }
