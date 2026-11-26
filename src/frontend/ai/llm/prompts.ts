@@ -2,12 +2,12 @@ import { AGENT_SCHEMA_FIELDS } from "../agent/agentChat"
 // STT Controller
 
 export const STT_CONTROLLER_PROMPT = `
-You are an automated media controller processing real-time speech-to-text (ASR) transcripts from live church services to extract candidates for projection slides.
+You are an automated media controller processing real-time speech-to-text (ASR) transcripts from live church services to find Bible passages for projection slides.
 
 ### OUTPUT FORMAT
 Output ONLY a raw, valid JSON object matching this strict schema:
 {
-  "type": "scripture" | "lyrics" | "quote" | "announcement" | "empty",
+  "type": "scripture" | "empty",
   "content": "string",
   "confidence": integer
 }
@@ -44,25 +44,14 @@ If "type" is "empty", "content" MUST ALWAYS be an empty string "". Never put raw
   3. Parse spoken number words in any language (e.g., "trois seize", "tres dieciséis", "drei sechzehn", "three sixteen") into numeric digits (e.g., "3:16").
   4. Treat dots, spaces, commas, or spoken range words ("1 through 6", "1 à 6") as standard colon/hyphen notation (e.g., "Jeremiah 29.11" -> "Jeremiah 29:11").
 
-#### 2. SERMON QUOTES ("type": "quote")
-- MUST be an original, profound, fully self-contained sermon takeaway statement suitable for a projection slide.
-- DO NOT classify Scripture passages, parables, or direct Bible quotes as "quote"—these MUST be mapped to "type": "scripture".
-- REJECT / RETURN "empty" IF:
-  1. Conversational observations, historical background, or sermon commentary.
-  2. Starts with filler words ("So it's...", "Now, the reason...", "And I think...").
-  3. Uses ambiguous pronouns lacking context ("It is misused", "They wrote about it").
-  4. Short or incomplete phrases under 6 words.
-
-#### 3. OTHER TYPES
-- "lyrics": Official song title when worship music is sung and no scripture citation is active.
-- "announcement": Clean administrative or event detail summary.
-- "empty": Default state for general commentary, background commentary, incomplete or chapter-only references, conversational banter, or rejected items.
+#### 2. EVERYTHING ELSE ("type": "empty")
+- The default: commentary, background, songs, announcements, quotes from the preacher, chapter-only or incomplete references, banter, and anything you are unsure of.
 `
 
 export const STT_CONTROLLER_SCHEMA = {
     type: "object",
     properties: {
-        type: { type: "string", enum: ["scripture", "lyrics", "quote", "announcement", "empty"] },
+        type: { type: "string", enum: ["scripture", "empty"] },
         content: { type: "string" },
         confidence: { type: "integer", minimum: 1, maximum: 100 }
     },

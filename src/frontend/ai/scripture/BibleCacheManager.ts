@@ -18,20 +18,33 @@ export interface BibleCacheData {
     verseTokensOffsets: Uint32Array
     verseTokens: Uint32Array
     bookNames: string[]
+    /** other names a book goes by, as they are said: the name this Bible uses */
+    aliases?: Record<string, string>
     refRegex: RegExp | null
     totalVerses: number
 }
 
+// by book number
+const OTHER_NAMES: Record<number, string[]> = { 22: ["song of songs", "canticles", "song of solomon"], 66: ["apocalypse"] }
+
 export class BibleCacheManager {
+    // about 17 MB each: the open Bible and the two used before it
+    private static readonly MAX_LOADED = 3
     private static caches: Map<string, BibleSearchDetector> = new Map()
     private static rawCaches: Map<string, BibleCacheData> = new Map()
     private static cachePromises: Map<string, Promise<BibleSearchDetector | null>> = new Map()
 
     public static async getCache(bibleId: string): Promise<BibleSearchDetector | null> {
-        if (this.caches.has(bibleId)) return this.caches.get(bibleId)!
+        const loaded = this.caches.get(bibleId)
+        if (loaded) {
+            // last used, last to go
+            this.caches.delete(bibleId)
+            this.caches.set(bibleId, loaded)
+            return loaded
+        }
         if (this.cachePromises.has(bibleId)) return await this.cachePromises.get(bibleId)!
 
-        const promise = (async () => {
+        const load = async () => {
             const scriptureData = get(scriptures)[bibleId]
             if (!scriptureData || scriptureData?.api) return null
 
@@ -43,24 +56,57 @@ export class BibleCacheManager {
 
             this.rawCaches.set(bibleId, cacheData)
             this.caches.set(bibleId, searchCache)
+            this.dropOldest()
             return searchCache
-        })()
+        }
+
+        const promise = load()
+            .catch((err) => {
+                console.warn("Live Copilot could not read the Bible", bibleId, err)
+                return null
+            })
+            .then((detector) => {
+                // a Bible that did not load is tried again, not remembered as missing
+                if (!detector) this.cachePromises.delete(bibleId)
+                return detector
+            })
 
         this.cachePromises.set(bibleId, promise)
         return await promise
     }
 
+    private static dropOldest() {
+        for (const id of this.loadedIds().slice(0, -this.MAX_LOADED)) {
+            this.caches.delete(id)
+            this.rawCaches.delete(id)
+            this.cachePromises.delete(id)
+        }
+    }
+
+    /** the Bibles in memory */
+    public static loadedIds(): string[] {
+        return [...this.caches.keys()]
+    }
+
     private static canon: Promise<BibleSearchDetector> | null = null
     /** references only, for when no Bible is stored on this computer */
     public static getCanon(): Promise<BibleSearchDetector> {
-        if (!this.canon) this.canon = this.buildCacheAsync({ books: CANON } as any).then((data) => new BibleSearchDetector(data))
+        if (!this.canon) {
+            this.canon = this.buildCacheAsync({ books: CANON } as any)
+                .then((data) => new BibleSearchDetector(data))
+                .catch((err) => {
+                    this.canon = null
+                    throw err
+                })
+        }
         return this.canon
     }
 
     /**
-     * Preloads all local Bibles sequentially in the background without blocking frames.
+     * Preloads the first local Bibles sequentially in the background without blocking frames.
      */
-    public static preloadAllInBackground(bibleIds: string[]) {
+    public static preloadAllInBackground(allIds: string[]) {
+        const bibleIds = allIds.slice(0, this.MAX_LOADED)
         let index = 0
         const loadNext = () => {
             if (index >= bibleIds.length) return
@@ -119,6 +165,7 @@ export class BibleCacheManager {
         const vocabPool: string[] = []
         const vocabToIdMap: Map<string, number> = new Map()
         const bookNames: string[] = []
+        const aliases: Record<string, string> = {}
         let totalVerses = 0
 
         const tempPostingsMap: Map<number, number[]> = new Map()
@@ -136,6 +183,7 @@ export class BibleCacheManager {
         // Pass 1: Build verse pool and reference indices asynchronously
         for (const book of bible.books) {
             bookNames.push(book.name)
+            for (const other of OTHER_NAMES[Number(book.number)] || []) if (other !== book.name.toLowerCase()) aliases[other] = book.name
             for (const chapter of book.chapters) {
                 const refKey = `${book.name.toLowerCase()} ${chapter.number}`
                 const startVerseId = totalVerses
@@ -234,7 +282,7 @@ export class BibleCacheManager {
             }
         }
 
-        const bookPattern = bookNames.map((b) => b.replace(/\s+/g, "\\s+")).join("|")
+        const bookPattern = bookNames.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")).join("|")
         const refRegex = new RegExp(`\\b((?:(?:[1-3]|${ORDINAL_PREFIX_PATTERN})\\s+)?(?:${bookPattern}))\\b\\s*(?:${CHAPTER_PATTERN})?\\s*(\\d+)(?:[\\s,:.]+(?:${VERSE_PATTERN})?\\s*(\\d+)(?:\\s*[-–—]\\s*(\\d+))?)?`, "iu")
 
         return {
@@ -249,6 +297,7 @@ export class BibleCacheManager {
             verseTokensOffsets,
             verseTokens,
             bookNames,
+            aliases,
             refRegex,
             totalVerses
         }

@@ -6,10 +6,11 @@ vi.mock("../../stores", async () => {
     return { ai: writable({ enabled: true }), sttTranscript: writable({ finalized: "", unprocessed: "" }), transcriptLog: writable([]) }
 })
 vi.mock("../../utils/common", () => ({ newToast: () => {} }))
-vi.mock("../manager/AiManager", () => ({ AiManager: { processSTTChunk: vi.fn() } }))
+vi.mock("../manager/AiManager", () => ({ AiManager: { processSTTChunk: vi.fn(), processUtterance: vi.fn(async () => false) } }))
 
 import { get } from "svelte/store"
 import { sttTranscript, transcriptLog } from "../../stores"
+import { AiManager } from "../manager/AiManager"
 import { Transcript } from "./transcript"
 
 const start = (last: string[], curr: string[]) => {
@@ -45,5 +46,53 @@ describe("transcription log", () => {
         Transcript.push({ text: "new words" })
         undo()
         expect(get(transcriptLog)).toHaveLength(3)
+    })
+})
+
+describe("whole utterances", () => {
+    const utterances = vi.mocked(AiManager.processUtterance)
+    const chunks = vi.mocked(AiManager.processSTTChunk)
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+    it("hands over what was said between two pauses, not each piece of it (B1)", async () => {
+        vi.useRealTimers()
+        Transcript.clear()
+        utterances.mockClear()
+        chunks.mockClear()
+
+        Transcript.push({ text: "Jesus is coming" })
+        Transcript.push({ text: "back.", utteranceEnd: true })
+        await settle()
+        expect(utterances.mock.calls).toEqual([["Jesus is coming back."]])
+        expect(chunks.mock.calls.every(([chunk]) => !("utterance" in chunk))).toBe(true)
+
+        utterances.mockClear()
+        Transcript.push({ text: "nex" })
+        Transcript.push({ text: "t", glue: true })
+        expect(utterances).not.toHaveBeenCalled()
+        Transcript.push({ text: "", utteranceEnd: true })
+        await settle()
+        expect(utterances.mock.calls).toEqual([["next"]])
+    })
+
+    it("does not search the words of a command that moved the screen", async () => {
+        Transcript.clear()
+        chunks.mockClear()
+        utterances.mockResolvedValueOnce(true)
+        Transcript.push({ text: "back", utteranceEnd: true })
+        await settle()
+        expect(chunks).not.toHaveBeenCalled()
+    })
+
+    it("never searches what the model labels as music (B15)", async () => {
+        Transcript.clear()
+        chunks.mockClear()
+        utterances.mockClear()
+        Transcript.push({ text: "(upbeat music)", music: true, utteranceEnd: true })
+        await settle()
+        expect(chunks).not.toHaveBeenCalled()
+        expect(utterances).not.toHaveBeenCalled()
+        expect(get(sttTranscript).finalized).toBe("")
+        expect(get(transcriptLog).map((line) => line.text)).toEqual(["(upbeat music)"])
     })
 })

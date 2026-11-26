@@ -22,6 +22,7 @@ import { isPartOf, isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 import { resolveNavigation } from "../scripture/voiceNavigation"
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
+import { spokenLanguage, resolveSttEngine } from "../stt/stt"
 
 interface Shown {
     content: string
@@ -33,18 +34,33 @@ export class AiManager {
     private static lastMatch: number = 0
     private static MAX_LLM_REQUEST_AFTER_MATCH = 5000
     private static latestSearchId: number = 0
+    // a search that has had less than this is let finish when the next words arrive
+    private static MIN_SEARCH_MS = 500
+    private static searches = new Set<{ id: number; startedAt: number }>()
+    private static startSearch() {
+        const now = Date.now()
+        for (const search of this.searches) if (now - search.startedAt >= this.MIN_SEARCH_MS) this.searches.delete(search)
+        const search = { id: ++this.latestSearchId, startedAt: now }
+        this.searches.add(search)
+        return search
+    }
+    /** what an older search finds now is old news */
+    private static cancelSearches(before = Infinity) {
+        for (const search of this.searches) if (search.id < before) this.searches.delete(search)
+    }
 
-    static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number; utterance?: string }) {
+    static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number }) {
         this.triggerBackgroundPreload()
         // watch the output from the first word heard, so slides moved by hand are seen
         this.listenToOutput()
 
-        const searchId = ++this.latestSearchId
-        const isCancelled = () => searchId !== this.latestSearchId
+        const search = this.startSearch()
+        const isCancelled = () => !this.searches.has(search)
+        const superseded = () => search.id !== this.latestSearchId
 
         // a spoken command ("next verse") moves the screen and is not searched for
         const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
-        const command = parseCopilotCommand(newWords, false) || (chunk.utterance ? parseCopilotCommand(chunk.utterance, true) : null)
+        const command = parseCopilotCommand(newWords, false)
         // a command that moved nothing (no passage on screen) is searched like any other words
         if (command && (await this.navigate(command))) return
 
@@ -52,6 +68,7 @@ export class AiManager {
         if (isCancelled()) return
 
         if (stringMatch) {
+            this.cancelSearches(search.id)
             this.newMatch(stringMatch)
             this.lastMatch = Date.now()
             return
@@ -65,17 +82,18 @@ export class AiManager {
 
         const eventMatch = this.eventDetection(chunk.chunkWithOverlap)
         if (eventMatch) {
-            this.newMatch(eventMatch)
+            this.newMatch(eventMatch, true)
             this.lastMatch = Date.now()
             return
         }
 
-        // anything past here can spend AI requests: only when switched on, or in agent mode
-        if (!usesAiDetection(get(ai))) return
+        // anything past here can spend AI requests: only when switched on, or in agent mode,
+        // and only for the newest words
+        if (!usesAiDetection(get(ai)) || superseded()) return
         if (this.lastMatch && Date.now() - this.lastMatch < this.MAX_LLM_REQUEST_AFTER_MATCH) return
 
-        const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, isCancelled)
-        if (isCancelled()) return
+        const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, superseded)
+        if (superseded()) return
         if (meaningMatch) {
             this.newMatch(meaningMatch)
             this.lastMatch = Date.now()
@@ -88,11 +106,29 @@ export class AiManager {
         // only report to LLM if nothing is auto detected
         const llmMatch = await llmManager.detectMatch(chunk)
         // a newer chunk has spoken since: this answer is stale
-        if (isCancelled()) return
+        if (superseded()) return
         if (llmMatch) {
             this.newMatch(llmMatch)
             this.lastMatch = Date.now()
         }
+    }
+
+    private static numberLanguage(): string {
+        return spokenLanguage(get(ai).stt?.engineOptions?.[resolveSttEngine()]?.language) || "any"
+    }
+
+    /** everything said between two pauses: only here do the one-word commands count. True when it moved the screen */
+    static async processUtterance(text: string): Promise<boolean> {
+        // phrases that count mid-sentence were acted on as they were heard
+        if (parseCopilotCommand(text, false)) return false
+        const command = parseCopilotCommand(text, true)
+        if (!command) return false
+
+        this.listenToOutput()
+        // what is still being searched was said before this
+        this.latestSearchId++
+        this.cancelSearches()
+        return this.navigate(command)
     }
 
     private static async stringDetection(textChunk: string, isCancelled?: () => boolean) {
@@ -106,8 +142,10 @@ export class AiManager {
     }
 
     private static async songDetection(text: string): Promise<boolean> {
-        const hit = songDetector()?.push(text)
-        if (!hit) return false
+        const heard = songDetector()?.push(text)
+        if (!heard) return false
+        // a preacher quoting a hymn over a reading is not the choir starting
+        const hit = !heard.sustained && this.scriptureRecently() ? { ...heard, confidence: Math.min(heard.confidence, 74) } : heard
         const recent = text.split(/\s+/).slice(-16).join(" ")
 
         // already up: on an auto-present setting, keep the screen on the line being sung,
@@ -127,14 +165,22 @@ export class AiManager {
         return true
     }
 
+    private static SCRIPTURE_RECENT_MS = 60_000
+    private static lastScripture = 0
+    /** a passage is up, or was in the last minute */
+    private static scriptureRecently(): boolean {
+        if (get(screenScripture)?.reference?.book && getFirstActiveOutput()?.out?.slide?.id === "temp") this.lastScripture = Date.now()
+        return Date.now() - this.lastScripture < this.SCRIPTURE_RECENT_MS
+    }
+
     private static autoLevel(type: "scripture" | "lyrics"): ConfidenceLevels {
         const chosen = get(ai)[type]?.confidence || "ask"
         // leading by itself: certain and likely matches go up, whatever the setting
         return get(ai).matthias?.agentMode && (chosen === "ask" || chosen === "highest") ? "high" : chosen
     }
 
-    // famous events and parables said in passing: "when Jesus walked on water"
-    // (capped below "high" so they are offered, not presented, by default)
+    // famous events and parables said in passing: "when Jesus walked on water".
+    // Only ever offered: nobody asked for the passage
     private static eventDetection(textChunk: string): MatchResult | null {
         const event = detectBibleEvents(textChunk)[0]
         if (!event) return null
@@ -195,8 +241,9 @@ export class AiManager {
         this.isPreloadStarted = true
 
         // load scriptures
+        const open = get(drawerTabsData)?.scripture?.activeSubTab || ""
         const localScriptureIds = this.getLocalScriptureIds()
-        BibleCacheManager.preloadAllInBackground(localScriptureIds)
+        BibleCacheManager.preloadAllInBackground([...localScriptureIds].sort((a, b) => Number(b === open) - Number(a === open)))
     }
 
     private static getLocalScriptureIds() {
@@ -212,20 +259,25 @@ export class AiManager {
 
         // an online Bible has no words here to listen against: spoken references are
         // followed all the same, and quotes through any Bible stored on this computer
-        if (!localIds.includes(openBibleId)) {
+        const open = localIds.includes(openBibleId)
+        const readId = open ? openBibleId : localIds[0]
+
+        // none stored, or one that will not load: references only
+        if (!readId || !(await BibleCacheManager.getCache(readId))) {
             if (!localIds.length) {
                 if (!this.scriptureAlerted) newToast("Listening for references. Download a Bible to also catch verses as they are quoted.")
                 this.scriptureAlerted = true
-                return await (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled)
             }
-            const match = await this.bibleDetection(localIds[0], textChunk, isCancelled)
-            if (match) delete match.scriptureTranslation
+            return (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
+        }
+
+        const match = await this.bibleDetection(readId, textChunk, isCancelled)
+        if (!match) return null
+        if (!open) {
+            delete match.scriptureTranslation
             return match
         }
         const activeBibleId = openBibleId
-
-        const match = await this.bibleDetection(activeBibleId, textChunk, isCancelled)
-        if (!match) return null
 
         // reference type matches stays on the active scripture
         if (match.scriptureMatchType !== "content") return match
@@ -234,7 +286,8 @@ export class AiManager {
 
         // Non-blocking concurrent scan
         Promise.all(
-            this.getLocalScriptureIds().map(async (id) => {
+            // only those in memory: loading every translation for every quote would never settle
+            BibleCacheManager.loadedIds().map(async (id) => {
                 // already checked
                 if (id === activeBibleId) return
 
@@ -244,7 +297,7 @@ export class AiManager {
                     this.newMatch({ ...otherMatch, scriptureIsNewTranslation: true })
                 }
             })
-        )
+        ).catch((err) => console.warn("Live Copilot could not search the other Bibles", err))
 
         return match
     }
@@ -253,7 +306,7 @@ export class AiManager {
         const bibleCache = await BibleCacheManager.getCache(id)
         if (!bibleCache || isCancelled?.()) return null
 
-        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled)
+        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
         if (!match) return null
 
         match.scriptureTranslation = id
@@ -262,14 +315,19 @@ export class AiManager {
 
     /////
 
-    static newMatch(match: MatchResult) {
+    // being put up: not yet live, and not to be put up a second time
+    private static pendingContent = ""
+
+    static newMatch(match: MatchResult, offerOnly = false) {
         if (match.type === "empty" || !match.content) return
-        if (match.type === "scripture" && AiManager.liveContent === match.content) {
+        // a verse of the range on screen being read keeps the whole range up
+        if (match.type === "scripture" && (AiManager.liveContent === match.content || isReferenceWithin(AiManager.liveContent, match.content))) {
             this.heardAgain()
             return
         }
 
         if (match.type !== "scripture" && match.type !== "scripture_version" && match.type !== "lyrics") return
+        if (match.content === this.pendingContent && !match.scriptureIsNewTranslation) return
 
         let suggestionDraft: any = {
             id: uid(5),
@@ -282,12 +340,17 @@ export class AiManager {
 
         const trigger = () => this.triggerMatchAction(match)
 
-        if (this.shouldAutoPlay(match)) {
+        if (!offerOnly && this.shouldAutoPlay(match)) {
             const suggestion = { ...suggestionDraft, action: "presented", trigger }
             this.addSuggestion(suggestion)
 
             console.info(`Auto-playing ${match.type}:`, match.content)
-            trigger()
+            this.pendingContent = match.content
+            trigger().then((up) => {
+                if (this.pendingContent === match.content) this.pendingContent = ""
+                // it did not go up: still on offer, not part of what was shown
+                if (!up) aiSuggestions.update((list) => list.map((a) => (a.id === suggestion.id ? { ...a, action: match.type === "lyrics" ? "present_song" : "present" } : a)))
+            })
             return
         }
 
@@ -301,14 +364,10 @@ export class AiManager {
         this.addSuggestion(suggestion)
     }
 
+    // long enough for the words that found it to have gone by; "back to verse sixteen" later is shown
+    private static RESHOW_BLOCK_MS = 20_000
     private static alreadySuggested(match: MatchResult): boolean {
-        // get suggested, but remove any suggestions that have lower confidence than the current match
-        const suggested = get(aiSuggestions)
-            .filter((a) => a.content !== match.content || a.confidence >= match.confidence)
-            .filter((a) => !isReferenceWithin(match.content, a.content))
-            .map((item) => item.content)
-
-        return suggested.includes(match.content)
+        return get(aiSuggestions).some((a) => a.content === match.content && a.confidence >= match.confidence && Date.now() - a.timestamp < this.RESHOW_BLOCK_MS)
     }
 
     private static shouldAutoPlay(match: MatchResult): boolean {
@@ -318,6 +377,9 @@ export class AiManager {
         if (match.type !== "scripture" && match.type !== "lyrics") return false
 
         if (match.type === "scripture" && match.scriptureIsNewTranslation) return false
+
+        // just taken back with Undo: the same words are still being heard
+        if (this.takenBack.content === match.content && Date.now() - this.takenBack.at < this.RESHOW_BLOCK_MS) return false
 
         // never auto-play low confidence matches
         if (match.confidence <= 50) return false
@@ -341,7 +403,7 @@ export class AiManager {
     }
 
     static liveContent: string = ""
-    private static async triggerMatchAction(match: MatchResult) {
+    private static async triggerMatchAction(match: MatchResult): Promise<boolean> {
         try {
             if (match.type === "scripture_version") {
                 if (match.scriptureTranslation) setActiveScripture(match.scriptureTranslation)
@@ -350,10 +412,18 @@ export class AiManager {
             } else if (match.type === "lyrics" && match.showId) {
                 const { showId, lyricsText } = match
                 await this.asOwnChange(match.content, () => presentSong(showId, lyricsText || ""), { show: showId })
+                this.markShown(match.content)
             }
+            return true
         } catch (err) {
             console.warn("Live Copilot could not present", match.content, err)
+            return false
         }
+    }
+
+    // something on offer that was put up joins what was shown, with the time
+    private static markShown(content: string) {
+        aiSuggestions.update((list) => list.map((a) => (a.content === content && a.action !== "open_scripture" ? { ...a, action: "presented", timestamp: Date.now() } : a)))
     }
 
     // Output changes the copilot makes itself are not "moved by hand".
@@ -375,6 +445,7 @@ export class AiManager {
     private static shown: Shown[] = []
     private static remember(content: string, kind: Shown["kind"], show: () => Promise<unknown>) {
         if (!content) return
+        this.markShown(content)
         this.shown = [...this.shown.filter((entry) => entry.content !== content), { content, kind, show }].slice(-20)
     }
 
@@ -385,6 +456,7 @@ export class AiManager {
             this.liveContent = ""
             throw new Error(`${content} could not be put up`)
         }
+        this.lastScripture = Date.now()
         this.remember(content, "scripture", () => this.present(content, reference, id))
     }
 
@@ -392,7 +464,7 @@ export class AiManager {
 
     static async findReference(words: string): Promise<string | null> {
         const detector = await this.referenceDetector()
-        return detector.findReference(words, this.liveContent)?.content || null
+        return detector.findReference(words, this.liveContent, this.numberLanguage())?.content || null
     }
     private static async referenceDetector() {
         const open = get(drawerTabsData)?.scripture?.activeSubTab || ""
@@ -401,7 +473,7 @@ export class AiManager {
         return (id && (await BibleCacheManager.getCache(id))) || (await BibleCacheManager.getCanon())
     }
     static async findInLocalBible(words: string): Promise<string | null> {
-        return (await (await this.referenceDetector()).search(words, ""))?.content || null
+        return (await (await this.referenceDetector()).search(words, "", undefined, this.numberLanguage()))?.content || null
     }
     static async showReference(reference: string) {
         await this.present(reference, reference)
@@ -449,10 +521,16 @@ export class AiManager {
         this.outputUpdate("")
         if (this.clearTimer) clearTimeout(this.clearTimer)
     }
+    private static takenBack = { content: "", at: 0 }
+    /** true while this is what the copilot last put up, and Undo would take it back */
+    static canUndo(content: string): boolean {
+        return !!content && this.liveContent === content && !!this.undone && !get(outLocked)
+    }
     /** what was up before the copilot's last change */
     static undoChange(): boolean {
         const before = this.undone
         if (!before && !get(outputCache)) return false
+        this.takenBack = { content: this.liveContent, at: Date.now() }
         this.listenToOutput()
         this.ownChanges.expect("any")
         this.undone = null
@@ -489,7 +567,8 @@ export class AiManager {
     private static setSmartAction(content: AiSuggestion) {
         aiSmartAction.set(content)
 
-        const TIMEOUT = content.action === "presented" ? 4000 : this.SMART_ACTION_DURATION
+        // long enough to read it and press Undo
+        const TIMEOUT = content.action === "presented" ? 8000 : this.SMART_ACTION_DURATION
 
         if (this.smartActionTimer) {
             clearTimeout(this.smartActionTimer)
@@ -503,6 +582,7 @@ export class AiManager {
 
     private static SUGGESTION_MAX_AGE = 5 * 60 * 1000 // 5 minutes
     private static SUGGESTION_LIMIT = 15
+    private static SHOWN_LIMIT = 50
     private static STILL_SPEAKING_MS = 6000
     private static addSuggestion(content: AiSuggestion) {
         this.setSmartAction(content)
@@ -510,16 +590,18 @@ export class AiManager {
         aiSuggestions.update((list) => {
             const now = Date.now()
 
-            // remove timed out suggestions
-            let active = list.filter((a) => now - a.timestamp < this.SUGGESTION_MAX_AGE)
+            // offers time out; what was put up stays for the session
+            let active = list.filter((a) => a.action === "presented" || now - a.timestamp < this.SUGGESTION_MAX_AGE)
 
-            // remove duplicate suggestions
-            active = active.filter((a) => a.id !== content.id && a.content !== content.content)
+            // remove duplicate suggestions, but an offer does not wipe the record of a showing
+            active = active.filter((a) => a.id !== content.id && (a.content !== content.content || (a.action === "presented" && content.action !== "presented")))
 
             // the first half of a reference is replaced by the whole of it
             if (content.kind !== "song") active = active.filter((a) => a.action === "presented" || now - a.timestamp > this.STILL_SPEAKING_MS || !isPartOf(a.content, content.content, a.confidence <= 75))
 
-            return [content, ...active].slice(0, this.SUGGESTION_LIMIT)
+            let shown = 0
+            let offered = 0
+            return [content, ...active].filter((a) => (a.action === "presented" ? ++shown <= this.SHOWN_LIMIT : ++offered <= this.SUGGESTION_LIMIT))
         })
     }
 

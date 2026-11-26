@@ -22,7 +22,8 @@ export type CopilotCommand =
 
 const BARE_NEXT = new Set(["next", "next one", "go next", "forward", "go forward"])
 const BARE_BACK = new Set(["back", "go back", "previous", "previous one", "back one", "back up"])
-const BARE_BEGINNING = new Set(["beginning", "the beginning", "start over", "from the top"])
+const BARE_BEGINNING = new Set(["beginning", "the beginning", "start over", "from the top", "from the beginning", "first chapter", "the first chapter"])
+const BARE_LAST_CHAPTER = new Set(["last chapter", "the last chapter", "final chapter", "the final chapter"])
 
 const UNITS: Record<string, number> = {
     one: 1,
@@ -138,10 +139,11 @@ export function parseCopilotCommand(chunk: string, allowBare = true): CopilotCom
     if (gotoVerse) return { type: "goto-verse", verse: parseInt(gotoVerse[1], 10) }
 
     // Beginning / end of the book.
-    if (/\b(go to the beginning|from the beginning|beginning of the book|start of the book|first chapter(?! of))\b/.test(t)) {
+    // ("from the beginning" and "last chapter" are ordinary talk: alone only, further down)
+    if (/\b(go to the beginning|go to the first chapter|beginning of the book|start of the book)\b/.test(t)) {
         return { type: "first-chapter" }
     }
-    if (/\b(last chapter(?! of)|final chapter(?! of)|end of the book)\b/.test(t)) {
+    if (/\b(go to the (?:last|final) chapter|end of the book)\b/.test(t)) {
         return { type: "last-chapter" }
     }
 
@@ -167,6 +169,7 @@ export function parseCopilotCommand(chunk: string, allowBare = true): CopilotCom
     if (BARE_NEXT.has(t)) return { type: "verse-step", delta: 1 }
     if (BARE_BACK.has(t)) return { type: "verse-step", delta: -1 }
     if (BARE_BEGINNING.has(t)) return { type: "first-chapter" }
+    if (BARE_LAST_CHAPTER.has(t)) return { type: "last-chapter" }
 
     const bareVerse = t.match(/^verse (\d{1,3})$/)
     if (bareVerse) return { type: "goto-verse", verse: parseInt(bareVerse[1], 10) }

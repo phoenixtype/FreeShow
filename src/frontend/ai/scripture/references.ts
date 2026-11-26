@@ -2,8 +2,22 @@ import type { BibleCacheData } from "./BibleCacheManager"
 import { correctBookNames } from "./nearestBook"
 import { CHAPTER_PATTERN, JOINER_PATTERN, normalizeBookName, OF_PATTERN, ORDINAL_PREFIX_PATTERN, PSALM_NORMALIZATION_MAP, PSALM_PATTERN, RANGE_PATTERN, THE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
 
+// "1st John", "II Corinthians"
+const NUMBERED_BOOKS = "samuel|kings|chronicles|corinthians|thessalonians|timothy|peter|john"
+const SHORT_ORDINALS: Record<string, string> = { "1st": "1", "2nd": "2", "3rd": "3", i: "1", ii: "2", iii: "3" }
+const SHORT_ORDINAL_REGEX = new RegExp(`(?<![\\p{L}\\p{N}])(1st|2nd|3rd|iii|ii|i)\\s+(?=(?:${NUMBERED_BOOKS})\\b)`, "giu")
+
+// "First, John 3:16": a pause after the number means it was probably counting a point, not naming 1 John
+const ORDINAL_ASIDE = new RegExp(`(?<![\\p{L}\\p{N}])(?:first(?:ly)?|second(?:ly)?|third(?:ly)?|1st|2nd|3rd|one|two|three|[1-3])\\s*[,;:.!]\\s*(?=(?:${NUMBERED_BOOKS})\\b)`, "giu")
+/** the words without such a number; null when there is none */
+export function withoutOrdinalAside(text: string): string | null {
+    const plain = text.replace(ORDINAL_ASIDE, "")
+    return plain === text ? null : plain
+}
+
 export function normalizeReferences(text: string, cacheData: BibleCacheData): string {
-    let normalized = text
+    let normalized = text.replace(SHORT_ORDINAL_REGEX, (_, ordinal: string) => `${SHORT_ORDINALS[ordinal.toLowerCase()]} `)
+    for (const [other, own] of Object.entries(cacheData.aliases || {})) normalized = normalized.replace(new RegExp(`\\b${other.replace(/ /g, "\\s+")}\\b`, "giu"), own)
 
     // 1. Remove punctuation that breaks numbered books and normalize ordinal book prefixes (e.g., "1, john 4" or "first, john" -> "1 john")
     normalized = normalized.replace(new RegExp(`\\b([1-3]|${ORDINAL_PREFIX_PATTERN})\\s*[,.\\-_]\\s*([\\p{L}]+)`, "giu"), "$1 $2")
@@ -14,6 +28,11 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     normalized = correctBookNames(normalized, cacheData.bookNames, CHAPTER_PATTERN, VERSE_PATTERN)
 
+    // 6. Ordinal psalm phrasing: "the 23rd psalm" -> "Psalm 23". Before the plural step, while
+    // one psalm still reads differently from "the 150 psalms"
+    const ordinalPsalmRegex = new RegExp(`\\b(?:${THE_PATTERN})\\s+(\\d+)(?:st|nd|rd|th)?\\s+(${PSALM_PATTERN})\\b`, "giu")
+    normalized = normalized.replace(ordinalPsalmRegex, "$2 $1")
+
     // 2. Normalize plural or localized book names (e.g., "Psalms" -> "Psalm")
     for (const [plural, singular] of Object.entries(PSALM_NORMALIZATION_MAP)) {
         // towards the name this Bible uses: some have "Psalm", some "Psalms"
@@ -21,6 +40,10 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
         const [from, to] = own.includes(plural) && !own.includes(singular.toLowerCase()) ? [singular, plural] : [plural, singular]
         normalized = normalized.replace(new RegExp(`\\b${from}\\b`, "giu"), to)
     }
+
+    // "and chapter three verse sixteen": "and" is not a book, and the chapter must stay said
+    const bookWords = cacheData.bookNames.flatMap((name) => [name.toLowerCase(), name.toLowerCase().split(" ").pop()!])
+    const isBook = (name: string) => bookWords.includes(name.toLowerCase().replace(/\s+/g, " ")) || bookWords.includes(name.toLowerCase().replace(/^[1-3]\s*/, ""))
 
     // 3. Inverted structure: "verse 16 of John chapter 3" or "16th verse of John chapter 3" -> "John 3:16"
     const invertedRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(?:${VERSE_PATTERN})?\\s*(\\d+)\\s+(?:(?:${VERSE_PATTERN})\\s+)?(?:${OF_PATTERN})\\s+((?:[1-3]\\s*)?[\\p{L}]+?)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d+)\\b`, "giu")
@@ -31,18 +54,26 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     // 4. Trailing verse ordinal/word: "John chapter 3, the 16th verse" -> "John 3:16"
     const trailingVerseRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+?)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d+)[,\\s]+(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(?:${VERSE_PATTERN})\\b`, "giu")
-    normalized = normalized.replace(trailingVerseRegex, (_, book, chap, verse) => {
+    normalized = normalized.replace(trailingVerseRegex, (match, book, chap, verse) => {
         const cleanBook = book.trim().replace(new RegExp(`\\s+(?:${CHAPTER_PATTERN})$`, "iu"), "")
+        if (!isBook(cleanBook)) return match
         return `${cleanBook} ${chap}:${verse}`
     })
 
     // 5. Ordinal chapter structure: "the 8th chapter of Romans" -> "Romans 8"
     const ordinalChapterRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(?:${CHAPTER_PATTERN}|${PSALM_PATTERN})\\s+(?:${OF_PATTERN})\\s+((?:[1-3]\\s*)?[\\p{L}]+)\\b`, "giu")
-    normalized = normalized.replace(ordinalChapterRegex, "$2 $1")
+    normalized = normalized.replace(ordinalChapterRegex, (all, chapter: string, book: string) => (/\bchapter\b/iu.test(all) ? `${book} chapter ${chapter}` : `${book} ${chapter}`))
 
-    // 6. Ordinal psalm phrasing: "the 23rd psalm" -> "Psalm 23"
-    const ordinalPsalmRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(${PSALM_PATTERN})\\b`, "giu")
-    normalized = normalized.replace(ordinalPsalmRegex, "$2 $1")
+    // "John three one six": the verse said a digit at a time
+    normalized = normalized.replace(new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d{1,3})\\s+(\\d)\\s+(\\d)\\b(?![:\\d])`, "giu"), (match, book: string, chapter: string, first: string, second: string) => {
+        const verse = Number(first + second)
+        const verses = cacheData.referenceIndex.get(`${book.toLowerCase()} ${chapter}`)?.verseCount || 0
+        return verse >= 1 && verse <= verses ? `${book} ${chapter}:${verse}` : match
+    })
+
+    // "Jude one three": the 1 is the only chapter, and the verse follows
+    const oneChapterRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+1\\s+(?:(?:${VERSE_PATTERN})\\s+)?(\\d+(?:-\\d+)?)\\b(?![:\\d])`, "giu")
+    normalized = normalized.replace(oneChapterRegex, (match, book, verse) => (isSingleChapterBook(book, cacheData) ? `${book} 1:${verse}` : match))
 
     // 7. Single-chapter book handler: convert "Philemon verse 6" -> "Philemon 1:6"
     const singleChapterRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)\\s+(?:${VERSE_PATTERN})?\\s*(\\d+)\\b(?![:\\d])(?!\\s+(?:${VERSE_PATTERN})\\s*\\d)`, "giu")
@@ -57,6 +88,7 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
     const standardRefRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+?)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d+)\\s+((?:${JOINER_PATTERN})|(?:${VERSE_PATTERN}))\\s+(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "giu")
     normalized = normalized.replace(standardRefRegex, (match, book, chap, joiner, vStart, vEnd) => {
         const cleanBook = book.trim().replace(new RegExp(`\\s+(?:${CHAPTER_PATTERN})$`, "iu"), "")
+        if (!isBook(cleanBook)) return match
         const joinerStr = (joiner || "").toLowerCase()
         const isJoinerWord = new RegExp(`^(?:${JOINER_PATTERN})$`, "i").test(joinerStr)
         // "Genesis 1 and 2" is two chapters, not chapter 1 verse 2
@@ -75,6 +107,12 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     // 10. Split concatenated 3- and 4-digit reference numbers (e.g., "John 316" -> "John 3:16", "Psalms 4610" -> "Psalms 46:10")
     normalized = normalized.replace(/\b((?:[1-3]\s*)?[\p{L}]+)\s+(\d{3,4})\b/giu, (match, book, digits) => {
+        // "Psalm 103" is a chapter as it stands
+        if (cacheData.referenceIndex.has(`${book.toLowerCase()} ${digits}`)) return match
+
+        // "Luke 2025" is a year, not Luke 20:25
+        if (Number(digits) >= 1900 && Number(digits) <= 2100) return match
+
         let chap = 0
         let verse = 0
         if (digits.length === 3) {

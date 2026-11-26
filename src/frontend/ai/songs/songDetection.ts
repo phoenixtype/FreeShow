@@ -18,6 +18,8 @@ export interface SongHit {
     id: string
     name: string
     confidence: number
+    /** heard in more than one chunk, over several seconds: singing, not a phrase quoted in passing */
+    sustained: boolean
 }
 
 const N = 3
@@ -26,6 +28,9 @@ const HALF_LIFE_MS = 20_000
 const RECOUNT_AFTER_MS = 15_000 // a chorus sung again counts again
 const MIN_SCORE = 2.5
 const MIN_SONG_WORDS = 12
+const SUSTAINED_MS = 8_000
+const RUN_GAP_MS = 15_000 // quiet this long and the next line starts a new run
+const LATEST_WORDS = 6
 
 export function words(text: string): string[] {
     return text
@@ -104,6 +109,7 @@ export class SongIndex {
 export class SongDetector {
     private scores = new Map<number, { score: number; at: number }>()
     private counted = new Map<number, number>()
+    private runs = new Map<number, { since: number; last: number; chunks: number }>()
 
     constructor(private index: SongIndex) {}
 
@@ -122,6 +128,11 @@ export class SongDetector {
                 this.scores.set(song, { score: (was ? decay(was, now) : 0) + found.weight, at: now })
                 gained.add(song)
             }
+        }
+
+        for (const song of gained) {
+            const run = this.runs.get(song)
+            this.runs.set(song, run && now - run.last <= RUN_GAP_MS ? { since: run.since, last: now, chunks: run.chunks + 1 } : { since: now, last: now, chunks: 1 })
         }
 
         // only songs heard in these words compete: what was sung earlier is not news,
@@ -143,12 +154,14 @@ export class SongDetector {
         if (rival && rival.score >= first * 0.8) confidence = Math.min(confidence, 60)
 
         const song = this.index.song(best)
-        return { id: song.id, name: song.name, confidence }
+        const run = this.runs.get(best)!
+        return { id: song.id, name: song.name, confidence, sustained: run.chunks >= 2 && now - run.since >= SUSTAINED_MS }
     }
 
     reset() {
         this.scores.clear()
         this.counted.clear()
+        this.runs.clear()
     }
 }
 
@@ -156,13 +169,15 @@ function decay(entry: { score: number; at: number }, now: number) {
     return entry.score * Math.pow(0.5, (now - entry.at) / HALF_LIFE_MS)
 }
 
-// The slide being sung: the one sharing the most triples with the latest words.
+// The slide being sung: the one sharing the most triples with the latest words,
+// the very last of which count twice.
 // A chorus shows up on several slides, so among equals the first at or after
 // `from` (the slide on screen) wins: the song moves on rather than back.
 export function bestSlide(slides: string[], recent: string, from = 0): number | null {
     const sung = new Set(triples(words(recent)))
     if (!sung.size) return null
-    const hits = slides.map((text) => triples(words(text)).filter((t) => sung.has(t)).length)
+    const latest = new Set(triples(words(recent).slice(-LATEST_WORDS)))
+    const hits = slides.map((text) => triples(words(text)).reduce((count, t) => count + (sung.has(t) ? 1 : 0) + (latest.has(t) ? 1 : 0), 0))
     const most = Math.max(0, ...hits)
     if (!most) return null
     const ahead = hits.findIndex((h, i) => h === most && i >= from)

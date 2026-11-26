@@ -147,8 +147,8 @@ export class LLMManager {
                 task: "listen",
                 allow
             })
-            if (!result?.content) return null
-            if (result.type !== "scripture") return result
+            // only passages are asked for, whatever a model answers
+            if (!result?.content || result.type !== "scripture") return null
 
             // the model's own certainty is only its word: the passage has to exist, and it is
             // offered to the operator rather than put up by itself

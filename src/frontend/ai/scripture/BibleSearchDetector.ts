@@ -3,8 +3,27 @@ import type { BibleCacheData } from "./BibleCacheManager"
 import { normalizeMishearings } from "./mishearings"
 import { normalizeNumbers } from "./numbers"
 import { MIN_EVIDENCE, PRESENT_EVIDENCE, quoteEvidence } from "./quoteEvidence"
-import { normalizeBookName, RANGE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
-import { normalizeReferences } from "./references"
+import { CHAPTER_PATTERN, normalizeBookName, RANGE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
+import { normalizeReferences, withoutOrdinalAside } from "./references"
+
+const COUNTED_WORDS = /^\s*(?:things|people|days|years|times|of|out|is|was|men|women|friends|letters)\b/iu
+const LEAD_IN = /\b(?:turn(?: with me)? to|book of|chapter of|in|read|reading|open(?: (?:your|our|the) bibles?)?(?: (?:with me )?(?:to|at))?)\s+(?:the (?:book of )?)?$/iu
+
+// a range stops at the end of the chapter
+function rangeEnd(start: number, end: number | undefined, verseCount: number): string {
+    const last = Math.min(end || 0, verseCount)
+    return last > start ? `-${last}` : ""
+}
+
+// group 1: what led up to it; then chapter, verse and range end
+const STANDALONE_CHAPTER = new RegExp(`(^|[.!?]\\s*|\\b(?:turn(?: with me)? to|go to|to|in|at|and|then|now|so|read|see|us|from)\\s+(?:the )?)(?:${CHAPTER_PATTERN})\\s*(\\d+)(?:[\\s,:]*(?:(?:and )?(?:${VERSE_PATTERN})\\s*)?(?<=[\\s,:])(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?)?`, "giu")
+
+// "verse eight and nine": the next one, and nothing it could be counting
+function andNext(start: number, after: string): number | undefined {
+    const next = after.match(/^\s*,?\s*and\s+(?:verse\s+)?(\d+)\b(?![:.]\d)/iu)
+    if (!next || Number(next[1]) !== start + 1 || COUNTED_WORDS.test(after.slice(next[0].length))) return undefined
+    return start + 1
+}
 
 export class BibleSearchDetector {
     constructor(private cacheData: BibleCacheData) {}
@@ -23,31 +42,45 @@ export class BibleSearchDetector {
 
             if (cleanInput.length - (matchIndex + matchLength) > 120) continue
 
-            const matchedBookName = normalizeBookName(refMatch[1])
+            let matchedBookName = normalizeBookName(refMatch[1])
 
             const chapterNum = parseInt(refMatch[2], 10)
             const startVerseNum = refMatch[3] ? parseInt(refMatch[3], 10) : undefined
             const endVerseNum = refMatch[4] ? parseInt(refMatch[4], 10) : undefined
 
-            const refKey = `${matchedBookName.toLowerCase()} ${chapterNum}`
-            const chapterData = this.cacheData.referenceIndex.get(refKey)
+            const chapterOf = (name: string) => this.cacheData.referenceIndex.get(`${name.toLowerCase()} ${chapterNum}`)
+            let chapterData = chapterOf(matchedBookName)
+            // "second John 21 verse 15": no such place in that book, so the number was not part of its name
+            if (!chapterData || (startVerseNum || 0) > chapterData.verseCount) {
+                matchedBookName = matchedBookName.replace(/^[1-3]\s+/, "")
+                chapterData = chapterOf(matchedBookName)
+            }
             if (!chapterData) continue
 
             if (!startVerseNum) {
                 if (chapterData.verseCount < 1) continue
+                const after = cleanInput.slice(matchIndex + matchLength)
+                // "Mark two things", "John 3 years ago": the number counts something else
+                if (COUNTED_WORDS.test(after)) continue
+                // "John chapter three, and look with me at verse sixteen"
+                const later = after.slice(0, 60).match(new RegExp(`\\b(?:${VERSE_PATTERN})\\s*(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "iu"))
+                const laterVerse = Number(later?.[1] || 0)
+                if (laterVerse >= 1 && laterVerse <= chapterData.verseCount) {
+                    const content = `${chapterData.bookName} ${chapterData.chapterNumber}:${laterVerse}${rangeEnd(laterVerse, Number(later![2] || 0), chapterData.verseCount)}`
+                    return { type: "scripture", content, confidence: 98 }
+                }
+                const meant = new RegExp(`\\b(?:${CHAPTER_PATTERN})\\b`, "iu").test(refMatch[0]) || LEAD_IN.test(cleanInput.slice(0, matchIndex)) || !/[\p{L}\p{N}]/u.test(after)
                 return {
                     type: "scripture",
                     content: `${chapterData.bookName} ${chapterData.chapterNumber}:1`,
-                    confidence: 75
+                    confidence: meant ? 75 : 60
                 }
             }
 
             if (startVerseNum < 1 || startVerseNum > chapterData.verseCount) continue
 
             let referenceContent = `${chapterData.bookName} ${chapterData.chapterNumber}:${startVerseNum}`
-            if (endVerseNum && endVerseNum > startVerseNum) {
-                referenceContent += `-${endVerseNum}`
-            }
+            referenceContent += rangeEnd(startVerseNum, endVerseNum ?? andNext(startVerseNum, cleanInput.slice(matchIndex + matchLength)), chapterData.verseCount)
 
             return {
                 type: "scripture",
@@ -59,10 +92,32 @@ export class BibleSearchDetector {
         return null
     }
 
-    public findStandaloneVerseMatch(cleanInput: string, currentlyOutputted?: string | null): MatchResult | null {
+    /** "chapter three verse sixteen", in the book that is up; null when no chapter alone was said */
+    private findStandaloneChapterMatch(cleanInput: string, currentlyOutputted?: string | null): { match: MatchResult | null } | null {
+        const said = Array.from(cleanInput.matchAll(STANDALONE_CHAPTER)).pop()
+        if (!said) return null
+        const after = cleanInput.slice((said.index ?? 0) + said[0].length)
+        if (after.length > 80) return null
+
+        const current = this.parseReference(currentlyOutputted || "")
+        const chapterData = current && this.cacheData.referenceIndex.get(`${current.book.toLowerCase()} ${Number(said[2])}`)
+        const verse = Number(said[3] || 0)
+        if (!chapterData || verse > chapterData.verseCount) return { match: null }
+        // a chapter alone ("a new chapter one of our lives") has to be asked for
+        if (!verse && !(LEAD_IN.test(said[1]) && !/\p{L}/u.test(after))) return { match: null }
+
+        const content = `${chapterData.bookName} ${chapterData.chapterNumber}:${verse || 1}${verse ? rangeEnd(verse, Number(said[4] || 0), chapterData.verseCount) : ""}`
+        return { match: { type: "scripture", content, confidence: 80 } }
+    }
+
+    public findStandaloneVerseMatch(cleanInput: string, currentlyOutputted?: string | null, withCue = false): MatchResult | null {
+        // a chapter said with it decides which verse is meant, so it comes first
+        const chapter = this.findStandaloneChapterMatch(cleanInput, currentlyOutputted)
+        if (chapter) return chapter.match
+
         const verseRegex = new RegExp(`\\b(?:${VERSE_PATTERN})\\s*(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "giu")
         const matches = Array.from(cleanInput.matchAll(verseRegex))
-        if (matches.length === 0) return this.findNextVerseCue(cleanInput, currentlyOutputted)
+        if (matches.length === 0) return withCue ? this.findNextVerseCue(cleanInput, currentlyOutputted) : null
 
         for (let i = matches.length - 1; i >= 0; i--) {
             const match = matches[i]
@@ -89,9 +144,7 @@ export class BibleSearchDetector {
             if (!chapterData || startVerseNum < 1 || startVerseNum > chapterData.verseCount) continue
 
             let referenceContent = `${chapterData.bookName} ${chapterData.chapterNumber}:${startVerseNum}`
-            if (endVerseNum && endVerseNum > startVerseNum) {
-                referenceContent += `-${endVerseNum}`
-            }
+            referenceContent += rangeEnd(startVerseNum, endVerseNum ?? andNext(startVerseNum, cleanInput.slice(matchIndex + matchLength)), chapterData.verseCount)
 
             const isSequential = startVerseNum === parsedCurrent.verse + 1
 
@@ -115,18 +168,40 @@ export class BibleSearchDetector {
             .filter((w) => w.length > 1)
     }
 
-    // a reader says the verse number before each verse
+    // A reader says the verse number before each verse. Number words are everywhere in talk,
+    // so the number has to start a sentence, and the words after it have to be that verse's.
     private findNextVerseCue(cleanInput: string, currentlyOutputted?: string | null): MatchResult | null {
         const current = currentlyOutputted ? this.parseReference(currentlyOutputted) : null
         if (!current) return null
 
-        const cue = Number(cleanInput.slice(-40).match(/\b(\d+)\b(?!.*\b\d+\b)/)?.[1])
+        const said = Array.from(cleanInput.matchAll(/(?:^|[.,;:!?"'\u201d\u2019])\s*(\d+)\b(?![:.]?\d)/g)).pop()
+        if (!said) return null
+        const after = cleanInput.slice((said.index ?? 0) + said[0].length)
+        if (after.length > 80) return null
+
+        const cue = Number(said[1])
         if (cue !== current.verse + 1 && cue !== current.verse + 2) return null
 
         const chapterData = this.cacheData.referenceIndex.get(`${current.book.toLowerCase()} ${current.chapter}`)
         if (!chapterData || cue > chapterData.verseCount) return null
+        const match: MatchResult = { type: "scripture", content: `${chapterData.bookName} ${chapterData.chapterNumber}:${cue}`, confidence: 85 }
 
-        return { type: "scripture", content: `${chapterData.bookName} ${chapterData.chapterNumber}:${cue}`, confidence: 85 }
+        const opening = this.openingWords(chapterData.startVerseId + cue - 1)
+        // no words to check it against (an online Bible): offered, not certain
+        if (!opening.size) return { ...match, confidence: 70 }
+        const confirmed = this.tokenizeText(after)
+            .slice(0, 4)
+            .filter((word) => opening.has(word)).length
+        return confirmed >= 2 ? match : null
+    }
+
+    /** the first words of a verse; none when this Bible has no text */
+    private openingWords(verseId: number): Set<string> {
+        const start = this.cacheData.verseTokensOffsets[verseId]
+        const end = Math.min(this.cacheData.verseTokensOffsets[verseId + 1], start + 6)
+        const opening = new Set<string>()
+        for (let i = start; i < end; i++) opening.add(this.cacheData.vocabPool[this.cacheData.verseTokens[i]])
+        return opening
     }
 
     // share of the verse's word weight that the spoken words account for
@@ -269,6 +344,8 @@ export class BibleSearchDetector {
 
         for (let i = 0; i < windowSizes.length; i++) {
             if (isCancelled?.()) return null
+            // a window that already held everything said: a wider one is the same search
+            if (i > 0 && allTokens.length <= windowSizes[i - 1]) break
 
             if (i > 0) {
                 await new Promise((resolve) => setTimeout(resolve, 0))
@@ -384,6 +461,10 @@ export class BibleSearchDetector {
 
             scoreRatio = Math.min(scoreRatio, 1.0)
 
+            // not enough even with the best phrase bonus: not worth comparing word order
+            const bestBoost = 1.6 * (isCurrent ? 1.25 : upcomingDist === 1 ? 1.15 : 1)
+            if (scoreRatio * bestBoost < (isCurrent || upcomingDist === 1 ? 0.18 : 0.28)) continue
+
             // Bonus for phrase / consecutive word matches vs scattered words
             const phraseMatch = this.computePhraseMatch(verseId, queryWordIds)
             scoreRatio *= phraseMatch.bonus
@@ -498,19 +579,21 @@ export class BibleSearchDetector {
     }
 
     /** a reference said outright, whole or as a verse of the passage that is up */
-    public findReference(words: string, currentlyOutputted = ""): MatchResult | null {
-        const forms = [normalizeMishearings(words), words].map((form) => normalizeReferences(normalizeNumbers(form), this.cacheData))
-        return this.findReferenceMatch(forms[0]) || this.findReferenceMatch(forms[1]) || this.findStandaloneVerseMatch(forms[0], currentlyOutputted) || this.findStandaloneVerseMatch(forms[1], currentlyOutputted)
+    public findReference(words: string, currentlyOutputted = "", language = "en"): MatchResult | null {
+        const forms = [normalizeMishearings(words), words].map((form) => normalizeReferences(normalizeNumbers(form, language), this.cacheData))
+        // the verse cue only reads the words as they were heard
+        return this.findReferenceMatch(forms[0]) || this.findReferenceMatch(forms[1]) || this.findStandaloneVerseMatch(forms[0], currentlyOutputted) || this.findStandaloneVerseMatch(forms[1], currentlyOutputted, true)
     }
 
     private readonly DEBUG_MODE = false
-    public async search(transcript: string, currentlyOutputted: string, isCancelled?: () => boolean): Promise<MatchResult | null> {
+    /** language: what is being spoken, for its number words ("any" when it could be several) */
+    public async search(transcript: string, currentlyOutputted: string, isCancelled?: () => boolean, language = "en"): Promise<MatchResult | null> {
         if (this.DEBUG_MODE) console.log("[DETECTION] Starting search with transcript:", transcript)
         if (isCancelled?.()) return null
 
         const mishearingsCorrected = normalizeMishearings(transcript)
-        const rawNormalizedNumbers = normalizeNumbers(transcript)
-        const mishearingsNormalizedNumbers = normalizeNumbers(mishearingsCorrected)
+        const rawNormalizedNumbers = normalizeNumbers(transcript, language)
+        const mishearingsNormalizedNumbers = normalizeNumbers(mishearingsCorrected, language)
 
         const rawNormalized = normalizeReferences(rawNormalizedNumbers, this.cacheData)
         const mishearingsNormalized = normalizeReferences(mishearingsNormalizedNumbers, this.cacheData)
@@ -518,18 +601,28 @@ export class BibleSearchDetector {
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings corrected:", mishearingsCorrected)
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings normalized:", mishearingsNormalized)
 
-        const refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted)
+        let refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted, true)
+
+        // the book without the number, offered rather than certain
+        const aside = withoutOrdinalAside(mishearingsCorrected)
+        const unnumbered = aside && this.findReferenceMatch(normalizeReferences(normalizeNumbers(aside, language), this.cacheData))
+        if (unnumbered) refMatch = { ...unnumbered, confidence: Math.min(unnumbered.confidence, 74) }
 
         if (this.DEBUG_MODE) console.log("[DETECTION] Reference match result:", refMatch)
 
+        // a reference said outright goes up at once, without waiting on the quote search.
+        // 70: a verse number heard where there is no text to check it against
+        if (refMatch && refMatch.confidence >= 70) return refMatch
         if (isCancelled?.()) return null
 
         // 1. Run active-context and fresh-context evaluations simultaneously
+        // the same words are not searched twice
+        const corrected = this.tokenizeText(mishearingsCorrected).join(" ") !== this.tokenizeText(transcript).join(" ")
         const activeRawPromise = this.findContentMatch(transcript, currentlyOutputted, isCancelled)
-        const activeMishearingPromise = this.findContentMatch(mishearingsCorrected, currentlyOutputted, isCancelled)
+        const activeMishearingPromise = corrected ? this.findContentMatch(mishearingsCorrected, currentlyOutputted, isCancelled) : Promise.resolve(null)
 
         const freshRawPromise = currentlyOutputted ? this.findContentMatch(transcript, null, isCancelled) : Promise.resolve(null)
-        const freshMishearingPromise = currentlyOutputted ? this.findContentMatch(mishearingsCorrected, null, isCancelled) : Promise.resolve(null)
+        const freshMishearingPromise = currentlyOutputted && corrected ? this.findContentMatch(mishearingsCorrected, null, isCancelled) : Promise.resolve(null)
 
         const [activeRaw, activeMishearing, freshRaw, freshMishearing] = await Promise.all([activeRawPromise, activeMishearingPromise, freshRawPromise, freshMishearingPromise])
 
@@ -549,9 +642,6 @@ export class BibleSearchDetector {
         }
 
         if (this.DEBUG_MODE) console.log("[DETECTION] Best content match:", bestContentMatch)
-
-        // explicit book/chapter/verse reference has priority
-        if (refMatch && refMatch.confidence >= 75) return refMatch
 
         return bestContentMatch || null
     }
