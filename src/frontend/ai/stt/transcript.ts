@@ -36,6 +36,13 @@ export class Transcript {
         if (!get(ai).enabled) return
 
         const textPart = part.text.trim()
+        // what the model labels as music is shown, and never read as speech
+        if (part.music) {
+            const label = part.interim ? "" : textPart
+            if (label) this.log(label, !!part.glue)
+            if (part.utteranceEnd) this.utterance = ""
+            return
+        }
 
         sttTranscript.update((t) => {
             if (part.interim) return { ...t, unprocessed: textPart }
@@ -53,13 +60,23 @@ export class Transcript {
         if (this.interimTimeout) clearTimeout(this.interimTimeout)
         this.interimTimeout = null
 
-        if (!part.interim && textPart) this.log(textPart, !!part.glue)
+        if (!part.interim && textPart) {
+            this.log(textPart, !!part.glue)
+            this.utterance = (this.utterance + (this.utterance && !part.glue ? " " : "") + textPart).slice(-this.MAX_UTTERANCE_CHARS)
+        }
+        // everything said since the last pause, once the speaker has paused
+        let utterance = ""
+        if (!part.interim && part.utteranceEnd) {
+            utterance = this.utterance
+            this.utterance = ""
+        }
 
         // words said to Matthias are a request, not the sermon: marked as read, and not searched
         const { finalized, unprocessed } = get(sttTranscript)
         if (Matthias.hear(`${finalized.slice(-MATTHIAS_CHARS)} ${unprocessed}`.trim(), Math.max(0, this.heardChars - Math.min(MATTHIAS_CHARS, finalized.length)), !part.interim)) {
             this.getTranscriptChunk()
             this.wordsSinceRequest = 0
+            this.utterance = ""
             return
         }
 
@@ -70,8 +87,20 @@ export class Transcript {
             }, this.INTERIM_DEBOUNCE_MS)
         } else {
             this.interimTimeout = null
-            this.processPendingChunk(textPart)
+            if (utterance) this.processUtterance(utterance)
+            else this.processPendingChunk()
         }
+    }
+
+    private static readonly MAX_UTTERANCE_CHARS = 600
+    private static utterance = ""
+
+    // a whole utterance can be a command ("back"); its words are then not searched as well
+    private static processUtterance(utterance: string) {
+        const chunk = this.getTranscriptChunk()
+        AiManager.processUtterance(utterance)
+            .then((moved) => (moved || !chunk.newWordsCount ? undefined : AiManager.processSTTChunk(chunk)))
+            .catch((err) => console.warn("Live Copilot could not follow what was said", err))
     }
 
     // a line runs until the speaker pauses, or it is long enough to read
@@ -99,6 +128,7 @@ export class Transcript {
         this.interimTimeout = null
         this.resetState()
         this.lastPart = 0
+        this.utterance = ""
         return () => transcriptLog.update((since) => [...lines, ...since].slice(-this.MAX_LINES))
     }
 
@@ -112,12 +142,11 @@ export class Transcript {
         newToast("actions.copied")
     }
 
-    // utterance: the finished phrase just heard, when this chunk ends one
-    private static processPendingChunk(utterance?: string) {
+    private static processPendingChunk() {
         const chunk = this.getTranscriptChunk()
         if (chunk.newWordsCount === 0) return
 
-        AiManager.processSTTChunk({ ...chunk, utterance })
+        AiManager.processSTTChunk(chunk)?.catch((err) => console.warn("Live Copilot could not follow what was said", err))
     }
 
     private static readonly OVERLAP_WORDS = 8

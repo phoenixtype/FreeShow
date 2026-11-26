@@ -34,7 +34,7 @@ export class AiManager {
     private static MAX_LLM_REQUEST_AFTER_MATCH = 5000
     private static latestSearchId: number = 0
 
-    static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number; utterance?: string }) {
+    static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number }) {
         this.triggerBackgroundPreload()
         // watch the output from the first word heard, so slides moved by hand are seen
         this.listenToOutput()
@@ -44,7 +44,7 @@ export class AiManager {
 
         // a spoken command ("next verse") moves the screen and is not searched for
         const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
-        const command = parseCopilotCommand(newWords, false) || (chunk.utterance ? parseCopilotCommand(chunk.utterance, true) : null)
+        const command = parseCopilotCommand(newWords, false)
         // a command that moved nothing (no passage on screen) is searched like any other words
         if (command && (await this.navigate(command))) return
 
@@ -97,6 +97,19 @@ export class AiManager {
 
     private static numberLanguage(): string {
         return spokenLanguage(get(ai).stt?.engineOptions?.[resolveSttEngine()]?.language) || "any"
+    }
+
+    /** everything said between two pauses: only here do the one-word commands count. True when it moved the screen */
+    static async processUtterance(text: string): Promise<boolean> {
+        // phrases that count mid-sentence were acted on as they were heard
+        if (parseCopilotCommand(text, false)) return false
+        const command = parseCopilotCommand(text, true)
+        if (!command) return false
+
+        this.listenToOutput()
+        // what is still being searched was said before this
+        this.latestSearchId++
+        return this.navigate(command)
     }
 
     private static async stringDetection(textChunk: string, isCancelled?: () => boolean) {

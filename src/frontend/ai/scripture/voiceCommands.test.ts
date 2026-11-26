@@ -27,6 +27,16 @@ describe("parseCopilotCommand", () => {
         expect(parseCopilotCommand("what happens next in the story")).toBeNull()
     })
 
+    it("moves to the start or end of a book only when that is all that was said (B10)", () => {
+        expect(parseCopilotCommand("we have known this from the beginning", false)).toBeNull()
+        expect(parseCopilotCommand("from the beginning God had a plan", true)).toBeNull()
+        expect(parseCopilotCommand("in the first chapter we meet Nicodemus", true)).toBeNull()
+        expect(parseCopilotCommand("the last chapter of our lives", true)).toBeNull()
+        expect(parseCopilotCommand("last chapter", false)).toBeNull()
+        expect(parseCopilotCommand("let's go to the beginning", false)).toEqual({ type: "first-chapter" })
+        expect(parseCopilotCommand("go to the last chapter", false)).toEqual({ type: "last-chapter" })
+    })
+
     it("understands beginning-of-book commands", () => {
         expect(parseCopilotCommand("go to the beginning")).toEqual({ type: "first-chapter" })
         expect(parseCopilotCommand("let's go to the beginning")).toEqual({ type: "first-chapter" })
