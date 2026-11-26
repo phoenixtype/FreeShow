@@ -349,3 +349,32 @@ it("moves the video, turns the volume and runs a named timer", async () => {
     await Matthias.ask("stop all timers")
     expect(runAgentTool).toHaveBeenLastCalledWith("control_timer", { command: "stop_all" })
 })
+
+it("starts and stops recording or the stream only when clearly asked", async () => {
+    await Matthias.ask("start recording")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_recording", { command: "start" })
+    await Matthias.ask("stop the stream in OBS")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_stream", { command: "stop", with: "obs" })
+
+    vi.mocked(runAgentTool).mockClear()
+    ai.set({ matthias: { agentMode: true } })
+    const sermon = ["We need to start recording what God has done", "Matthias was recording the names, stop recording", "Matthias. Stop recording.", "Matthias, start recording.", "They said to Matthias, go live your life", "Matthias, go live.", "Hey Matthew, stop the stream"]
+    for (const words of sermon) {
+        position += 2000
+        hear(words, true)
+        await settle()
+    }
+    expect(runAgentTool).not.toHaveBeenCalled()
+
+    position += 2000
+    hear("hey matthias stop recording", true)
+    await settle()
+    expect(runAgentTool).toHaveBeenCalledWith("control_recording", { command: "stop" })
+})
+
+it("never lets the model start or stop recording from words spoken in the room", async () => {
+    model.llm = { request: vi.fn() }
+    chat.run.mockImplementationOnce(async (_history, deps) => ({ content: deps.refuse("control_recording") + " | " + deps.refuse("control_stream") }))
+    await Matthias.ask("could you get the cameras rolling", true)
+    expect(chat.run.mock.calls[0][1].refuse("control_stream")).toMatch(/Hey Matthias/)
+})

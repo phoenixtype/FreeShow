@@ -1,12 +1,13 @@
-// The video on screen and the named timers. Everything is done by the app's own actions
+// The video on screen, the named timers, recording and the live stream. Everything is done by the app's own actions
 // (components/actions/api.ts), the same ones a stream deck or the phone remote use.
 
 import { get } from "svelte/store"
 import { API_ACTIONS } from "../../components/actions/api"
 import { SPEAKER_TIMER_ID } from "../../components/drawer/timers/speakerTimer"
 import { getFirstActiveOutput } from "../../components/helpers/output"
+import { hasStreamableDestination } from "../../components/helpers/rtmpDestinations"
 import { VideoPlayer } from "../../components/media/video/videoPlayer"
-import { activeTimers, timers } from "../../stores"
+import { activeRecording, activeTimers, obsData, outputs, timers } from "../../stores"
 import type { AgentTool } from "./agentTools"
 import { confirm, requireUnlocked, text, ToolError } from "./toolBasics"
 
@@ -18,7 +19,68 @@ function liveVideo() {
     return { path, outputId: output!.id!, ...state }
 }
 
+/** OBS does what it is asked without answering, so only the connection can be checked */
+async function askObs(action: "obs_start_recording" | "obs_stop_recording" | "obs_start_livestream" | "obs_stop_livestream", doing: string) {
+    if (!get(obsData).enabled) throw new ToolError("OBS is not turned on. Turn it on in Settings, Connection.")
+    await API_ACTIONS[action]()
+    if (!get(obsData).connected) throw new ToolError("OBS is not connected. Open OBS and check Settings, Connection.")
+    return `Asked OBS to ${doing}. Check OBS to be sure.`
+}
+
+const recordingHere = () => !!get(activeRecording)?.isOutput
+const screens = () => Object.values(get(outputs))
+const streamingHere = () => screens().some((output) => output.rtmpData?.streaming || output.webrtcData?.streaming)
+
+const recordingInput = { type: "object" as const, properties: { command: { type: "string", enum: ["start", "stop"] }, with: { type: "string", enum: ["app", "obs"], description: "Left out: the app, or OBS when that is what is set up or running" } }, required: ["command"] }
+
 export const liveTools: AgentTool[] = [
+    {
+        name: "control_recording",
+        destructive: true,
+        description: "Start or stop recording the screen. Only when the operator asks for it in so many words.",
+        inputSchema: recordingInput,
+        run: async ({ command, with: where }) => {
+            if (command === "start") {
+                if (where === "obs") return askObs("obs_start_recording", "start recording")
+                API_ACTIONS.start_output_recording({})
+                await confirm(recordingHere, "Recording did not start. Check that a screen is switched on.", 10_000)
+                return "Recording."
+            }
+            if (where !== "obs" && recordingHere()) {
+                API_ACTIONS.stop_output_recording()
+                await confirm(() => !recordingHere(), "It is still recording. Stop it from the screen's preview.", 8000)
+                return "Recording stopped."
+            }
+            if (where !== "app" && get(obsData).enabled) return askObs("obs_stop_recording", "stop recording")
+            throw new ToolError("Nothing is being recorded here.")
+        }
+    },
+    {
+        name: "control_stream",
+        destructive: true,
+        description: "Start or stop the live stream. Only when the operator asks for it in so many words.",
+        inputSchema: recordingInput,
+        run: async ({ command, with: where }) => {
+            if (command === "start") {
+                const rtmp = screens().some((output) => output.rtmp && hasStreamableDestination(output.rtmpData))
+                const webrtc = screens().some((output) => output.webrtc && output.webrtcData?.url)
+                if (where === "obs" || (!rtmp && !webrtc && where !== "app" && get(obsData).enabled)) return askObs("obs_start_livestream", "go live")
+                if (!rtmp && !webrtc) throw new ToolError("No live stream is set up. Add one in Settings, Outputs, or connect OBS in Settings, Connection.")
+                if (rtmp) API_ACTIONS.start_rtmp_stream({})
+                if (webrtc) API_ACTIONS.start_webrtc_stream({})
+                await confirm(streamingHere, "The live stream did not start. Check it in Settings, Outputs.", 10_000)
+                return "The live stream is on."
+            }
+            if (where !== "obs" && streamingHere()) {
+                API_ACTIONS.stop_rtmp_stream({})
+                API_ACTIONS.stop_webrtc_stream({})
+                await confirm(() => !streamingHere(), "It is still streaming. Stop it in Settings, Outputs.", 8000)
+                return "The live stream has stopped."
+            }
+            if (where !== "app" && get(obsData).enabled) return askObs("obs_stop_livestream", "end the stream")
+            throw new ToolError("Nothing is streaming from here.")
+        }
+    },
     {
         name: "control_video",
         description: "Play, pause or restart the video on screen, or skip forward or back in it.",

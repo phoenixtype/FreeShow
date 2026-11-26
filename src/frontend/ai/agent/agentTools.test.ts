@@ -1,13 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
-    const names = ["activeTimers", "timers", "playingAudio", "activePage", "activeProject", "aiSuggestions", "audioChannelsData", "outLocked", "outputs", "overlays", "paintCache", "playingVideos", "projects", "scriptures", "shows", "showsCache", "styles", "sttTranscript", "ai"]
+    const names = ["activeTimers", "timers", "playingAudio", "activePage", "activeProject", "aiSuggestions", "audioChannelsData", "outLocked", "outputs", "overlays", "paintCache", "playingVideos", "activeRecording", "obsData", "projects", "scriptures", "shows", "showsCache", "styles", "sttTranscript", "ai"]
     return Object.fromEntries(names.map((name) => [name, writable(name === "outLocked" ? false : name === "activeTimers" ? [] : {})]))
 })
 vi.mock("../../components/actions/apiHelper", () => ({ playMedia: vi.fn(), addToProject: vi.fn(), createProject: vi.fn(), getClearedState: vi.fn(() => ({ all: false })), getPlainText: vi.fn(), toggleSttListening: vi.fn() }))
 vi.mock("../../components/drawer/bible/scripture", () => ({}))
 const video = vi.hoisted(() => ({ duration: 0, time: 0, paused: false }))
-const api = vi.hoisted(() => ({ get_playing_video_state: vi.fn(() => ({ ...video })), video_seekto: vi.fn(), change_volume: vi.fn(), id_start_timer: vi.fn(), id_pause_timer: vi.fn(), id_stop_timer: vi.fn(), stop_timers: vi.fn() }))
+const api = vi.hoisted(() => ({
+    get_playing_video_state: vi.fn(() => ({ ...video })),
+    video_seekto: vi.fn(),
+    change_volume: vi.fn(),
+    id_start_timer: vi.fn(),
+    id_pause_timer: vi.fn(),
+    id_stop_timer: vi.fn(),
+    stop_timers: vi.fn(),
+    start_output_recording: vi.fn(),
+    stop_output_recording: vi.fn(),
+    start_rtmp_stream: vi.fn(),
+    stop_rtmp_stream: vi.fn(),
+    start_webrtc_stream: vi.fn(),
+    stop_webrtc_stream: vi.fn(),
+    obs_start_recording: vi.fn(),
+    obs_stop_recording: vi.fn(),
+    obs_start_livestream: vi.fn(),
+    obs_stop_livestream: vi.fn()
+}))
 vi.mock("../../components/actions/api", () => ({ API_ACTIONS: api }))
 const player = vi.hoisted(() => ({ play: vi.fn(() => (video.paused = false)), pause: vi.fn(() => (video.paused = true)) }))
 vi.mock("../../components/media/video/videoPlayer", () => ({ VideoPlayer: player }))
@@ -45,7 +63,7 @@ vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 import { get } from "svelte/store"
 import { playMedia } from "../../components/actions/apiHelper"
 import { copilotListening } from "../liveCopilot"
-import { activeTimers, ai, audioChannelsData, outLocked, overlays, playingAudio, shows, timers } from "../../stores"
+import { activeRecording, activeTimers, ai, audioChannelsData, obsData, outLocked, outputs, overlays, playingAudio, shows, timers } from "../../stores"
 import { listAgentTools, runAgentTool } from "./agentTools"
 
 describe("agent tools", () => {
@@ -248,5 +266,59 @@ describe("video, volume and timers go through the app's own actions", () => {
                 { name: "Sermon", running: false }
             ]
         })
+    })
+})
+
+describe("recording and the live stream", () => {
+    const rtmp = (streaming: boolean) => outputs.set({ o: { rtmp: true, rtmpData: { streaming, destinations: [{ enabled: true, url: "rtmp://x" }] } } } as any)
+    beforeEach(() => {
+        vi.clearAllMocks()
+        vi.useFakeTimers()
+        activeRecording.set(null)
+        obsData.set({})
+        outputs.set({})
+    })
+    afterEach(() => vi.useRealTimers())
+    const run = async (name: string, args: any) => {
+        const answer = runAgentTool(name, args)
+        await vi.advanceTimersByTimeAsync(20_000)
+        return answer
+    }
+
+    it("are marked as things to ask about first", () => {
+        const tools = listAgentTools()
+        for (const name of ["control_recording", "control_stream"]) expect(tools.find((tool) => tool.name === name)?.destructive).toBe(true)
+    })
+    it("records in the app, and says so only when it is recording", async () => {
+        expect((await run("control_recording", { command: "start" })).error).toMatch(/did not start/)
+        api.start_output_recording.mockImplementationOnce(() => activeRecording.set({ isOutput: true }))
+        expect((await run("control_recording", { command: "start" })).ok).toBe(true)
+        api.stop_output_recording.mockImplementationOnce(() => activeRecording.set(null))
+        expect((await run("control_recording", { command: "stop" })).ok).toBe(true)
+        expect((await run("control_recording", { command: "stop" })).error).toMatch(/Nothing is being recorded/)
+        expect(api.obs_stop_recording).not.toHaveBeenCalled()
+    })
+    it("records in OBS when asked, and says when OBS is not there", async () => {
+        expect((await run("control_recording", { command: "start", with: "obs" })).error).toMatch(/OBS/)
+        expect(api.obs_start_recording).not.toHaveBeenCalled()
+        obsData.set({ enabled: true, connected: true })
+        expect((await run("control_recording", { command: "start", with: "obs" })).ok).toBe(true)
+        expect(api.obs_start_recording).toHaveBeenCalled()
+        expect(api.start_output_recording).not.toHaveBeenCalled()
+        obsData.set({ enabled: true, connected: false })
+        expect((await run("control_recording", { command: "start", with: "obs" })).error).toMatch(/not connected/)
+    })
+    it("goes live where the church set it up, else says there is no stream", async () => {
+        expect((await run("control_stream", { command: "start" })).error).toMatch(/No live stream is set up/)
+        rtmp(false)
+        api.start_rtmp_stream.mockImplementationOnce(() => rtmp(true))
+        expect((await run("control_stream", { command: "start" })).ok).toBe(true)
+        api.stop_rtmp_stream.mockImplementationOnce(() => rtmp(false))
+        expect((await run("control_stream", { command: "stop" })).ok).toBe(true)
+        expect((await run("control_stream", { command: "stop" })).error).toMatch(/Nothing is streaming/)
+        obsData.set({ enabled: true, connected: true })
+        outputs.set({})
+        expect((await run("control_stream", { command: "start" })).ok).toBe(true)
+        expect(api.obs_start_livestream).toHaveBeenCalled()
     })
 })

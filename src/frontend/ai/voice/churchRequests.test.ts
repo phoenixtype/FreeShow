@@ -25,6 +25,8 @@ const SAID: Record<string, string[]> = {
     media: ["play the welcome video", "show the sunrise picture", "change the background to the mountains", "run the announcement clip", "put up the cross image"],
     audio: ["stop the music", "mute the sound", "unmute", "fade out the music", "turn off the pad", "turn the volume up", "turn down the music", "turn the music down", "volume up", "louder", "a bit quieter", "set the volume to 50", "volume fifty percent"],
     video: ["pause the video", "play the video", "resume the video", "stop the video", "restart the video", "start the video again", "skip forward ten seconds", "skip ahead 30 seconds", "rewind 10 seconds", "rewind the video", "go back 15 seconds"],
+    recording: ["start recording", "stop recording", "start the recording", "please start recording the service", "stop the recording now", "end the recording", "start recording in OBS"],
+    stream: ["go live", "start the live stream", "stop the stream", "end the livestream", "start streaming", "stop broadcasting", "start the stream in OBS", "go off air"],
     "named-timer": ["start the offering timer", "pause the sermon countdown", "stop the worship timer", "stop all timers", "start the altar call clock"],
     countdown: ["start a five minute countdown", "set a timer for ten minutes", "give the preacher thirty minutes", "add two minutes", "give him five more minutes", "start a 30 second timer"],
     timer: ["start the timer", "pause the timer", "stop the countdown", "next segment"],
@@ -36,7 +38,24 @@ const SAID: Record<string, string[]> = {
     tell: ["what's on the screen", "what's next", "what can you do", "which song is this", "what verse is this"],
     "find-song": ["find the song that says how sweet the sound", "which song says you make a way", "what song goes great is your faithfulness", "find me a hymn with the words blessed assurance", "show the song that says then sings my soul", "search for the song which says waymaker miracle worker", "find the song with the line I once was lost but now am found"],
     // for the model: never to be put on screen by a guess
-    unknown: ["make a plan for Sunday with Amazing Grace and Way Maker", "who wrote the book of Romans", "prepare the Easter service", "create a welcome slide", "how many songs do we have", "is the projector working", "thank you", "read me the words of Morning Hill without showing them", "read me the words of Morning Hill", "put up Morning Hill but not the chorus", "show me what the preacher said last week because I missed it"],
+    unknown: [
+        "start recording what God has done in your life",
+        "we need to start recording our testimonies",
+        "stop the stream of living water",
+        "go live your life for Christ",
+        "start streaming into your family",
+        "make a plan for Sunday with Amazing Grace and Way Maker",
+        "who wrote the book of Romans",
+        "prepare the Easter service",
+        "create a welcome slide",
+        "how many songs do we have",
+        "is the projector working",
+        "thank you",
+        "read me the words of Morning Hill without showing them",
+        "read me the words of Morning Hill",
+        "put up Morning Hill but not the chorus",
+        "show me what the preacher said last week because I missed it"
+    ],
     "remove-from-plan": ["remove Amazing Grace from the plan", "take Way Maker out of the service", "delete the song Holy Forever from today's plan", "drop Morning Hill off the plan"]
 }
 

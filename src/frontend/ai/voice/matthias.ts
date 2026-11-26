@@ -93,6 +93,7 @@ export type Request =
     | { type: "media"; name: string; kind?: "image" | "video" }
     | { type: "audio"; command: "stop" | "mute" | "unmute" | "louder" | "quieter" | "set_volume"; percent?: number }
     | { type: "video"; command: "play" | "pause" | "restart" | "forward" | "back"; seconds?: number }
+    | { type: "recording" | "stream"; on: boolean; obs?: boolean }
     | { type: "named-timer"; command: "start" | "pause" | "stop" | "stop_all"; name?: string }
     | { type: "countdown"; seconds: number; add?: boolean }
     | { type: "timer"; command: "start" | "next" | "play_pause" }
@@ -156,7 +157,7 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan", "video", "named-timer"]
+const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan", "video", "named-timer", "recording", "stream"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
@@ -221,8 +222,18 @@ function volumeRequest(t: string): Request | null {
     return set ? { type: "audio", command: "set_volume", percent: set[1] === "half" ? 50 : Math.min(100, Number(set[1])) } : null
 }
 
+// said in full or not at all: these cannot be taken back, and sermons are full of the words
+const RECORDING = /^(start|begin|stop|end|finish) (?:the |our |a )?recording(?: (?:the )?(?:service|sermon|message))?( (?:in|on|with) obs)?$/
+const STREAM = /^(?:(start|begin|stop|end|finish) (?:the |our )?(?:live ?stream(?:ing)?|stream(?:ing)?|broadcast(?:ing)?)|(go live|go off ?air))( (?:in|on|with) obs)?$/
+
 function parseWords(t: string): Request {
     if (!t) return { type: "unknown", words: "" }
+    const recording = t.match(RECORDING)
+    if (recording) return { type: "recording", on: /start|begin/.test(recording[1]), ...(recording[2] ? { obs: true } : {}) }
+    const stream = t.match(STREAM)
+    if (stream) return { type: "stream", on: /start|begin|go live/.test(stream[1] || stream[2]), ...(stream[3] ? { obs: true } : {}) }
+    // "start recording what God has done": not a song of that name either
+    if (/^(?:start|stop) (?:recording|streaming)\b/.test(t)) return { type: "unknown", words: t }
     const remembered = t.match(REMEMBERED)
     if (remembered) return { type: "find-song", line: remembered[1] }
 

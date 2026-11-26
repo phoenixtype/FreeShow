@@ -219,6 +219,14 @@ export class Matthias {
             case "countdown":
                 await this.tool("speaker_timer", { command: request.add ? "add" : "set", minutes: request.seconds / 60 })
                 return request.add ? `Added ${spell(request.seconds)}` : `Timer: ${spell(request.seconds)}`
+            case "recording":
+            case "stream": {
+                const wanted = `${request.on ? "start" : "stop"} ${request.type === "stream" ? "the live stream" : "recording"}`
+                // the name in passing is not enough for something that cannot be taken back
+                if (!asked.certain) throw new ToolError(`To ${wanted}, say "Hey ${NAME}, ${wanted}" or type it`)
+                const result = await this.tool(request.type === "stream" ? "control_stream" : "control_recording", { command: request.on ? "start" : "stop", ...(request.obs ? { with: "obs" } : {}) })
+                return typeof result === "string" ? result.replace(/\.$/, "") : wanted
+            }
             case "find-song":
                 return this.findSong(request.line)
             case "audio": {
@@ -467,7 +475,11 @@ export class Matthias {
             context: context(!typed),
             spoken: !typed,
             stopped: () => stopped() || turn.signal.aborted,
-            refuse: (tool) => (changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""),
+            refuse: (tool) => {
+                // a model never starts or ends these from words it may have misread
+                if (/^control_(recording|stream)$/.test(tool) && (!typed || !/record|stream|live|broadcast|air/i.test(words))) return `Recording and the live stream are started and stopped by a plain request: "Hey ${NAME}, start recording".`
+                return changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""
+            },
             run: async (tool, args) => {
                 if (!changesScreen(tool)) return runAgentTool(tool, args)
                 let result: Awaited<ReturnType<typeof runAgentTool>> = { ok: false }
