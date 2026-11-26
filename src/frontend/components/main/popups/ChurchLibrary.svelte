@@ -118,7 +118,15 @@
         received = 0
         try {
             const done = await syncChurch(activeId, (n) => (received = n))
-            message = [done.sent ? `${done.sent} songs sent to the library.` : "", done.received ? `${done.received} songs updated on this computer.` : "", !done.sent && !done.received && !done.refused ? "Everything is already up to date." : "", done.refused].filter(Boolean).join(" ")
+            const lines = [
+                done.sent ? `${done.sent} songs sent to the library.` : "",
+                done.removed ? `${done.removed} songs you deleted were removed from the library.` : "",
+                done.received ? `${done.received} songs updated on this computer.` : "",
+                ...done.conflicts.map((title) => `"${title}" was also changed on another computer. Yours is kept as "${title} (this computer's copy)".`),
+                done.held ? `${done.held} library songs are missing from this computer. To be safe, they were not deleted from the library.` : "",
+                done.refused
+            ].filter(Boolean)
+            message = lines.join(" ") || "Everything is already up to date."
         } catch (err) {
             message = errorText(err, "The sync stopped. Try again.")
         }

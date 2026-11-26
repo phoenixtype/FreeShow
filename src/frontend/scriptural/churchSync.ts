@@ -3,6 +3,7 @@
 // and stay usable offline. Changes made in the library online (or on another
 // computer) arrive on the next sync.
 
+import { uid } from "uid"
 import { setTempShows } from "../converters/importHelpers"
 import { convertText } from "../converters/txt"
 import { loadShows } from "../components/helpers/setShow"
@@ -90,14 +91,17 @@ export function songText(song: Pick<LibrarySong, "sections" | "arrangement">): s
 const cursorOverlapMs = 2 * 60 * 1000
 const syncedKey = (churchId: string) => `church-library-songs:${churchId}`
 
-function readSynced(churchId: string): { [id: string]: SyncedSong } {
+// u: the library row's updated_at when this computer last saw it
+type Synced = SyncedSong & { u?: string }
+
+function readSynced(churchId: string): { [id: string]: Synced } {
     try {
         return JSON.parse(localStorage.getItem(syncedKey(churchId)) || "{}")
     } catch {
         return {}
     }
 }
-const writeSynced = (churchId: string, synced: { [id: string]: SyncedSong }) => localStorage.setItem(syncedKey(churchId), JSON.stringify(synced))
+const writeSynced = (churchId: string, synced: { [id: string]: Synced }) => localStorage.setItem(syncedKey(churchId), JSON.stringify(synced))
 
 // the library category is shared by every church this computer has synced with
 function otherChurchSongs(churchId: string): Set<string> {
@@ -176,7 +180,8 @@ export async function syncSongs(churchId: string, onProgress?: (count: number) =
             const local = mine ? songSignature(mine) : null
             const choice = pullChoice(remote, local, synced[id], canWrite)
             if (choice === "keep") {
-                synced[id] = { r: remote, l: local! }
+                // an edit here that is not sent yet stays marked as not sent
+                synced[id] = { r: remote, l: local === remote ? remote : (synced[id]?.l ?? local!), u: song.updated_at }
             } else if (choice === "later" || inUse(id)) {
                 wait(song)
             } else {
@@ -184,7 +189,7 @@ export async function syncSongs(churchId: string, onProgress?: (count: number) =
                 show.name = song.title
                 show.origin = "church-library"
                 show.meta = { ...show.meta, title: song.title, author: song.authors || "", copyright: song.copyright || "", CCLI: song.ccli || "" }
-                synced[id] = { r: remote, l: songSignature(JSON.parse(JSON.stringify(showToSong(show)))) }
+                synced[id] = { r: remote, l: songSignature(JSON.parse(JSON.stringify(showToSong(show)))), u: song.updated_at }
                 tempShows.push({ id, show })
             }
         }
@@ -212,23 +217,119 @@ export async function syncSongs(churchId: string, onProgress?: (count: number) =
 
 const pushedKey = (churchId: string) => `church-library-pushed:${churchId}`
 const isLibraryId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)
+// a song first made in the app is known to the library by that id as its source
+const songFilter = (churchId: string, id: string) => (isLibraryId(id) ? `id=eq.${id}&church_id=eq.${churchId}` : `church_id=eq.${churchId}&source=eq.app&source_id=eq.${encodeURIComponent(id)}`)
 
-/** Sends songs changed or added in the Church library category on this computer. Returns how many went up. */
-export async function pushSongs(churchId: string): Promise<number> {
+/** The library's copy of one song as it is now, or null when it is gone. */
+async function librarySong(churchId: string, id: string): Promise<{ signature: string; updatedAt: string } | null> {
+    const { data } = await churchLibrary.rest<LibrarySong[]>(`songs?select=title,authors,copyright,ccli,sections,arrangement,updated_at,deleted_at&${songFilter(churchId, id)}`, { signedIn: true })
+    const song = data?.[0]
+    if (!song || song.deleted_at) return null
+    return { signature: songSignature({ ...song, authors: song.authors || "", copyright: song.copyright || "", ccli: song.ccli || "" }), updatedAt: song.updated_at }
+}
+
+// SONGS THE PLAN REFUSED //
+
+// remembered, so pressing Sync again does not ask the server for the same refusal
+const REFUSAL_MS = 6 * 60 * 60 * 1000
+const refusedKey = (churchId: string) => `church-library-refused:${churchId}`
+type Refusals = { [id: string]: { at: number; signature: string; message: string } }
+const isPlanRefusal = (message: string) => /plan holds \d+ songs|plan has room for \d+ people/i.test(message)
+
+function readRefusals(churchId: string): Refusals {
+    try {
+        return JSON.parse(localStorage.getItem(refusedKey(churchId)) || "{}")
+    } catch {
+        return {}
+    }
+}
+/** After a plan change: refused songs are tried again at the next sync. */
+export const forgetRefusals = (churchId: string) => localStorage.removeItem(refusedKey(churchId))
+
+// DELETED SONGS //
+
+// more than this missing at once looks like a lost or moved data folder, not someone deleting songs
+const tooManyMissing = (missing: number, known: number) => missing > 3 && missing > known * 0.2
+
+async function removeDeleted(churchId: string, synced: { [id: string]: Synced }): Promise<{ removed: number; held: number; refused: string }> {
+    const here = get(shows)
+    const missing = Object.keys(synced).filter((id) => !here[id])
+    if (!missing.length) return { removed: 0, held: 0, refused: "" }
+    if (tooManyMissing(missing.length, Object.keys(synced).length)) return { removed: 0, held: missing.length, refused: "" }
+
+    let removed = 0
+    let refused = ""
+    for (const id of missing) {
+        try {
+            let stamp = synced[id].u
+            if (!stamp) {
+                const there = await librarySong(churchId, id)
+                // changed since: the change wins over the delete, and the next pull brings it back
+                if (there && there.signature === synced[id].r) stamp = there.updatedAt
+            }
+            if (stamp) {
+                const { data } = await churchLibrary.rest<unknown[]>(`songs?${songFilter(churchId, id)}&deleted_at=is.null&updated_at=eq.${encodeURIComponent(stamp)}&select=updated_at`, { method: "PATCH", body: { deleted_at: new Date().toISOString() }, headers: { Prefer: "return=representation" }, signedIn: true })
+                if (data?.length) removed++
+            }
+        } catch (err) {
+            if (!(err instanceof ScripturalError)) throw err
+            refused = err.message
+            continue
+        }
+        delete synced[id]
+        writeSynced(churchId, synced)
+    }
+    return { removed, held: 0, refused }
+}
+
+// CHANGED IN TWO PLACES //
+
+/** This computer's version stays as a separate song; the next pull puts the library's version in its place. */
+function keepAsCopy(id: string): string {
+    const show = JSON.parse(JSON.stringify(get(showsCache)[id]))
+    const title: string = show.name
+    show.name = `${title} (this computer's copy)`
+    if (show.meta?.title) show.meta.title = show.name
+    // outside the library category, so it is not sent up as another song
+    show.category = null
+    delete show.origin
+    setTempShows([{ id: uid(), show }], { suppressFinishedToast: true, quiet: true, background: true })
+    save()
+    return title
+}
+
+export interface PushResult {
+    sent: number
+    removed: number
+    /** missing here but not deleted from the library, because too many went at once */
+    held: number
+    /** titles changed on another computer too: this computer's version was kept as a copy */
+    conflicts: string[]
+    refused: string
+    planRefused: boolean
+}
+
+/** Sends songs changed, added or deleted in the Church library category on this computer. */
+export async function pushSongs(churchId: string): Promise<PushResult> {
     if (!churchLibrary.getSession()) throw new ScripturalError("Sign in to your church library first.")
     const since = Number(localStorage.getItem(pushedKey(churchId)) || 0)
     // taken before reading: an edit made while this runs is sent next time
     const startedAt = Date.now()
+    const synced = readSynced(churchId)
+    const result: PushResult = { sent: 0, conflicts: [], planRefused: false, ...(await removeDeleted(churchId, synced)) }
+
     const changed = Object.entries(get(shows))
         // a song imported into the category has no "modified" until someone edits it
         .filter(([, show]) => show.category === "church_library" && (show.timestamps?.modified || show.timestamps?.created || 0) > since)
         .map(([id]) => id)
-    if (!changed.length) return 0
+    if (!changed.length) return result
 
-    const synced = readSynced(churchId)
     const elsewhere = otherChurchSongs(churchId)
-    let sent = 0
-    let refused: ScripturalError | null = null
+    const remembered = readRefusals(churchId)
+    const refusals: Refusals = {}
+    // the first "the plan is full" of this run: no more songs are added after it
+    let full = ""
+
     for (let i = 0; i < changed.length; i += BATCH) {
         const batch = changed.slice(i, i + BATCH)
         await loadShows(batch)
@@ -237,48 +338,81 @@ export async function pushSongs(churchId: string): Promise<number> {
             const song = localSong(id)
             if (!song?.sections.length) continue
             const signature = songSignature(song)
+            const known = synced[id]
             // the same words as at the last sync: it came from the library, or only its look changed
-            if (synced[id]?.l === signature) continue
+            if (known?.l === signature) continue
             // another church's song stays with that church
-            if (!synced[id] && elsewhere.has(id)) continue
+            if (!known && elsewhere.has(id)) continue
             // came from the library before sync kept track, and never edited here
-            if (!synced[id] && get(shows)[id]?.origin === "church-library" && !get(shows)[id]?.timestamps?.modified) continue
+            if (!known && get(shows)[id]?.origin === "church-library" && !get(shows)[id]?.timestamps?.modified) continue
+
+            const before = remembered[id]
+            const recent = before && before.signature === signature && Date.now() - before.at < REFUSAL_MS ? before : null
+            const adds = !known && !isLibraryId(id)
+            if (recent || (full && adds)) {
+                refusals[id] = recent || { at: Date.now(), signature, message: full }
+                result.refused = refusals[id].message
+                result.planRefused = true
+                continue
+            }
 
             const row = { authors: null, copyright: null, ccli: null, ...song }
             try {
-                if (isLibraryId(id)) {
-                    const { data } = await churchLibrary.rest<unknown[]>(`songs?id=eq.${id}&church_id=eq.${churchId}&deleted_at=is.null&select=id`, { method: "PATCH", body: row, headers: { Prefer: "return=representation" }, signedIn: true })
-                    // nothing matched: deleted in the library, or not ours to change
-                    if (!data?.length) continue
+                let updatedAt: string | undefined
+                if (adds) {
+                    const { data } = await churchLibrary.rest<{ updated_at: string }[]>("songs?on_conflict=church_id,source,source_id&select=updated_at", { method: "POST", body: { ...row, church_id: churchId, source: "app", source_id: id, deleted_at: null }, headers: { Prefer: "resolution=merge-duplicates,return=representation" }, signedIn: true })
+                    updatedAt = data?.[0]?.updated_at
                 } else {
-                    await churchLibrary.rest("songs?on_conflict=church_id,source,source_id", { method: "POST", body: { ...row, church_id: churchId, source: "app", source_id: id }, headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, signedIn: true })
+                    // changed only if the library still has the version this computer last saw
+                    let stamp = known?.u
+                    if (!stamp) {
+                        const there = await librarySong(churchId, id)
+                        // deleted in the library, or not ours to see
+                        if (!there) continue
+                        if (there.signature === known?.r || there.signature === signature) stamp = there.updatedAt
+                    }
+                    let changedRows: { updated_at: string }[] = []
+                    if (stamp) {
+                        const { data } = await churchLibrary.rest<{ updated_at: string }[]>(`songs?${songFilter(churchId, id)}&deleted_at=is.null&updated_at=eq.${encodeURIComponent(stamp)}&select=updated_at`, { method: "PATCH", body: row, headers: { Prefer: "return=representation" }, signedIn: true })
+                        changedRows = data || []
+                    }
+                    if (changedRows.length) updatedAt = changedRows[0].updated_at
+                    else {
+                        const there = await librarySong(churchId, id)
+                        if (!there) continue
+                        if (there.signature !== signature) {
+                            result.conflicts.push(keepAsCopy(id))
+                            // "unchanged here", so the pull takes the library's version
+                            synced[id] = { r: "", l: signature }
+                            writeSynced(churchId, synced)
+                            continue
+                        }
+                        // the same words arrived from somewhere else
+                        updatedAt = there.updatedAt
+                    }
                 }
+                synced[id] = { r: signature, l: signature, u: updatedAt }
             } catch (err) {
-                // the library said no to this one (a full plan, say): the others still go. Offline stops here.
+                // the library said no to this one: the others still go. Offline stops here.
                 if (!(err instanceof ScripturalError)) throw err
-                refused = err
+                result.refused = err.message
+                if (isPlanRefusal(err.message)) {
+                    full = err.message
+                    result.planRefused = true
+                    refusals[id] = { at: Date.now(), signature, message: err.message }
+                }
                 continue
             }
-            synced[id] = { r: signature, l: signature }
             // kept as it goes: a sync that stops half way does not send these twice
             writeSynced(churchId, synced)
-            sent++
+            result.sent++
         }
         await breathe()
     }
-    // left where it was, so what was refused is tried again
-    if (refused) throw new PartlySent(refused.message, sent)
-    localStorage.setItem(pushedKey(churchId), String(startedAt))
-    return sent
-}
-
-class PartlySent extends ScripturalError {
-    constructor(
-        message: string,
-        public sent: number
-    ) {
-        super(message)
-    }
+    localStorage.setItem(refusedKey(churchId), JSON.stringify(refusals))
+    // left where it was after a refusal, so what was refused is tried again
+    if (!result.refused) localStorage.setItem(pushedKey(churchId), String(startedAt))
+    return result
 }
 
 export interface SyncStatus {
@@ -291,7 +425,8 @@ export const syncStatus = writable<SyncStatus>({ running: false, at: null, error
 /** something here changed since the last sync; the top bar offers "Sync library" until it is pressed */
 export const librarySyncPending = writable(false)
 
-type SyncResult = { sent: number; received: number; refused: string }
+export type SyncResult = PushResult & { received: number }
+const nothingSent: PushResult = { sent: 0, removed: 0, held: 0, conflicts: [], refused: "", planRefused: false }
 let current: { churchId: string; result: Promise<SyncResult> } | null = null
 /** Sends what changed here, then takes what changed in the library. One at a time: a second call waits for the first. */
 export function syncChurch(churchId: string, onProgress?: (count: number) => void): Promise<SyncResult> {
@@ -304,22 +439,12 @@ export function syncChurch(churchId: string, onProgress?: (count: number) => voi
             const church = (await myChurches()).find((c) => c.id === churchId)
             if (!church) throw new ScripturalError("You are no longer in that church library.")
             const canWrite = church.role !== "viewer"
-            let sent = 0
-            let refused = ""
-            if (canWrite) {
-                try {
-                    sent = await pushSongs(churchId)
-                } catch (err) {
-                    // a refused song does not hold back what others changed
-                    if (!(err instanceof PartlySent)) throw err
-                    sent = err.sent
-                    refused = err.message
-                }
-            }
+            // a refused song does not hold back what others changed
+            const pushed = canWrite ? await pushSongs(churchId) : nothingSent
             const received = await syncSongs(churchId, onProgress, canWrite)
-            syncStatus.set({ running: false, at: Date.now(), error: refused })
+            syncStatus.set({ running: false, at: Date.now(), error: pushed.refused })
             librarySyncPending.set(false)
-            return { sent, received, refused }
+            return { ...pushed, received }
         } catch (err) {
             syncStatus.update((a) => ({ ...a, running: false, error: err instanceof ScripturalError ? err.message : "The church library could not be reached. Press Sync to try again." }))
             throw err
