@@ -13,6 +13,11 @@ it("does not stretch the home screen's buttons to one width", () => {
     expect(splash).toMatch(/\.buttons \{[^}]*align-items: center/)
 })
 
+it("offers the starter hymns by a button, and never adds them by itself", () => {
+    expect(splash).toMatch(/on:click=\{addStarterHymns\}>Add \{STARTER_HYMNS\.length\} starter hymns</)
+    expect(splash).not.toMatch(/addStarterHymns\(/)
+})
+
 it("asks a new church to choose the screen, with the app's own screen picker", () => {
     expect(splash).toMatch(/label: "Choose the screen"[\s\S]{0,300}activePopup\.set\("choose_screen"\)/)
 })

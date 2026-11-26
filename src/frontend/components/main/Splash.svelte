@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { openLiveCopilot } from "../../ai/liveCopilot"
+    import { addStarterHymns } from "../../converters/starterSongs"
+    import { STARTER_HYMNS } from "../../converters/starterSongs.data"
     import { activePopup, activeProject, ai, outputs, popupData, projects, projectView, quickSearchActive, scriptures, shows, showRecentlyUsedProjects, special, version } from "../../stores"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
@@ -118,6 +120,9 @@
                     </span>
                 </button>
             {/each}
+            {#if !steps[0].done}
+                <MaterialButton variant="outlined" small icon="add" on:click={addStarterHymns}>Add {STARTER_HYMNS.length} starter hymns</MaterialButton>
+            {/if}
             <MaterialButton variant="text" small on:click={hideSteps}>Hide these steps</MaterialButton>
         </div>
     {/if}
