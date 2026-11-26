@@ -56,6 +56,23 @@ describe("runAgentChat", () => {
         expect(await runAgentChat(history, { run, ask: async () => null })).toBeNull()
     })
 
+    it("does not call a tool that broke a badly written request", async () => {
+        run.mockRejectedValueOnce(new Error("boom"))
+        const prompts: string[] = []
+        const turns = [{ tool: "show_scripture", arguments: "{}" }, { content: "It did not work." }]
+        await runAgentChat(history, { run, ask: async (p) => (prompts.push(p), turns.shift()!) })
+        expect(prompts[1]).toContain("did not work in the app")
+        expect(prompts[1]).not.toContain("not a JSON object")
+    })
+
+    it("says what was done when the model then fails", async () => {
+        run.mockResolvedValue({ ok: true, result: "Done." })
+        const turns = [{ tool: "show_scripture", arguments: "{}" }, null]
+        const answer = await runAgentChat(history, { run, ask: async () => turns.shift()! })
+        expect(answer?.content).toMatch(/show scripture/)
+        expect(answer?.content).toMatch(/AI model/)
+    })
+
     it("lists the tools to the model", () => {
         expect(agentInstructions()).toContain("show_scripture(reference)")
     })

@@ -65,24 +65,35 @@ export async function runAgentChat(history: { role: string; content: string }[],
         .join("\n")
     const steps: string[] = []
     const failed = new Set<string>()
+    const did: string[] = []
+    const readOnly = new Set(listAgentTools().filter((tool) => tool.readOnly).map((tool) => tool.name))
+    /** the model stopped answering part way: what had been done by then is not to be lost */
+    const partly = () => (did.length ? { content: `I did part of it (${did.join(", ")}), then could not reach the AI model. Check the internet connection and ask for the rest.` } : null)
     const asked = deps.context ? `${deps.context}\n\n${conversation}` : conversation
     let struggling = false
 
     for (let step = 0; step < MAX_STEPS; step++) {
         const turn = await deps.ask(steps.length ? `${asked}\n\nWhat you have done for this message:\n${steps.join("\n")}` : asked, struggling || step >= MANY_STEPS)
         if (deps.stopped?.()) return { content: "Stopped." }
-        if (!turn) return null
+        if (!turn) return partly()
         if (!turn.tool) return turn
 
         let args: any = {}
-        let answer: { ok: boolean; result?: unknown; error?: string }
+        let badArguments = false
         try {
             args = turn.arguments ? JSON.parse(turn.arguments) : {}
-            const refused = deps.refuse?.(turn.tool)
-            answer = refused ? { ok: false, error: refused } : await run(turn.tool, args)
         } catch {
-            answer = { ok: false, error: "The arguments were not a JSON object." }
+            badArguments = true
         }
+        let answer: { ok: boolean; result?: unknown; error?: string }
+        try {
+            const refused = badArguments ? "The arguments were not a JSON object." : deps.refuse?.(turn.tool)
+            answer = refused ? { ok: false, error: refused } : await run(turn.tool, args)
+        } catch (err) {
+            console.error(`Matthias tool ${turn.tool}:`, err)
+            answer = { ok: false, error: "That did not work in the app." }
+        }
+        if (answer.ok && !readOnly.has(turn.tool)) did.push(turn.tool.replace(/_/g, " "))
         if (!answer.ok) {
             struggling = true
             // the same thing again would fail again, and every try costs an answer

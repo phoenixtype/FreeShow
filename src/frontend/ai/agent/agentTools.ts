@@ -5,7 +5,7 @@
 
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { activePage, activeProject, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, projects, scriptures, shows, showsCache, styles, sttTranscript, ai } from "../../stores"
+import { activePage, activeProject, activeTimers, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, playingAudio, projects, scriptures, shows, showsCache, styles, sttTranscript, timers, ai } from "../../stores"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { clearAudio } from "../../audio/audioFading"
@@ -18,6 +18,7 @@ import { getLayoutRef } from "../../components/helpers/show"
 import { startShow } from "../../components/helpers/showActions"
 import { clearAll, clearBackground, clearOverlays, clearSlide, restoreOutput } from "../../components/output/clear"
 import { addSpeakerTime, nextProgramSegment, playPauseSpeaker, setSpeakerDuration, startProgram } from "../../components/drawer/timers/speakerTimerActions"
+import { SPEAKER_TIMER_ID } from "../../components/drawer/timers/speakerTimer"
 import { convertText } from "../../converters/txt"
 import { ANON_KEY, FUNCTIONS_URL } from "../../scriptural/connection"
 import { setActiveScripture } from "../../converters/bible"
@@ -80,6 +81,14 @@ async function until(done: () => boolean, timeoutMs = 6000): Promise<boolean> {
     }
     return done()
 }
+
+/** throws when the screen never shows it: a tool may only say done when it happened */
+async function confirm(done: () => boolean, otherwise: string, timeoutMs = 3000) {
+    if (!(await until(done, timeoutMs))) throw new ToolError(otherwise)
+}
+const NOT_ON_SCREEN = "It did not reach the screen. Check that a screen is switched on."
+const liveOut = () => getFirstActiveOutput()?.out
+const snapshot = () => JSON.stringify(liveOut() || {})
 
 export function liveState() {
     const output = getFirstActiveOutput()
@@ -154,6 +163,16 @@ export async function searchBible(query: string, version: string) {
     return results.map((r: any) => ({ reference: r.reference, text: r.text, version: r.version }))
 }
 
+/** whether a plan item's own thing is what is up now */
+function planItemIsUp(item: { id: string; type?: string }): boolean {
+    const type = item.type || "show"
+    if (type === "show" || type === "pdf") return liveOut()?.slide?.id === item.id
+    if (type === "image" || type === "video") return liveOut()?.background?.path === item.id
+    if (type === "overlay") return !!liveOut()?.overlays?.includes(item.id)
+    if (type === "audio") return !!get(playingAudio)[item.id]
+    return true
+}
+
 /** the new version's name; what is on screen changes with it */
 export async function changeVersion(name: string): Promise<string> {
     const list = Object.entries(get(scriptures)).map(([id, s]) => ({ id, names: [s?.name, s?.customName, (s as any)?.scripturalVersion, (s as any)?.abbreviation, getShortBibleName(s?.name || "")].filter(Boolean) as string[] }))
@@ -166,7 +185,7 @@ export async function changeVersion(name: string): Promise<string> {
     const up = getFirstActiveOutput()?.out?.slide?.id === "temp"
     if (reference?.book && chapter && verses.length && up) {
         requireUnlocked()
-        await presentPassage(`${reference.book}.${chapter}.${verses.join(",")}`, id)
+        if (!(await presentPassage(`${reference.book}.${chapter}.${verses.join(",")}`, id))) throw new ToolError(`The passage could not be put up in ${label}.`)
     } else setActiveScripture(id)
     return label
 }
@@ -214,7 +233,7 @@ export const agentTools: AgentTool[] = [
         run: async ({ on }) => {
             if (!get(ai).enabled || !get(ai).stt?.micDeviceId) throw new ToolError("The Live Copilot is not set up. The operator turns it on in Settings, Live Copilot, and picks a microphone.")
             toggleSttListening({ value: !!on } as any)
-            await until(() => get(copilotListening) === !!on, 8000)
+            await confirm(() => get(copilotListening) === !!on, on ? "Listening did not start. Check the microphone in Settings, Live Copilot." : "Listening did not stop.", 8000)
             return { listening: get(copilotListening) }
         }
     },
@@ -384,14 +403,21 @@ export const agentTools: AgentTool[] = [
                 return liveState()
             }
             requireUnlocked()
-            if (command === "next" || command === "previous") await stepScreen(command)
-            else if (command === "clear_words") clearSlide()
+            if (command === "next" || command === "previous") {
+                const before = snapshot()
+                const stuck = `Nothing moved. This may be the ${command === "next" ? "last" : "first"} one, or no screen is switched on.`
+                if (!(await stepScreen(command))) throw new ToolError(stuck)
+                await confirm(() => snapshot() !== before, stuck)
+            } else if (command === "clear_words") clearSlide()
             else if (command === "clear_background") clearBackground()
             else if (command === "clear_overlays") clearOverlays()
             else if (command === "clear_all") clearAll(true)
             else if (command === "restore") restoreOutput()
             else if (command === "screen_on" || command === "screen_off") toggleOutputs(null, { state: command === "screen_on" })
             else throw new ToolError(`Unknown command "${command}".`)
+            if (command === "clear_words") await confirm(() => !liveOut()?.slide, "The words are still on screen.")
+            else if (command === "clear_background") await confirm(() => !liveOut()?.background, "The background is still on screen.")
+            else if (command === "restore") await confirm(() => !getClearedState().all, "There is nothing to bring back.")
             await settle(900)
             return liveState()
         }
@@ -476,6 +502,7 @@ export const agentTools: AgentTool[] = [
             const found = wanted === "start" || wanted === "next" || wanted === "previous" ? nextPlanItem(wanted) : items[items.findIndex((i) => i.label.toLowerCase() === wanted)]
             if (!found) throw new ToolError(wanted === "next" ? "That was the last item." : `The plan has: ${items.map((i) => i.label).join("; ")}.`)
             await showPlanItem(found)
+            await confirm(() => planItemIsUp(found), NOT_ON_SCREEN)
             await settle(900)
             return { shown: found.label, next: nextPlanItem("next")?.label || null }
         }
@@ -508,12 +535,13 @@ export const agentTools: AgentTool[] = [
         description: "Put one of the church's overlays (a logo, a notice, a timer) on screen, or take it off. Leave name out to list them.",
         inputSchema: { type: "object", properties: { name: text("Overlay name or id"), on: { type: "boolean" } } },
         screen: true,
-        run: ({ name, on }) => {
+        run: async ({ name, on }) => {
             if (!name) return { overlays: Object.values(get(overlays)).map((overlay) => overlay.name) }
             requireUnlocked()
             const found = findByName(get(overlays) as any, name)
             const showing = (getFirstActiveOutput()?.out?.overlays || []).includes(found.id)
             if (showing !== (on !== false)) setOutput("overlays", found.id, true)
+            await confirm(() => !!liveOut()?.overlays?.includes(found.id) === (on !== false), NOT_ON_SCREEN)
             return { overlay: found.name, on: on !== false }
         }
     },
@@ -522,13 +550,14 @@ export const agentTools: AgentTool[] = [
         description: "Put one of the church's pictures or videos on screen by name. Leave name out to list them.",
         inputSchema: { type: "object", properties: { name: text("Its name") } },
         screen: true,
-        run: ({ name }) => {
+        run: async ({ name }) => {
             const list = mediaList()
             if (!name) return { media: list.slice(0, 100).map(({ name, kind }) => ({ name, kind })) }
             requireUnlocked()
             const item = matchTitle(String(name), list)
             if (!item) throw new ToolError(`Nothing named "${name}" was found.`)
             playMedia({ path: item.id })
+            await confirm(() => liveOut()?.background?.path === item.id || liveOut()?.slide?.id === item.id, NOT_ON_SCREEN)
             return { shown: item.name }
         }
     },
@@ -536,9 +565,12 @@ export const agentTools: AgentTool[] = [
         name: "control_sound",
         description: "The sound the app is playing: stop it, or mute and unmute it.",
         inputSchema: { type: "object", properties: { command: { type: "string", enum: ["stop", "mute", "unmute"] } }, required: ["command"] },
-        run: ({ command }) => {
-            if (command === "stop") clearAudio("", { clearPlaylist: true, commonClear: true })
-            else audioChannelsData.update((a) => ({ ...a, main: { ...(a.main || {}), isMuted: command === "mute" } }))
+        run: async ({ command }) => {
+            if (command === "stop") {
+                clearAudio("", { clearPlaylist: true, commonClear: true })
+                // the music fades out; microphones are left alone
+                await confirm(() => !Object.values(get(playingAudio)).some((audio: any) => !audio?.isMic), "The sound is still playing.", 6000)
+            } else audioChannelsData.update((a) => ({ ...a, main: { ...(a.main || {}), isMuted: command === "mute" } }))
             return "Done."
         }
     },
@@ -557,16 +589,26 @@ export const agentTools: AgentTool[] = [
         inputSchema: { type: "object", properties: { command: { type: "string", enum: ["start", "next", "play_pause", "set", "add"] }, minutes: { type: "integer", description: "For set and add" } }, required: ["command"] },
         run: ({ command, minutes }) => {
             if ((command === "set" || command === "add") && !(Number(minutes) > 0)) throw new ToolError("Say how many minutes.")
-            if (command === "add") return addSpeakerTime(Number(minutes) * 60)
+            const running = () => get(activeTimers).some((timer) => timer.id === SPEAKER_TIMER_ID)
+            const needsProgram = () => {
+                if (!get(timers)[SPEAKER_TIMER_ID]?.program?.segments?.length) throw new ToolError("There is no speaker program yet. Add one in the Timers drawer, or say how many minutes.")
+            }
+            if (command === "add") {
+                if (!get(timers)[SPEAKER_TIMER_ID]) throw new ToolError("No speaker timer is set. Say how many minutes to set it to.")
+                addSpeakerTime(Number(minutes) * 60)
+                return "Done."
+            }
             if (command === "set") {
                 setSpeakerDuration(Number(minutes) * 60)
                 playPauseSpeaker()
-                return "Done."
-            }
-            if (command === "start") startProgram()
-            else if (command === "next") nextProgramSegment()
-            else if (command === "play_pause") playPauseSpeaker()
+            } else if (command === "start" || command === "next") {
+                needsProgram()
+                if (command === "start") startProgram()
+                else nextProgramSegment()
+            } else if (command === "play_pause") playPauseSpeaker()
             else throw new ToolError(`Unknown command "${command}".`)
+            // "next" after the last part stops the timer, which is right
+            if (command !== "next" && !running()) throw new ToolError("The speaker timer did not start.")
             return "Done."
         }
     },
