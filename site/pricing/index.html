@@ -4,145 +4,110 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Plans: Scriptural Project</title>
-        <meta name="description" content="Put songs and scripture on screen in church meetings. Scriptural listens to the preacher and brings up each verse as it is read." />
+        <meta name="description" content="The app is free. A plan adds a bigger church library, Scriptural AI and licensed Bible versions on request." />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        <link rel="canonical" href="https://project.scriptural.online/pricing" />
-        <meta name="theme-color" content="#080808" />
+        <link rel="canonical" href="https://project.scriptural.online/pricing/" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Scriptural Project" />
         <meta property="og:title" content="Plans: Scriptural Project" />
-        <meta property="og:description" content="Put songs and scripture on screen in church meetings. Scriptural listens to the preacher and brings up each verse as it is read." />
-        <meta property="og:url" content="https://project.scriptural.online/pricing" />
+        <meta property="og:description" content="The app is free. A plan adds a bigger church library, Scriptural AI and licensed Bible versions on request." />
+        <meta property="og:url" content="https://project.scriptural.online/pricing/" />
         <meta property="og:image" content="https://project.scriptural.online/og.jpg" />
         <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="Scriptural Project: Psalm 23:1 on a church screen" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="theme-color" content="#080808" />
         <script>
+            // the same choice, under the same name, as scriptural.online
             try {
                 const theme = localStorage.getItem("theme")
                 if (theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark")
             } catch {}
         </script>
-        <style>
-            :root {
-                --background: hsl(36 30% 97%);
-                --card: hsl(36 30% 97%);
-                --border: hsl(36 15% 87%);
-                --foreground: hsl(30 8% 12%);
-                --muted: hsl(30 5% 40%);
-                color-scheme: light;
-            }
-            .dark {
-                --background: hsl(0 0% 3%);
-                --card: hsl(0 0% 7%);
-                --border: hsl(0 0% 18%);
-                --foreground: hsl(0 0% 97%);
-                --muted: hsl(0 0% 74%);
-                color-scheme: dark;
-            }
-            * {
-                box-sizing: border-box;
-            }
-            body {
-                margin: 0;
-                background: var(--background);
-                color: var(--foreground);
-                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
-                line-height: 1.55;
-                -webkit-font-smoothing: antialiased;
-            }
-            main {
-                max-width: 640px;
-                margin: 0 auto;
-                padding: 72px 24px 48px;
-            }
-            img {
-                width: 56px;
-                height: 56px;
-                border-radius: 14px;
-            }
-            h1 {
-                font-size: 2.25rem;
-                font-weight: 700;
-                letter-spacing: -0.025em;
-                line-height: 1.15;
-                margin: 28px 0 12px;
-            }
-            p {
-                color: var(--muted);
-                margin: 0 0 16px;
-            }
-            .downloads {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 10px;
-                margin: 32px 0 12px;
-            }
-            .downloads a {
-                display: inline-block;
-                padding: 10px 18px;
-                border-radius: 999px;
-                background: var(--foreground);
-                color: var(--background);
-                font-weight: 600;
-                text-decoration: none;
-            }
-            .downloads a.secondary {
-                background: transparent;
-                color: var(--foreground);
-                border: 1px solid var(--border);
-            }
-            .note {
-                font-size: 0.875rem;
-            }
-            hr {
-                border: 0;
-                border-top: 1px solid var(--border);
-                margin: 40px 0;
-            }
-            h2 {
-                font-size: 1.125rem;
-                font-weight: 600;
-                margin: 0 0 8px;
-            }
-            section + section {
-                margin-top: 24px;
-            }
-            a {
-                color: var(--foreground);
-            }
-            footer {
-                font-size: 0.8125rem;
-                color: var(--muted);
-            }
-        </style>
+        <link rel="stylesheet" href="/page.css" />
+        <link rel="stylesheet" href="/site.css" />
     </head>
     <body>
+        <header class="top">
+            <a href="/"><img src="/icon.png" alt="" /> Scriptural Project</a>
+            <nav aria-label="Main">
+                <a href="/guide/">Guide</a>
+                <a href="/pricing/">Plans</a>
+                <a href="/#downloads">Download</a>
+            </nav>
+        </header>
         <main>
-            <a href="/"><img src="/icon.png" alt="Scriptural Project" /></a>
             <h1>Plans for every size of church</h1>
-            <p>The app is free, with every public-domain Bible and live scripture. A plan adds the shared church library, Scriptural AI and licensed versions on request. Prices in US dollars, plus tax where it applies.</p>
+            <p>The app is free, with every public-domain Bible and live scripture. A plan adds the shared church library for a bigger team, Scriptural AI and licensed versions on request. Prices are in US dollars, plus tax where it applies.</p>
 
-            <section>
-                <h2>Free</h2>
-                <p>The whole app on every computer. Church library for 3 people and 500 songs. Use AI with your own Claude or Gemini key.</p>
-            </section>
-            <section>
-                <h2>Church: $19 a month, or $190 a year</h2>
-                <p>Church library for 10 people and every song you have. 25 GB of media. Scriptural AI included, no key needed. Licensed versions such as the NIV and NKJV on request.</p>
-            </section>
-            <section>
-                <h2>Multi-campus: $49 a month, or $490 a year</h2>
-                <p>Up to 50 people across campuses, 100 GB of media and five times the Scriptural AI.</p>
-            </section>
+            <h2>Free</h2>
+            <ul>
+                <li>The whole app on every computer</li>
+                <li>Church library for 3 people and 500 songs</li>
+                <li>AI with your own Claude or Gemini key</li>
+            </ul>
+
+            <h2>Church: $19 a month, or $190 a year</h2>
+            <ul>
+                <li>Church library for 10 people and every song you have</li>
+                <li>1,000 Scriptural AI requests a month, no key needed</li>
+                <li>Licensed versions such as the NIV and NKJV on request</li>
+            </ul>
+
+            <h2>Multi-campus: $49 a month, or $490 a year</h2>
+            <ul>
+                <li>Church library for 50 people across campuses and every song you have</li>
+                <li>5,000 Scriptural AI requests a month, no key needed</li>
+                <li>Licensed versions on request</li>
+            </ul>
+
+            <p>Cancel any time in the app. You keep your plan until the end of the period you paid for. Yearly plans are refunded in full within 14 days if you ask.</p>
 
             <hr />
-            <p>Choose a plan in the app: Import, then Church library. Cancel any time from the same place.</p>
+            <h2>Get the app</h2>
+            <p>Download it free for Mac, Windows or Linux. Choose a plan in the app: Import, then Church library.</p>
+            <div class="downloads">
+                <a href="/download/mac" data-os="mac">Mac (Apple silicon)</a>
+                <a class="secondary" href="/download/mac-intel" data-os="mac-intel">Mac (Intel)</a>
+                <a class="secondary" href="/download/windows" data-os="windows">Windows</a>
+                <a class="secondary" href="/download/linux" data-os="linux">Linux</a>
+            </div>
+            <div class="on-phone">
+                <p>Scriptural Project runs on a computer, not a phone.</p>
+                <a class="send-link" href="mailto:?subject=Scriptural%20Project&amp;body=https%3A%2F%2Fproject.scriptural.online%2F">Send me the link</a>
+            </div>
+
+            <hr />
+            <h2>Questions</h2>
+            <h3>Is there a free trial?</h3>
+            <p>No. The free plan is the trial: use it for as long as you like, with no card.</p>
+            <h3>What happens when we cancel?</h3>
+            <p>Nothing is deleted. If your library is over the free limits, you can still open and download everything, but not add more until you are back under them.</p>
+            <h3>How do we ask for a refund?</h3>
+            <p>Email <a href="mailto:support@scriptural.online">support@scriptural.online</a> within 14 days of paying for a year.</p>
+            <h3>Do we need a plan on every computer?</h3>
+            <p>No. One plan covers your church. People are invited to the church library, and the app is free on each computer.</p>
+            <h3>Does it work without the internet?</h3>
+            <p>Songs, public-domain Bibles and service plans stay on your computer. Scriptural AI and syncing the church library need the internet.</p>
         </main>
+        <footer class="site-footer">
+            <nav aria-label="Site">
+                <a href="/">Home</a>
+                <a href="/guide/">Guide</a>
+                <a href="/loops/">Video loops</a>
+                <a href="/pricing/">Plans</a>
+                <a href="/licences/">Licences</a>
+                <a href="/privacy/">Privacy</a>
+                <a href="/terms/">Terms</a>
+                <a href="mailto:support@scriptural.online">support@scriptural.online</a>
+            </nav>
+        </footer>
+        <script src="/tags-config.js"></script>
+        <script src="/site.js"></script>
     </body>
 </html>

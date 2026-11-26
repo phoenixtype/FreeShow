@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Page not found: Scriptural Project</title>
+        <meta name="description" content="This page does not exist." />
+        <meta name="robots" content="noindex" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#080808" />
+        <script>
+            // the same choice, under the same name, as scriptural.online
+            try {
+                const theme = localStorage.getItem("theme")
+                if (theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark")
+            } catch {}
+        </script>
+        <link rel="stylesheet" href="/page.css" />
+        <link rel="stylesheet" href="/site.css" />
+    </head>
+    <body>
+        <header class="top">
+            <a href="/"><img src="/icon.png" alt="" /> Scriptural Project</a>
+            <nav aria-label="Main">
+                <a href="/guide/">Guide</a>
+                <a href="/pricing/">Plans</a>
+                <a href="/#downloads">Download</a>
+            </nav>
+        </header>
+        <main>
+            <h1>Page not found</h1>
+            <p>There is no page at this address.</p>
+            <p><a href="/">Go to the home page</a></p>
+        </main>
+        <footer class="site-footer">
+            <nav aria-label="Site">
+                <a href="/">Home</a>
+                <a href="/guide/">Guide</a>
+                <a href="/loops/">Video loops</a>
+                <a href="/pricing/">Plans</a>
+                <a href="/licences/">Licences</a>
+                <a href="/privacy/">Privacy</a>
+                <a href="/terms/">Terms</a>
+                <a href="mailto:support@scriptural.online">support@scriptural.online</a>
+            </nav>
+        </footer>
+        <script src="/tags-config.js"></script>
+        <script src="/site.js"></script>
+    </body>
+</html>
