@@ -142,7 +142,7 @@
     }
 
     .column {
-        --copilot-width: 360px;
+        --copilot-width: clamp(400px, 32vw, 480px);
     }
     @media screen and (min-width: 1180px) {
         .column.docked {

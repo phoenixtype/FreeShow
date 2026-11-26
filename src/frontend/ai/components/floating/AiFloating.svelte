@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte"
     import { fly } from "svelte/transition"
+    import Icon from "../../../components/helpers/Icon.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import Tabs from "../../../components/main/Tabs.svelte"
@@ -198,6 +199,7 @@
     <!-- beside the app, not over it: everything stays usable while it works -->
     <aside class="panel" bind:this={panel} aria-label={NAME} transition:fly={{ x: 60, duration: 160 }}>
         <header>
+            <Icon id="ai" size={1.2} white />
             <h2>{NAME}</h2>
             <span class="listening">{isListening ? "Listening" : state === "error" ? ($ai.matthias?.agentMode ? "Microphone problem, trying again" : "Microphone problem") : "Not listening"}</span>
             <MaterialToggleSwitch label="" title="Listen" checked={isListening} disabled={state !== "inactive" && state !== "listening"} on:change={() => toggleListening()} small />
@@ -227,6 +229,7 @@
         inset-block: 0;
         inset-inline-end: 0;
         width: var(--copilot-width);
+        max-width: 100vw;
         z-index: 4000;
         display: flex;
         flex-direction: column;
@@ -244,6 +247,7 @@
     }
     h2 {
         flex: 1;
+        margin-inline-start: 4px;
         font-size: 1.05em;
         font-weight: 600;
     }

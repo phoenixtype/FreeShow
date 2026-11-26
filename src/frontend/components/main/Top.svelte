@@ -17,7 +17,8 @@
 
     // room for every button to say what it is
     let innerWidth = 0
-    $: room = innerWidth - ($ai.enabled && $copilotOpen ? 360 : 0)
+    // the panel's width, as MainLayout sets it
+    $: room = innerWidth - ($ai.enabled && $copilotOpen ? Math.min(480, Math.max(400, innerWidth * 0.32)) : 0)
     $: wide = room >= 1520
 
     $: show = $shows[$activeShow?.id || ""]
