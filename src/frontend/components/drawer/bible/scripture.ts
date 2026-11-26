@@ -44,7 +44,9 @@ export async function getApiBiblesList() {
         return await ApiBiblesList(customKey || key, customKey ? "" : SCRIPTURE_API_URL)
     } catch (err) {
         console.error("Error loading API Bible:", err)
-        return await ApiBiblesList(customKey ? key : getKey("bibleapi"), customKey ? SCRIPTURE_API_URL : "")
+        const ownKey = getKey("bibleapi")
+        if (!customKey && !ownKey) throw err
+        return await ApiBiblesList(customKey ? key : ownKey, customKey ? SCRIPTURE_API_URL : "")
     }
 }
 
@@ -69,7 +71,8 @@ export async function loadJsonBible(id: string): Promise<BibleInstance | null> {
             return instance
         } catch (err) {
             console.error("Error loading API Bible:", err)
-            const instance = await JsonBibleApi(key, apiId, customKey ? SCRIPTURE_API_URL : "")
+            if (!customKey && !key) throw err
+            const instance = await JsonBibleApi(key || "*", apiId, customKey ? SCRIPTURE_API_URL : "")
             jsonBibleCache[id] = instance
             return instance
         }

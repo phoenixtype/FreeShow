@@ -33,6 +33,7 @@
     import MediaGrid from "./MediaGrid.svelte"
     import { loadFromPixabay } from "./pixabay"
     import { loadFromUnsplash } from "./unsplash"
+    import { providerAvailable } from "../../../values/keys"
     import { loadScripturalBackgrounds, loadScripturalCategories, type BackgroundCategory } from "./scripturalBackgrounds"
 
     export let active: string | null
@@ -146,6 +147,8 @@
     }
 
     let onlineTab = $drawerTabsData.media?.openedSubSubTab?.online || "scriptural"
+    // a tab remembered from a build that had this provider's key
+    if ((onlineTab === "pixabay" || onlineTab === "unsplash") && !providerAvailable(onlineTab)) onlineTab = "scriptural"
     $: if (active === "online" && onlineTab === "pixabay" && (searchValue !== null || activeView)) loadFilesAsync()
     $: if (active === "online" && onlineTab === "unsplash" && (searchValue !== null || activeView)) loadFilesAsync()
     $: if (active === "online" && onlineTab === "scriptural" && (searchValue !== null || activeView || scripturalCategory !== null)) loadFilesAsync()
@@ -556,15 +559,19 @@
             <Icon style={onlineTab === "vimeo" ? "fill: #17d5ff" : ""} size={1.2} id="vimeo" white />
             <p>Vimeo</p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "pixabay"} on:click={() => setSubSubTab("pixabay")}>
-            <Icon style={onlineTab === "pixabay" ? "fill: #00ab6b" : ""} size={1.2} id="pixabay" box={48} white />
-            <p>Pixabay</p>
-        </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "unsplash"} on:click={() => setSubSubTab("unsplash")}>
-            <!-- #111111 -->
-            <Icon style={onlineTab === "unsplash" ? "fill: #bbbbbb" : ""} size={1.2} id="unsplash" white />
-            <p>Unsplash</p>
-        </MaterialButton>
+        {#if providerAvailable("pixabay")}
+            <MaterialButton style="flex: 1;" isActive={onlineTab === "pixabay"} on:click={() => setSubSubTab("pixabay")}>
+                <Icon style={onlineTab === "pixabay" ? "fill: #00ab6b" : ""} size={1.2} id="pixabay" box={48} white />
+                <p>Pixabay</p>
+            </MaterialButton>
+        {/if}
+        {#if providerAvailable("unsplash")}
+            <MaterialButton style="flex: 1;" isActive={onlineTab === "unsplash"} on:click={() => setSubSubTab("unsplash")}>
+                <!-- #111111 -->
+                <Icon style={onlineTab === "unsplash" ? "fill: #bbbbbb" : ""} size={1.2} id="unsplash" white />
+                <p>Unsplash</p>
+            </MaterialButton>
+        {/if}
         <MaterialButton style="flex: 1;" isActive={onlineTab === "canva"} on:click={() => setSubSubTab("canva")}>
             {#if onlineTab === "canva"}
                 <CLogo />
