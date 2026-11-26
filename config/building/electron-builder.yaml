@@ -27,6 +27,12 @@ win:
     target: NSIS
     icon: build/public/icon.png
     files:
+        # each platform list names what goes in: a list of exclusions alone makes
+        # electron-builder pack the whole repository (see packaging.test.ts)
+        - build/electron/**
+        - build/types/**
+        - public/**
+        - LICENSE
         - "!**/node_modules/openmediatransport/lib/{macos,linux-*,win-arm64}/**"
         - "!**/node_modules/better-sqlite3/prebuilds/{darwin-*,linux*,win32-arm64}.node"
     asarUnpack:
@@ -41,6 +47,12 @@ win:
 
 linux:
     files:
+        # each platform list names what goes in: a list of exclusions alone makes
+        # electron-builder pack the whole repository (see packaging.test.ts)
+        - build/electron/**
+        - build/types/**
+        - public/**
+        - LICENSE
         - "!**/node_modules/openmediatransport/lib/{macos,win-*}/**"
         - "!**/node_modules/better-sqlite3/prebuilds/{darwin-*,linuxmusl-*,win32-*}.node"
     asarUnpack:
@@ -69,6 +81,12 @@ deb:
 mac:
     icon: build/public/icon.png
     files:
+        # each platform list names what goes in: a list of exclusions alone makes
+        # electron-builder pack the whole repository (see packaging.test.ts)
+        - build/electron/**
+        - build/types/**
+        - public/**
+        - LICENSE
         - "!**/node_modules/openmediatransport/lib/{linux-*,win-*}/**"
         - "!**/node_modules/better-sqlite3/prebuilds/{linux*,win32-*}.node"
     asarUnpack:
