@@ -18,9 +18,14 @@ export interface BibleCacheData {
     verseTokensOffsets: Uint32Array
     verseTokens: Uint32Array
     bookNames: string[]
+    /** other names a book goes by, as they are said: the name this Bible uses */
+    aliases?: Record<string, string>
     refRegex: RegExp | null
     totalVerses: number
 }
+
+// by book number
+const OTHER_NAMES: Record<number, string[]> = { 22: ["song of songs", "canticles", "song of solomon"], 66: ["apocalypse"] }
 
 export class BibleCacheManager {
     private static caches: Map<string, BibleSearchDetector> = new Map()
@@ -119,6 +124,7 @@ export class BibleCacheManager {
         const vocabPool: string[] = []
         const vocabToIdMap: Map<string, number> = new Map()
         const bookNames: string[] = []
+        const aliases: Record<string, string> = {}
         let totalVerses = 0
 
         const tempPostingsMap: Map<number, number[]> = new Map()
@@ -136,6 +142,7 @@ export class BibleCacheManager {
         // Pass 1: Build verse pool and reference indices asynchronously
         for (const book of bible.books) {
             bookNames.push(book.name)
+            for (const other of OTHER_NAMES[Number(book.number)] || []) if (other !== book.name.toLowerCase()) aliases[other] = book.name
             for (const chapter of book.chapters) {
                 const refKey = `${book.name.toLowerCase()} ${chapter.number}`
                 const startVerseId = totalVerses
@@ -249,6 +256,7 @@ export class BibleCacheManager {
             verseTokensOffsets,
             verseTokens,
             bookNames,
+            aliases,
             refRegex,
             totalVerses
         }

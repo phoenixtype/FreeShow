@@ -17,6 +17,7 @@ export function withoutOrdinalAside(text: string): string | null {
 
 export function normalizeReferences(text: string, cacheData: BibleCacheData): string {
     let normalized = text.replace(SHORT_ORDINAL_REGEX, (_, ordinal: string) => `${SHORT_ORDINALS[ordinal.toLowerCase()]} `)
+    for (const [other, own] of Object.entries(cacheData.aliases || {})) normalized = normalized.replace(new RegExp(`\\b${other.replace(/ /g, "\\s+")}\\b`, "giu"), own)
 
     // 1. Remove punctuation that breaks numbered books and normalize ordinal book prefixes (e.g., "1, john 4" or "first, john" -> "1 john")
     normalized = normalized.replace(new RegExp(`\\b([1-3]|${ORDINAL_PREFIX_PATTERN})\\s*[,.\\-_]\\s*([\\p{L}]+)`, "giu"), "$1 $2")
@@ -63,6 +64,13 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
     const ordinalChapterRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(?:${CHAPTER_PATTERN}|${PSALM_PATTERN})\\s+(?:${OF_PATTERN})\\s+((?:[1-3]\\s*)?[\\p{L}]+)\\b`, "giu")
     normalized = normalized.replace(ordinalChapterRegex, (all, chapter: string, book: string) => (/\bchapter\b/iu.test(all) ? `${book} chapter ${chapter}` : `${book} ${chapter}`))
 
+    // "John three one six": the verse said a digit at a time
+    normalized = normalized.replace(new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d{1,3})\\s+(\\d)\\s+(\\d)\\b(?![:\\d])`, "giu"), (match, book: string, chapter: string, first: string, second: string) => {
+        const verse = Number(first + second)
+        const verses = cacheData.referenceIndex.get(`${book.toLowerCase()} ${chapter}`)?.verseCount || 0
+        return verse >= 1 && verse <= verses ? `${book} ${chapter}:${verse}` : match
+    })
+
     // "Jude one three": the 1 is the only chapter, and the verse follows
     const oneChapterRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+1\\s+(?:(?:${VERSE_PATTERN})\\s+)?(\\d+(?:-\\d+)?)\\b(?![:\\d])`, "giu")
     normalized = normalized.replace(oneChapterRegex, (match, book, verse) => (isSingleChapterBook(book, cacheData) ? `${book} 1:${verse}` : match))
@@ -101,6 +109,9 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
     normalized = normalized.replace(/\b((?:[1-3]\s*)?[\p{L}]+)\s+(\d{3,4})\b/giu, (match, book, digits) => {
         // "Psalm 103" is a chapter as it stands
         if (cacheData.referenceIndex.has(`${book.toLowerCase()} ${digits}`)) return match
+
+        // "Luke 2025" is a year, not Luke 20:25
+        if (Number(digits) >= 1900 && Number(digits) <= 2100) return match
 
         let chap = 0
         let verse = 0

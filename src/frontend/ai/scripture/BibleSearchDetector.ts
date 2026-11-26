@@ -18,6 +18,13 @@ function rangeEnd(start: number, end: number | undefined, verseCount: number): s
 // group 1: what led up to it; then chapter, verse and range end
 const STANDALONE_CHAPTER = new RegExp(`(^|[.!?]\\s*|\\b(?:turn(?: with me)? to|go to|to|in|at|and|then|now|so|read|see|us|from)\\s+(?:the )?)(?:${CHAPTER_PATTERN})\\s*(\\d+)(?:[\\s,:]*(?:(?:and )?(?:${VERSE_PATTERN})\\s*)?(?<=[\\s,:])(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?)?`, "giu")
 
+// "verse eight and nine": the next one, and nothing it could be counting
+function andNext(start: number, after: string): number | undefined {
+    const next = after.match(/^\s*,?\s*and\s+(?:verse\s+)?(\d+)\b(?![:.]\d)/iu)
+    if (!next || Number(next[1]) !== start + 1 || COUNTED_WORDS.test(after.slice(next[0].length))) return undefined
+    return start + 1
+}
+
 export class BibleSearchDetector {
     constructor(private cacheData: BibleCacheData) {}
 
@@ -73,7 +80,7 @@ export class BibleSearchDetector {
             if (startVerseNum < 1 || startVerseNum > chapterData.verseCount) continue
 
             let referenceContent = `${chapterData.bookName} ${chapterData.chapterNumber}:${startVerseNum}`
-            referenceContent += rangeEnd(startVerseNum, endVerseNum, chapterData.verseCount)
+            referenceContent += rangeEnd(startVerseNum, endVerseNum ?? andNext(startVerseNum, cleanInput.slice(matchIndex + matchLength)), chapterData.verseCount)
 
             return {
                 type: "scripture",
@@ -137,7 +144,7 @@ export class BibleSearchDetector {
             if (!chapterData || startVerseNum < 1 || startVerseNum > chapterData.verseCount) continue
 
             let referenceContent = `${chapterData.bookName} ${chapterData.chapterNumber}:${startVerseNum}`
-            referenceContent += rangeEnd(startVerseNum, endVerseNum, chapterData.verseCount)
+            referenceContent += rangeEnd(startVerseNum, endVerseNum ?? andNext(startVerseNum, cleanInput.slice(matchIndex + matchLength)), chapterData.verseCount)
 
             const isSequential = startVerseNum === parsedCurrent.verse + 1
 

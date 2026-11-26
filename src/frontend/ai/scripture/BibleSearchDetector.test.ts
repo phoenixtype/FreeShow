@@ -146,3 +146,25 @@ describe("a psalm named by its place (B12)", () => {
         expect(await heard("we have read all of the one hundred and fifty psalms")).toBeUndefined()
     })
 })
+
+describe("smaller ways of saying it (B15)", () => {
+    it("takes the next verse into a range", async () => {
+        expect(await heard("John 3 verse 8 and nine")).toBe("John 3:8-9")
+        expect(await heard("verses sixteen and seventeen", "John 3:1")).toBe("John 3:16-17")
+        expect(await heard("John 3 16 and 17 years later he wrote")).toBe("John 3:16")
+    })
+
+    it("reads a verse said a digit at a time", async () => {
+        expect(await heard("John three one six")).toBe("John 3:16")
+    })
+
+    it("knows other names of a book", async () => {
+        expect(await heard("Song of Songs two four")).toBe("Song of Solomon 2:4")
+        expect(await heard("Canticles 2:4")).toBe("Song of Solomon 2:4")
+        expect(await heard("turn to the Apocalypse chapter three verse twenty")).toBe("Revelation 3:20")
+    })
+
+    it("does not split a year into chapter and verse", async () => {
+        expect(await heard("Luke 2025")).toBeUndefined()
+    })
+})
