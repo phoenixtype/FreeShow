@@ -164,6 +164,10 @@ describe("smaller ways of saying it (B15)", () => {
         expect(await heard("turn to the Apocalypse chapter three verse twenty")).toBe("Revelation 3:20")
     })
 
+    it("goes back to an earlier verse when asked", async () => {
+        expect(await heard("back to verse sixteen", "John 3:20")).toBe("John 3:16")
+    })
+
     it("does not split a year into chapter and verse", async () => {
         expect(await heard("Luke 2025")).toBeUndefined()
     })
