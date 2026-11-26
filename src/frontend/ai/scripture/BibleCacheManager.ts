@@ -36,7 +36,7 @@ export class BibleCacheManager {
         if (this.caches.has(bibleId)) return this.caches.get(bibleId)!
         if (this.cachePromises.has(bibleId)) return await this.cachePromises.get(bibleId)!
 
-        const promise = (async () => {
+        const load = async () => {
             const scriptureData = get(scriptures)[bibleId]
             if (!scriptureData || scriptureData?.api) return null
 
@@ -49,7 +49,18 @@ export class BibleCacheManager {
             this.rawCaches.set(bibleId, cacheData)
             this.caches.set(bibleId, searchCache)
             return searchCache
-        })()
+        }
+
+        const promise = load()
+            .catch((err) => {
+                console.warn("Live Copilot could not read the Bible", bibleId, err)
+                return null
+            })
+            .then((detector) => {
+                // a Bible that did not load is tried again, not remembered as missing
+                if (!detector) this.cachePromises.delete(bibleId)
+                return detector
+            })
 
         this.cachePromises.set(bibleId, promise)
         return await promise
@@ -58,7 +69,14 @@ export class BibleCacheManager {
     private static canon: Promise<BibleSearchDetector> | null = null
     /** references only, for when no Bible is stored on this computer */
     public static getCanon(): Promise<BibleSearchDetector> {
-        if (!this.canon) this.canon = this.buildCacheAsync({ books: CANON } as any).then((data) => new BibleSearchDetector(data))
+        if (!this.canon) {
+            this.canon = this.buildCacheAsync({ books: CANON } as any)
+                .then((data) => new BibleSearchDetector(data))
+                .catch((err) => {
+                    this.canon = null
+                    throw err
+                })
+        }
         return this.canon
     }
 
@@ -241,7 +259,7 @@ export class BibleCacheManager {
             }
         }
 
-        const bookPattern = bookNames.map((b) => b.replace(/\s+/g, "\\s+")).join("|")
+        const bookPattern = bookNames.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")).join("|")
         const refRegex = new RegExp(`\\b((?:(?:[1-3]|${ORDINAL_PREFIX_PATTERN})\\s+)?(?:${bookPattern}))\\b\\s*(?:${CHAPTER_PATTERN})?\\s*(\\d+)(?:[\\s,:.]+(?:${VERSE_PATTERN})?\\s*(\\d+)(?:\\s*[-–—]\\s*(\\d+))?)?`, "iu")
 
         return {

@@ -239,20 +239,25 @@ export class AiManager {
 
         // an online Bible has no words here to listen against: spoken references are
         // followed all the same, and quotes through any Bible stored on this computer
-        if (!localIds.includes(openBibleId)) {
+        const open = localIds.includes(openBibleId)
+        const readId = open ? openBibleId : localIds[0]
+
+        // none stored, or one that will not load: references only
+        if (!readId || !(await BibleCacheManager.getCache(readId))) {
             if (!localIds.length) {
                 if (!this.scriptureAlerted) newToast("Listening for references. Download a Bible to also catch verses as they are quoted.")
                 this.scriptureAlerted = true
-                return await (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
             }
-            const match = await this.bibleDetection(localIds[0], textChunk, isCancelled)
-            if (match) delete match.scriptureTranslation
+            return (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
+        }
+
+        const match = await this.bibleDetection(readId, textChunk, isCancelled)
+        if (!match) return null
+        if (!open) {
+            delete match.scriptureTranslation
             return match
         }
         const activeBibleId = openBibleId
-
-        const match = await this.bibleDetection(activeBibleId, textChunk, isCancelled)
-        if (!match) return null
 
         // reference type matches stays on the active scripture
         if (match.scriptureMatchType !== "content") return match
@@ -271,7 +276,7 @@ export class AiManager {
                     this.newMatch({ ...otherMatch, scriptureIsNewTranslation: true })
                 }
             })
-        )
+        ).catch((err) => console.warn("Live Copilot could not search the other Bibles", err))
 
         return match
     }
