@@ -5,7 +5,9 @@
     import MaterialDatePicker from "../../components/inputs/MaterialDatePicker.svelte"
     import MaterialToggleSwitch from "../../components/inputs/MaterialToggleSwitch.svelte"
     import { ai, special, usageLog } from "../../stores"
+    import T from "../../components/helpers/T.svelte"
     import { newToast } from "../../utils/common"
+    import { translateText } from "../../utils/language"
     import { saveCcliReport } from "./ccliReport"
     import { openDetectionLogs } from "./detectionLog"
     import { localDay } from "./localDate"
@@ -16,9 +18,9 @@
         saving = true
         const result = await saveRecap().catch(() => "failed")
         saving = false
-        if (result === "empty") newToast("Nothing has been on screen today, so there is nothing to save yet.")
-        else if (result === "saved") newToast("Recap saved.")
-        else if (result === "failed") newToast("The recap could not be saved. Try another folder.")
+        if (result === "empty") newToast(translateText("matthias.recap_empty"))
+        else if (result === "saved") newToast(translateText("matthias.recap_saved"))
+        else if (result === "failed") newToast(translateText("matthias.recap_failed"))
     }
 
     // the last six months, which is how long a CCLI reporting period is
@@ -30,34 +32,34 @@
         saving = true
         const result = await saveCcliReport(from, to).catch(() => "failed")
         saving = false
-        if (result === "empty") newToast("No songs were counted between those dates.")
-        else if (result === "saved") newToast("Report saved.")
-        else if (result === "failed") newToast("The report could not be saved. Try another folder.")
+        if (result === "empty") newToast(translateText("matthias.report_empty"))
+        else if (result === "saved") newToast(translateText("matthias.report_saved"))
+        else if (result === "failed") newToast(translateText("matthias.report_failed"))
     }
 </script>
 
-<Title label="Service records" icon="folder" />
+<Title label="matthias.service_records" icon="folder" />
 
-<p class="note">The verses and songs shown today, with their times, and any list made of the main points. It covers the time since the app was opened.</p>
+<p class="note"><T id="matthias.recap_note" /></p>
 <div class="actions">
-    <MaterialButton variant="outlined" icon="export" disabled={saving} on:click={recap}>Save today's recap</MaterialButton>
+    <MaterialButton variant="outlined" icon="export" disabled={saving} on:click={recap}><T id="matthias.save_recap" /></MaterialButton>
 </div>
 
-<MaterialToggleSwitch label="Count the songs used, for a CCLI report" checked={!!$special.logSongUsage} defaultValue={false} on:change={(e) => special.update((a) => ({ ...a, logSongUsage: e.detail }))} />
-<p class="note">Songs are counted on this computer from when this is switched on.</p>
+<MaterialToggleSwitch label="matthias.count_songs" checked={!!$special.logSongUsage} defaultValue={false} on:change={(e) => special.update((a) => ({ ...a, logSongUsage: e.detail }))} />
+<p class="note"><T id="matthias.count_note" /></p>
 {#if $special.logSongUsage || $usageLog.all?.length}
-    <MaterialDatePicker label="From" value={from} on:change={(e) => (from = e.detail || from)} />
-    <MaterialDatePicker label="To" value={to} on:change={(e) => (to = e.detail || to)} />
+    <MaterialDatePicker label="matthias.date_from" value={from} on:change={(e) => (from = e.detail || from)} />
+    <MaterialDatePicker label="matthias.date_to" value={to} on:change={(e) => (to = e.detail || to)} />
     <div class="actions">
-        <MaterialButton variant="outlined" icon="export" disabled={saving || from > to} on:click={report}>Save CCLI report</MaterialButton>
+        <MaterialButton variant="outlined" icon="export" disabled={saving || from > to} on:click={report}><T id="matthias.save_ccli" /></MaterialButton>
     </div>
 {/if}
 
 {#if $ai.enabled}
-    <MaterialToggleSwitch label="Keep a record of what was detected" checked={!!$ai.detectionLog} defaultValue={false} on:change={(e) => ai.update((a) => ({ ...a, detectionLog: e.detail }))} />
-    <p class="note">This saves words heard in the meeting on this computer, one file for each service. Files older than 90 days are deleted.</p>
+    <MaterialToggleSwitch label="matthias.keep_detections" checked={!!$ai.detectionLog} defaultValue={false} on:change={(e) => ai.update((a) => ({ ...a, detectionLog: e.detail }))} />
+    <p class="note"><T id="matthias.detections_note" /></p>
     <div class="actions">
-        <MaterialButton variant="outlined" icon="folder" on:click={openDetectionLogs}>Open the records folder</MaterialButton>
+        <MaterialButton variant="outlined" icon="folder" on:click={openDetectionLogs}><T id="matthias.open_records" /></MaterialButton>
     </div>
 {/if}
 

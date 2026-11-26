@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { expect, it } from "vitest"
 
 const read = (path: string) => readFileSync(join(__dirname, path), "utf8")
+const en = JSON.parse(read("../../public/lang/en.json"))
 
 it("gives a switch with no visible label an accessible name", () => {
     expect(read("components/inputs/MaterialToggleSwitch.svelte")).toContain("aria-label={translateText(title || label) || undefined}")
@@ -11,7 +12,8 @@ it("gives a switch with no visible label an accessible name", () => {
 it("says how sure a match is in figures, not only colour", () => {
     const meter = read("ai/components/floating/ConfidenceMeter.svelte")
     expect(meter).toContain("{safeConfidence}%")
-    expect(meter).toContain('aria-label="Confidence {safeConfidence}%"')
+    expect(meter).toContain('aria-label={translateText("matthias.confidence", $dictionary, [String(safeConfidence)])}')
+    expect(en.matthias.confidence).toBe("Confidence $1%")
 })
 
 it("shows the shortcut as Cmd on a Mac", () => {

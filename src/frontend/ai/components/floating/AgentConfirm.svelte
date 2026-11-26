@@ -2,14 +2,17 @@
 <script lang="ts">
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { cancelAgentMode, confirmAgentMode } from "../../agent/control"
+    import T from "../../../components/helpers/T.svelte"
+    import { dictionary } from "../../../stores"
+    import { translateText } from "../../../utils/language"
     import { NAME } from "../../voice/matthias"
 </script>
 
-<div class="confirm" role="alertdialog" aria-label="Let {NAME} lead">
-    <p>{NAME} will change the screen on its own and use AI requests.</p>
+<div class="confirm" role="alertdialog" aria-label={translateText("matthias.let_lead", $dictionary, [NAME])}>
+    <p><T id="matthias.agent_warning" replace={[NAME]} /></p>
     <div class="actions">
-        <MaterialButton variant="text" small on:click={cancelAgentMode}>Cancel</MaterialButton>
-        <MaterialButton variant="outlined" small on:click={confirmAgentMode}>Turn on</MaterialButton>
+        <MaterialButton variant="text" small on:click={cancelAgentMode}><T id="matthias.cancel" /></MaterialButton>
+        <MaterialButton variant="outlined" small on:click={confirmAgentMode}><T id="matthias.turn_on" /></MaterialButton>
     </div>
 </div>
 

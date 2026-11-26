@@ -4,7 +4,9 @@
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { clearAll, clearSlide, restoreOutput } from "../../../components/output/clear"
     import PreviewOutput from "../../../components/output/preview/PreviewOutput.svelte"
-    import { outLocked, outputCache, outputs, outputState, shows } from "../../../stores"
+    import { dictionary, outLocked, outputCache, outputs, outputState, shows } from "../../../stores"
+    import T from "../../../components/helpers/T.svelte"
+    import { translateText } from "../../../utils/language"
     import { stepScreen } from "../../agent/stepScreen"
     import { isScreenOff, onScreenTitle } from "./onScreen"
 
@@ -16,17 +18,17 @@
     $: cleared = isOutCleared(null, $outputs)
     $: title = onScreenTitle(screen?.out?.slide, $shows)
     $: hidden = isScreenOff(screen?.id, $outputState) && !screen?.invisible
-    $: status = !screen ? "" : cleared ? "Nothing on screen" : title || "On screen"
+    $: status = !screen ? "" : cleared ? translateText("matthias.nothing_on_screen", $dictionary) : title || translateText("matthias.on_screen", $dictionary)
 </script>
 
 <section class="preview">
     <header>
         <p class="title" class:faded={cleared} title={status}>{status}</p>
         {#if $outLocked}
-            <span class="tag">Locked</span>
+            <span class="tag"><T id="matthias.locked" /></span>
         {:else if hidden}
-            <span class="tag" title="Only you see this">Screen is off</span>
-            <MaterialButton variant="outlined" small on:click={() => toggleOutputs(null, { state: true })}>Turn on</MaterialButton>
+            <span class="tag" title={translateText("matthias.only_you", $dictionary)}><T id="matthias.screen_off" /></span>
+            <MaterialButton variant="outlined" small on:click={() => toggleOutputs(null, { state: true })}><T id="matthias.turn_on" /></MaterialButton>
         {/if}
     </header>
 
@@ -36,7 +38,7 @@
                 <PreviewOutput outputId={screen.id} />
             {/key}
         {:else}
-            <p class="empty">No screen is set up. Add one in Settings, Outputs.</p>
+            <p class="empty"><T id="matthias.no_screen" /></p>
         {/if}
     </div>
 
@@ -49,14 +51,14 @@
     {/if}
 
     <div class="controls">
-        <MaterialButton icon="previous" title="preview._previous_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("previous")}>Previous</MaterialButton>
-        <MaterialButton icon="next" title="preview._next_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("next")}>Next</MaterialButton>
+        <MaterialButton icon="previous" title="preview._previous_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("previous")}><T id="matthias.previous" /></MaterialButton>
+        <MaterialButton icon="next" title="preview._next_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("next")}><T id="matthias.next" /></MaterialButton>
         <div class="fill" />
         {#if cleared && $outputCache && $outputCache.slide?.type !== "ppt"}
-            <MaterialButton icon="reset" disabled={$outLocked} on:click={restoreOutput}>Bring it back</MaterialButton>
+            <MaterialButton icon="reset" disabled={$outLocked} on:click={restoreOutput}><T id="matthias.bring_back" /></MaterialButton>
         {:else}
-            <MaterialButton icon="slide" disabled={$outLocked || cleared} on:click={() => clearSlide()}>Clear words</MaterialButton>
-            <MaterialButton icon="clear" disabled={$outLocked || cleared} on:click={() => clearAll(true)}>Clear all</MaterialButton>
+            <MaterialButton icon="slide" disabled={$outLocked || cleared} on:click={() => clearSlide()}><T id="matthias.clear_words" /></MaterialButton>
+            <MaterialButton icon="clear" disabled={$outLocked || cleared} on:click={() => clearAll(true)}><T id="matthias.clear_all" /></MaterialButton>
         {/if}
     </div>
 </section>

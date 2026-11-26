@@ -6,8 +6,10 @@
     import Loader from "../../../components/main/Loader.svelte"
     import Tip from "../../../components/main/Tip.svelte"
     import { requestMain } from "../../../IPC/main"
-    import { activePopup, mediaDownloads } from "../../../stores"
+    import { activePopup, dictionary, mediaDownloads } from "../../../stores"
+    import T from "../../../components/helpers/T.svelte"
     import { newToast } from "../../../utils/common"
+    import { translateText } from "../../../utils/language"
     import { downloadPercent } from "../../stt/listenStatus"
 
     const engine = "nemotron"
@@ -57,16 +59,16 @@
     <Tip type="warning" value={status.error} />
 {:else if status.ready}
     <div class="row">
-        <p>The speech model is ready.</p>
-        <MaterialButton variant="contained" on:click={() => activePopup.set(null)}>Done</MaterialButton>
+        <p><T id="matthias.model_ready" /></p>
+        <MaterialButton variant="contained" on:click={() => activePopup.set(null)}><T id="matthias.done" /></MaterialButton>
     </div>
 {:else}
     {#if unfinished}
-        <p class="problem" role="alert">The download did not finish. Check your internet connection and free disk space, then try again.</p>
+        <p class="problem" role="alert"><T id="matthias.download_unfinished" /></p>
     {/if}
     <div class="row">
-        <p>{isModelDownloading ? `Downloading${percent === null ? "" : ` ${percent}%`}` : "About 680 MB, downloaded once."}</p>
-        <MaterialButton variant="contained" icon="download" disabled={isModelDownloading} on:click={downloadModel}>{unfinished ? "Try again" : "Get the speech model"}</MaterialButton>
+        <p>{isModelDownloading ? (percent === null ? translateText("matthias.downloading", $dictionary) : translateText("matthias.downloading_percent", $dictionary, [String(percent)])) : translateText("matthias.model_size", $dictionary)}</p>
+        <MaterialButton variant="contained" icon="download" disabled={isModelDownloading} on:click={downloadModel}>{unfinished ? translateText("matthias.try_again", $dictionary) : translateText("matthias.get_model", $dictionary)}</MaterialButton>
     </div>
 {/if}
 

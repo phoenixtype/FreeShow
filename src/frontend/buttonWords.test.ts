@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 // house rule: transport and clear buttons carry words, whatever the labels setting
 const src = join(__dirname, "..")
 const read = (path: string) => readFileSync(join(src, path), "utf8")
+const en = JSON.parse(read("../public/lang/en.json"))
 
 const BUTTONS = ["MaterialButton", "Button", "button"]
 
@@ -47,6 +48,7 @@ describe("the panel preview", () => {
     it("can bring back what was cleared", () => {
         const preview = read("frontend/ai/components/floating/CopilotPreview.svelte")
         expect(preview).toContain("on:click={restoreOutput}")
-        expect(preview).toContain("Bring it back")
+        expect(preview).toContain('<T id="matthias.bring_back" />')
+        expect(en.matthias.bring_back).toBe("Bring it back")
     })
 })

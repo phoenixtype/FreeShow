@@ -53,9 +53,13 @@ describe("agent mode", () => {
     it("asks in these words, with Turn on and Cancel, everywhere it can be turned on", () => {
         const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8")
         const confirm = read("../components/floating/AgentConfirm.svelte")
-        expect(confirm).toContain("will change the screen on its own and use AI requests.")
-        expect(confirm).toContain(">Turn on<")
-        expect(confirm).toContain(">Cancel<")
+        const en = JSON.parse(read("../../../../public/lang/en.json")).matthias
+        expect(confirm).toContain('<T id="matthias.agent_warning" replace={[NAME]} />')
+        expect(en.agent_warning).toBe("$1 will change the screen on its own and use AI requests.")
+        expect(confirm).toContain('><T id="matthias.turn_on" /><')
+        expect(en.turn_on).toBe("Turn on")
+        expect(confirm).toContain('><T id="matthias.cancel" /><')
+        expect(en.cancel).toBe("Cancel")
         expect(confirm).toContain("justify-content: flex-end")
         expect(read("../components/floating/ScreenControl.svelte")).toContain("<AgentConfirm />")
         expect(read("../components/settings/MatthiasOptions.svelte")).toContain("<AgentConfirm />")

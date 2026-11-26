@@ -3,6 +3,7 @@
     import { fly } from "svelte/transition"
     import { getShortBibleName } from "../../../components/drawer/bible/scripture"
     import Icon from "../../../components/helpers/Icon.svelte"
+    import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { ai, aiSmartAction, aiSuggestions, outputs, scriptures } from "../../../stores"
     import { translateText } from "../../../utils/language"
@@ -48,11 +49,11 @@
                 <div class="suggestion">
                     <MaterialButton style="padding: 8px 4px;gap: 8px;" title="actions.close" on:click={() => aiSmartAction.set(null)}>
                         <Icon id="check" white />
-                        <p>Presented:</p>
+                        <p><T id="matthias.presented" /></p>
                         <span style="font-weight: bold;">{smartAction.content}</span>
                     </MaterialButton>
                     {#if canUndo(smartAction.content, $outputs, $aiSuggestions)}
-                        <MaterialButton variant="outlined" small on:click={undo}>Undo</MaterialButton>
+                        <MaterialButton variant="outlined" small on:click={undo}><T id="matthias.undo" /></MaterialButton>
                     {/if}
                 </div>
             </AiRing>
@@ -78,7 +79,7 @@
                     {#if smartAction?.action === "present"}
                         <Icon id="play" white />
 
-                        <p>Click to present:</p>
+                        <p><T id="matthias.click_to_present" /></p>
                         <span style="font-weight: bold;">
                             {smartAction.content}
 
@@ -89,7 +90,7 @@
                     {:else if smartAction?.action === "present_song"}
                         <Icon id="song" white />
 
-                        <p>In your library, click to present:</p>
+                        <p><T id="matthias.library_present" /></p>
                         <span style="font-weight: bold;">{smartAction.content}</span>
                     {:else if smartAction?.action === "open_scripture"}
                         <Icon id="scripture" white />

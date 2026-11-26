@@ -6,7 +6,9 @@
     import Title from "../../../components/input/Title.svelte"
     import MaterialDropdown from "../../../components/inputs/MaterialDropdown.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
-    import { activePopup, ai, mediaDownloads, popupData } from "../../../stores"
+    import { activePopup, ai, dictionary, mediaDownloads, popupData } from "../../../stores"
+    import { translateText } from "../../../utils/language"
+    import T from "../../../components/helpers/T.svelte"
     import { copilotListening } from "../../liveCopilot"
     import { downloadPercent } from "../../stt/listenStatus"
     import { resolveSttEngine, SPOKEN_LANGUAGES, SpeechToText } from "../../stt/stt"
@@ -65,7 +67,7 @@
 
     // LANGUAGE
 
-    const languages = [{ value: "", label: "Same as the app" }, { value: "auto", label: "Work it out (more than one language)" }, ...Object.entries(SPOKEN_LANGUAGES).map(([value, label]) => ({ value, label }))]
+    $: languages = [{ value: "", label: translateText("matthias.same_as_app", $dictionary) }, { value: "auto", label: translateText("matthias.work_out_language", $dictionary) }, ...Object.entries(SPOKEN_LANGUAGES).map(([value, label]) => ({ value, label }))]
     async function updateLanguage(value: string) {
         ai.update((a) => ({ ...a, stt: { ...(a.stt || {}), engineOptions: { ...(a.stt?.engineOptions || {}), [selectedEngine]: { ...(a.stt?.engineOptions?.[selectedEngine] || {}), language: value } } } }))
         // what is listening now was started in the old language
@@ -78,7 +80,7 @@
     $: selectedEngine = $ai.stt?.engine || resolveSttEngine()
 </script>
 
-<Title label="Listening" icon="microphone" />
+<Title label="matthias.listening" icon="microphone" />
 
 <!-- Currently not needed as there's just one engine -->
 <!-- <InputRow>
@@ -96,15 +98,15 @@
 </InputRow> -->
 
 {#if status?.ready}
-    <MaterialDropdown label="Microphone" options={microphones} value={options.micDeviceId || ""} on:change={(e) => updateValue("micDeviceId", e.detail)} />
-    <MaterialDropdown label="Spoken language" options={languages} value={options.engineOptions?.[selectedEngine]?.language || ""} on:change={(e) => updateLanguage(e.detail)} />
+    <MaterialDropdown label="matthias.microphone" options={microphones} value={options.micDeviceId || ""} on:change={(e) => updateValue("micDeviceId", e.detail)} />
+    <MaterialDropdown label="matthias.spoken_language" options={languages} value={options.engineOptions?.[selectedEngine]?.language || ""} on:change={(e) => updateLanguage(e.detail)} />
 {:else if currentlyDownloading?.size}
-    <p class="note">Getting the speech model ready{percent === null ? "" : `: ${percent}%`}. This happens once (about 680 MB).</p>
+    <p class="note">{percent === null ? translateText("matthias.model_getting", $dictionary) : translateText("matthias.model_getting_percent", $dictionary, [String(percent)])}</p>
 {:else}
     <!-- the speech model runs on this computer; it has to be downloaded once before listening -->
     <div class="setup">
-        <p class="note">{status?.error || "Listening needs the speech model on this computer first."}</p>
-        <MaterialButton variant="contained" icon="download" on:click={getSpeechModel}>Get the speech model</MaterialButton>
+        <p class="note">{status?.error || translateText("matthias.model_needed", $dictionary)}</p>
+        <MaterialButton variant="contained" icon="download" on:click={getSpeechModel}><T id="matthias.get_model" /></MaterialButton>
     </div>
 {/if}
 

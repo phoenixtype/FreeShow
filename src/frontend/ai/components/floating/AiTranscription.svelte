@@ -4,7 +4,7 @@
     import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
-    import { ai, aiSmartAction, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript, transcriptLog } from "../../../stores"
+    import { ai, aiSmartAction, aiSuggestions, dictionary, outLocked, outputs, scriptures, shows, sttTranscript, transcriptLog } from "../../../stores"
     import type { AiSuggestion } from "../../../../types/ai/Ai"
     import { getFirstActiveOutput } from "../../../components/helpers/output"
     import { readPassage } from "../../scripture/passage"
@@ -12,6 +12,7 @@
     import { AiManager } from "../../manager/AiManager"
 
     import { createEventDispatcher } from "svelte"
+    import { translateText } from "../../../utils/language"
     import { onScreenTitle } from "./onScreen"
 
     const dispatch = createEventDispatcher<{ listen: void }>()
@@ -44,6 +45,8 @@
 
     const time = (at: number) => new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     const SHOWN_LINES = 400
+    // said out loud to the speech model, so it stays in English
+    const SPOKEN_EXAMPLE = "Matthias, John three sixteen"
     $: shownLines = $transcriptLog.slice(-SHOWN_LINES)
 
     function toLatest() {
@@ -100,21 +103,21 @@
     // asked again whenever the screen or the list changes
     const canUndo = (content: string, ..._changes: unknown[]) => AiManager.canUndo(content)
 
-    const matchLabel = (confidence: number) => (confidence >= 95 ? "Certain" : confidence >= 75 ? "Likely" : "Possible")
+    const matchLabel = (confidence: number) => (confidence >= 95 ? "matthias.match_certain" : confidence >= 75 ? "matthias.match_likely" : "matthias.match_possible")
 </script>
 
 <div class="columns">
     <section class="heard">
         {#if $transcriptLog.length || undoClear}
             <div class="log-head">
-                <p>{undoClear ? "Cleared" : state === "listening" ? "Live" : "Transcription"}</p>
+                <p>{undoClear ? translateText("matthias.cleared", $dictionary) : state === "listening" ? translateText("matthias.live", $dictionary) : translateText("matthias.transcription", $dictionary)}</p>
                 {#if undoClear}
-                    <MaterialButton small style="padding: 4px 10px;" on:click={putBack}>Undo</MaterialButton>
+                    <MaterialButton small style="padding: 4px 10px;" on:click={putBack}><T id="matthias.undo" /></MaterialButton>
                 {/if}
                 {#if $transcriptLog.length}
-                    {#if !transcriptPinned}<MaterialButton small style="padding: 4px 10px;" on:click={toLatest}>Latest</MaterialButton>{/if}
-                    <MaterialButton small style="padding: 4px 10px;" on:click={() => Transcript.copy()}>Copy</MaterialButton>
-                    <MaterialButton small style="padding: 4px 10px;" on:click={clearLog}>Clear</MaterialButton>
+                    {#if !transcriptPinned}<MaterialButton small style="padding: 4px 10px;" on:click={toLatest}><T id="matthias.latest" /></MaterialButton>{/if}
+                    <MaterialButton small style="padding: 4px 10px;" on:click={() => Transcript.copy()}><T id="matthias.copy" /></MaterialButton>
+                    <MaterialButton small style="padding: 4px 10px;" on:click={clearLog}><T id="matthias.clear" /></MaterialButton>
                 {/if}
             </div>
         {/if}
@@ -130,25 +133,25 @@
                         <p><time>{time(line.at)}</time>{line.text}</p>
                     {/each}
                     {#if $sttTranscript.unprocessed}
-                        <p><time>now</time><span class="interim">{$sttTranscript.unprocessed}</span></p>
+                        <p><time><T id="matthias.time_now" /></time><span class="interim">{$sttTranscript.unprocessed}</span></p>
                     {/if}
                 </div>
             {:else if state === "inactive"}
                 <div class="message">
-                    <p>Not listening.</p>
-                    <MaterialButton variant="outlined" icon="microphone" on:click={() => dispatch("listen")}>Start listening</MaterialButton>
+                    <p><T id="matthias.not_listening_sentence" /></p>
+                    <MaterialButton variant="outlined" icon="microphone" on:click={() => dispatch("listen")}><T id="matthias.start_listening" /></MaterialButton>
                 </div>
             {:else}
                 <Center faded>
-                    <p style="white-space: initial;padding: 0 20px;">{state === "loading" ? "Getting ready to listen…" : $ai.matthias?.name === false ? "Listening. Words appear here as they are spoken." : "Listening. You can say “Matthias, John three sixteen”."}</p>
+                    <p style="white-space: initial;padding: 0 20px;">{state === "loading" ? translateText("matthias.getting_ready", $dictionary) : $ai.matthias?.name === false ? translateText("matthias.listening_words", $dictionary) : translateText("matthias.listening_say", $dictionary, [SPOKEN_EXAMPLE])}</p>
                 </Center>
             {/if}
         </div>
 
         {#if suggestions.length}
             <div class="suggestions-head">
-                <p>Found</p>
-                <MaterialButton small style="padding: 4px 10px;" on:click={clearSuggestions}>Clear list</MaterialButton>
+                <p><T id="matthias.found" /></p>
+                <MaterialButton small style="padding: 4px 10px;" on:click={clearSuggestions}><T id="matthias.clear_list" /></MaterialButton>
             </div>
             <div class="suggestions-panel">
                 {#each suggestions as suggestion (suggestion.id)}
@@ -161,20 +164,20 @@
                                 {#if suggestion.scriptureTranslation}
                                     <span class="note">{getShortBibleName($scriptures[suggestion.scriptureTranslation]?.name)}</span>
                                 {/if}
-                                <span class="note">{live ? "On screen" : suggestion.action === "presented" ? `Shown ${time(suggestion.timestamp)}` : suggestion.confidence ? matchLabel(suggestion.confidence) : ""}</span>
+                                <span class="note">{live ? translateText("matthias.on_screen", $dictionary) : suggestion.action === "presented" ? translateText("matthias.shown_at", $dictionary, [time(suggestion.timestamp)]) : suggestion.confidence ? translateText(matchLabel(suggestion.confidence), $dictionary) : ""}</span>
                             </p>
                             {#if words}<p class="words">{words}</p>{/if}
                         </div>
 
                         {#if live && suggestion.action === "presented" && canUndo(suggestion.content, $outputs, suggestions)}
-                            <MaterialButton variant="outlined" small on:click={() => AiManager.undoChange()}>Undo</MaterialButton>
+                            <MaterialButton variant="outlined" small on:click={() => AiManager.undoChange()}><T id="matthias.undo" /></MaterialButton>
                         {/if}
 
                         {#if suggestion.action === "open_scripture"}
                             <MaterialButton variant="outlined" small on:click={() => suggestion.trigger?.()}><T id="main.open" /></MaterialButton>
                         {:else}
                             {#if !live && suggestion.trigger}
-                                <MaterialButton variant="outlined" small disabled={$outLocked} title="menu._title_display" on:click={() => suggestion.trigger?.()}>Show</MaterialButton>
+                                <MaterialButton variant="outlined" small disabled={$outLocked} title="menu._title_display" on:click={() => suggestion.trigger?.()}><T id="matthias.show" /></MaterialButton>
                             {/if}
                             {#if isPassage(suggestion)}
                                 <MaterialButton icon="scripture" title="main.open" style="padding: 6px;" on:click={() => startScripture({ id: suggestion.scriptureTranslation, reference: suggestion.content, play: false })} />

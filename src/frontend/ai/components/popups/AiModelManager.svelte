@@ -6,7 +6,8 @@
     import Link from "../../../components/inputs/Link.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import MaterialDropdown from "../../../components/inputs/MaterialDropdown.svelte"
-    import { ai, popupData } from "../../../stores"
+    import { ai, dictionary, popupData } from "../../../stores"
+    import { translateText } from "../../../utils/language"
     import { resolveSttEngine } from "../../stt/stt"
     import LlmFiles from "./LlmFiles.svelte"
     import LlmOptions from "./LlmOptions.svelte"
@@ -32,8 +33,8 @@
         })
     }
 
-    const sttEngines = [
-        { value: "nemotron", label: "Nemotron", data: "Transcribes as you speak, so references are picked up almost immediately. Supports around 40 languages." }
+    $: sttEngines = [
+        { value: "nemotron", label: "Nemotron", data: translateText("matthias.nemotron_about", $dictionary) }
         // other models in the future?
     ]
     $: selectedSttEngine = sttOptions.engine || resolveSttEngine()

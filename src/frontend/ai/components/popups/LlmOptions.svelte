@@ -6,8 +6,10 @@
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Loader from "../../../components/main/Loader.svelte"
     import Tip from "../../../components/main/Tip.svelte"
+    import T from "../../../components/helpers/T.svelte"
     import { requestMain } from "../../../IPC/main"
-    import { ai } from "../../../stores"
+    import { ai, dictionary } from "../../../stores"
+    import { translateText } from "../../../utils/language"
     import { newToast } from "../../../utils/common"
     import { llmSession } from "../../llm/llmSession"
     import LocalModels from "./LocalModels.svelte"
@@ -22,13 +24,13 @@
         })
     }
 
-    const providerOptions = [
-        { value: "none", label: "Off" },
-        { value: "scriptural", label: "Scriptural AI (Church plan)" },
-        { value: "anthropic", label: "Your Claude key" },
-        { value: "google", label: "Your Gemini key" },
-        { value: "openai", label: "Your OpenAI key" },
-        { value: "ollama", label: "Free, on this computer (Ollama)" }
+    $: providerOptions = [
+        { value: "none", label: translateText("matthias.provider_off", $dictionary) },
+        { value: "scriptural", label: translateText("matthias.provider_scriptural", $dictionary) },
+        { value: "anthropic", label: translateText("matthias.provider_anthropic", $dictionary) },
+        { value: "google", label: translateText("matthias.provider_google", $dictionary) },
+        { value: "openai", label: translateText("matthias.provider_openai", $dictionary) },
+        { value: "ollama", label: translateText("matthias.provider_ollama", $dictionary) }
     ]
 
     $: provider = (llmOptions.provider || "none") as AIProviderId | "none"
@@ -98,7 +100,7 @@
         const isValid = await requestMain(Main.AI_SET_KEY, { providerId: provider, key: keyInput })
         if (!isValid) {
             keyInput = ""
-            newToast("That key was not accepted. Check that you copied all of it and that the computer is online, then paste it again.")
+            newToast(translateText("matthias.key_refused"))
             return
         }
 
@@ -115,16 +117,16 @@
         status = null
         llmSession.refreshConfig()
         fetchedModels = []
-        newToast("Key removed from this computer")
+        newToast(translateText("matthias.key_removed"))
     }
 </script>
 
-<MaterialDropdown label="AI model" options={providerOptions} value={provider} on:change={(e) => setProvider(e.detail)} />
+<MaterialDropdown label="matthias.ai_model" options={providerOptions} value={provider} on:change={(e) => setProvider(e.detail)} />
 
 {#if provider === "none"}
     <!-- explicitly no LLM - detection runs on speech-to-text alone -->
 {:else if provider === "scriptural"}
-    <p style="opacity: 0.8;margin: 10px 0;">Included with a Church plan, no key needed. Sign in under Import, then Church library.</p>
+    <p style="opacity: 0.8;margin: 10px 0;"><T id="matthias.included_plan" /></p>
 {:else if provider === "ollama"}
     <!-- no API key: everything runs on the local ollama server -->
     <LocalModels mode="main" on:changed={() => fetchModelsForProvider("ollama")} />
@@ -133,7 +135,7 @@
 
     <MaterialTextInput label="ai.api_key" value={keyInput} type="password" pasteBtn on:change={updateKey} />
     <div class="removeKey">
-        <MaterialButton variant="text" small on:click={removeKey}>Remove saved key</MaterialButton>
+        <MaterialButton variant="text" small on:click={removeKey}><T id="matthias.remove_key" /></MaterialButton>
     </div>
 {/if}
 
@@ -148,7 +150,7 @@
 {/if}
 
 {#if provider !== "none" && provider !== "ollama"}
-    <p class="backupTitle">{provider === "scriptural" ? "Use a free model on this computer first" : "If it can't be reached, use a free model on this computer"}</p>
+    <p class="backupTitle">{provider === "scriptural" ? translateText("matthias.local_first", $dictionary) : translateText("matthias.local_fallback", $dictionary)}</p>
     <LocalModels mode="fallback" />
 {/if}
 
