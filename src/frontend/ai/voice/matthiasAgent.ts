@@ -9,7 +9,7 @@ import { planProblem } from "../../scriptural/planNotice"
 import { activeProject, ai, aiSuggestions, outLocked, overlays, projects, shows, sttTranscript } from "../../stores"
 import { mediaList } from "../agent/mediaLibrary"
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
-import { changesScreen, changeVersion, liveState, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
+import { changesScreen, changeVersion, liveState, openVersion, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
 import { SIMPLE_SHAPES } from "../agent/illustration"
 import { handMoves, setAgentMode } from "../agent/control"
 import { nextPlanItem } from "../agent/planItems"
@@ -18,7 +18,7 @@ import { addChatMessage, clearChatHistory, getChatHistory, getLLMManager } from 
 import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT } from "../llm/prompts"
 import { AiManager } from "../manager/AiManager"
 import { showSlide } from "../songs/librarySongs"
-import { findCalls, matchTitle, NAME, namesWhatToShow, parseRequests, type Request } from "./matthias"
+import { findCalls, matchTitle, NAME, namesWhatToShow, parseRequests, splitVersion, type Request } from "./matthias"
 
 export interface MatthiasStatus {
     state: "hearing" | "working" | "done" | "failed"
@@ -204,10 +204,10 @@ export class Matthias {
             case "add-to-plan": {
                 const plan = get(projects)[get(activeProject) || ""]
                 if (!plan) throw new ToolError("Open a plan first")
-                const song = matchTitle(request.what, songList())
-                if (!song) return this.think(asked)
-                await this.tool("add_to_plan", { plan: get(activeProject)!, song: song.id })
-                return `Added ${song.name} to ${plan.name}`
+                const item = await this.planItem(request.what)
+                if (!item) return this.think(asked)
+                await this.tool("add_to_plan", { plan: get(activeProject)!, ...item.args })
+                return `Added ${item.label} to ${plan.name}`
             }
             case "remove-from-plan": {
                 const result = await this.tool("remove_from_plan", { item: request.what })
@@ -254,6 +254,11 @@ export class Matthias {
             case "clear":
                 AiManager.clearScreen(request.all)
                 return "Cleared"
+            case "black":
+                // cleared the copilot's way first, so "bring it back" brings back all of it
+                AiManager.clearScreen(true)
+                await this.tool("control_screen", { command: "black" })
+                return "Black screen"
             case "draw":
             case "drawing": {
                 const tool = request.type === "draw" ? "draw_on_screen" : request.command === "clean" ? "clean_up_drawing" : "clear_drawing"
@@ -266,6 +271,10 @@ export class Matthias {
                 return "Cleared"
             case "overlay": {
                 const overlay = matchTitle(request.name, nameList(get(overlays)))
+                if (!overlay && request.on && request.name === "logo") {
+                    await AiManager.asOwnChange("", () => this.tool("control_screen", { command: "logo" }))
+                    return "Logo is on"
+                }
                 // "take down the notice overlay" may be a song or slide after all
                 if (!overlay) throw new ToolError(`I do not know the overlay "${request.name}"`)
                 await this.tool("show_overlay", { name: overlay.id, on: request.on })
@@ -346,7 +355,7 @@ export class Matthias {
             case "result":
                 return this.stepResults(request.direction)
             case "show":
-                return this.show(request.what)
+                return this.show(request.what, request.version)
         }
     }
 
@@ -374,8 +383,30 @@ export class Matthias {
         return number ? `${shown} ${number}` : shown
     }
 
-    private static async show(what: string): Promise<string> {
+    /** what "add ... to the plan" means in the church's own things, or null for the model */
+    private static async planItem(wanted: string): Promise<{ args: { [key: string]: string }; label: string } | null> {
+        const name = wanted.replace(/^the /, "")
+        const kind = name.match(/^(.+?) (video|clip|movie|picture|image|photo|background|overlay)$/)
+        const overlay = () => {
+            const found = matchTitle(kind?.[1] || name, nameList(get(overlays)))
+            return found ? { args: { overlay: found.id }, label: found.name } : null
+        }
+        const media = () => {
+            const found = matchTitle(kind?.[1] || name, mediaList())
+            return found ? { args: { media: found.name }, label: found.name } : null
+        }
+        if (kind) return kind[2] === "overlay" ? overlay() : media()
+        const song = matchTitle(wanted, songList())
+        if (song) return { args: { song: song.id }, label: song.name }
+        const { what, version } = splitVersion(wanted)
         const reference = await AiManager.findReference(what)
+        if (reference) return { args: { scripture: reference, ...(version ? { version } : {}) }, label: reference }
+        return overlay() || media()
+    }
+
+    private static async show(what: string, version?: string): Promise<string> {
+        const reference = await AiManager.findReference(what)
+        if (reference && version) openVersion(version)
         if (reference) return this.passage(reference)
         const song = matchTitle(what, songList())
         if (song) return this.present(song)
@@ -450,7 +481,9 @@ export class Matthias {
         // said without "hey": the name may have been said in passing, and a passage in the sentence is not an order
         if (!certain && !get(ai).matthias?.agentMode) return null
         if (namesWhatToShow(words) && !get(outLocked)) {
-            const reference = await AiManager.findReference(words)
+            const { what, version } = splitVersion(words)
+            const reference = await AiManager.findReference(what)
+            if (reference && version) openVersion(version)
             if (reference) return this.passage(reference)
             const song = matchTitle(words, songList()) || matchTitle(words.replace(/^\S+\s+/, ""), songList())
             if (song && words.trim().includes(" ")) return this.present(song)

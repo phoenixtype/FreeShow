@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
-    const names = ["activeTimers", "timers", "playingAudio", "activePage", "activeProject", "aiSuggestions", "audioChannelsData", "outLocked", "outputs", "overlays", "paintCache", "playingVideos", "activeRecording", "obsData", "projects", "scriptures", "shows", "showsCache", "styles", "sttTranscript", "ai"]
+    const names = ["activeTimers", "timers", "playingAudio", "activePage", "activeProject", "aiSuggestions", "audioChannelsData", "outLocked", "drawerTabsData", "outputs", "overlays", "paintCache", "playingVideos", "activeRecording", "obsData", "projects", "scriptures", "shows", "showsCache", "styles", "sttTranscript", "ai"]
     return Object.fromEntries(names.map((name) => [name, writable(name === "outLocked" ? false : name === "activeTimers" ? [] : {})]))
 })
 vi.mock("../../components/actions/apiHelper", () => ({ playMedia: vi.fn(), addToProject: vi.fn(), createProject: vi.fn(), getClearedState: vi.fn(() => ({ all: false })), getPlainText: vi.fn(), toggleSttListening: vi.fn() }))
-vi.mock("../../components/drawer/bible/scripture", () => ({}))
+vi.mock("../../components/drawer/bible/scripture", () => ({ getShortBibleName: () => "" }))
 const video = vi.hoisted(() => ({ duration: 0, time: 0, paused: false }))
 const api = vi.hoisted(() => ({
     get_playing_video_state: vi.fn(() => ({ ...video })),
@@ -32,7 +32,7 @@ vi.mock("../../components/media/video/videoPlayer", () => ({ VideoPlayer: player
 vi.mock("../../audio/audioFading", () => ({ clearAudio: vi.fn() }))
 vi.mock("../../components/actions/apiGet", () => ({ getOutputSlideText: () => "" }))
 const screen = vi.hoisted(() => ({ out: {} as any }))
-vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ id: "o", out: screen.out }), setOutput: vi.fn(), toggleOutputs: vi.fn() }))
+vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => ({ id: "o", out: screen.out }), getOutputResolution: () => ({ width: 1920, height: 1080 }), setOutput: vi.fn((type: string, data: any) => type === "slide" && (screen.out = { ...screen.out, slide: data })), toggleOutputs: vi.fn() }))
 vi.mock("../../components/draw/paintLines", () => ({}))
 vi.mock("./illustration", () => ({ MAX_SHAPES: 10 }))
 vi.mock("../../components/helpers/setShow", () => ({ loadShows: vi.fn() }))
@@ -42,7 +42,9 @@ vi.mock("../../components/output/clear", () => ({ clearAll: vi.fn(), clearBackgr
 vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeakerTime: vi.fn(), nextProgramSegment: vi.fn(), playPauseSpeaker: vi.fn(), setSpeakerDuration: vi.fn(), startProgram: vi.fn() }))
 vi.mock("../../converters/txt", () => ({}))
 vi.mock("../../scriptural/connection", () => ({ ANON_KEY: "", FUNCTIONS_URL: "" }))
-vi.mock("../../converters/bible", () => ({}))
+const bible = vi.hoisted(() => ({ setActiveScripture: vi.fn(), passageShow: vi.fn(async () => ({ id: "p1", name: "John 3:16" }) as any) }))
+vi.mock("../../converters/bible", () => bible)
+vi.mock("./planPassage", () => bible)
 vi.mock("../liveCopilot", async () => ({ copilotListening: (await import("svelte/store")).writable(false) }))
 vi.mock("./stepScreen", () => ({ stepScreen: vi.fn(async () => true) }))
 vi.mock("../components/floating/onScreen", () => ({ onScreenTitle: () => "" }))
@@ -51,7 +53,7 @@ vi.mock("../scripture/passage", () => ({ readPassage: vi.fn(async () => "For God
 const library = vi.hoisted(() => ({ findSongsByLine: vi.fn((): { id: string; name: string; share: number }[] => []) }))
 vi.mock("../songs/librarySongs", () => library)
 vi.mock("../voice/matthias", () => ({ PAGES: [], matchTitle: (name: string, list: any[]) => (name === "welcome" ? list[0] : null) }))
-vi.mock("../voice/versions", () => ({}))
+vi.mock("../voice/versions", () => ({ matchVersion: (name: string) => (name.toLowerCase() === "nlt" ? "nlt-id" : null) }))
 vi.mock("./control", () => ({ isHeld: () => false, setAgentMode: vi.fn(() => false) }))
 vi.mock("./listFromPoints", () => ({}))
 vi.mock("./mediaLibrary", () => ({ mediaList: () => [{ id: "/v/welcome.mp4", name: "welcome", kind: "video" }] }))
@@ -61,9 +63,9 @@ vi.mock("./presentPassage", () => ({ presentPassage: vi.fn() }))
 const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn() }))
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 import { get } from "svelte/store"
-import { playMedia } from "../../components/actions/apiHelper"
+import { addToProject, playMedia } from "../../components/actions/apiHelper"
 import { copilotListening } from "../liveCopilot"
-import { activeRecording, activeTimers, ai, audioChannelsData, obsData, outLocked, outputs, overlays, playingAudio, shows, timers } from "../../stores"
+import { activeRecording, activeTimers, ai, audioChannelsData, obsData, outLocked, outputs, overlays, projects, scriptures, playingAudio, shows, timers } from "../../stores"
 import { listAgentTools, runAgentTool } from "./agentTools"
 
 describe("agent tools", () => {
@@ -320,5 +322,60 @@ describe("recording and the live stream", () => {
         outputs.set({})
         expect((await run("control_stream", { command: "start" })).ok).toBe(true)
         expect(api.obs_start_livestream).toHaveBeenCalled()
+    })
+})
+
+describe("plans take more than songs", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        outLocked.set(false)
+        projects.set({ p: { name: "Sunday", shows: [] } } as any)
+        shows.set({ s1: { name: "Amazing Grace" } } as any)
+        overlays.set({ l: { name: "Welcome notice" } } as any)
+        scriptures.set({ "nlt-id": { name: "New Living Translation" } } as any)
+    })
+
+    it("adds a passage in the Bible asked for, a picture or video, and an overlay", async () => {
+        const answer = await runAgentTool("add_to_plan", { plan: "Sunday", scripture: "John 3:16", version: "NLT", media: "welcome", overlay: "Welcome notice" })
+        expect(answer.ok).toBe(true)
+        expect(bible.passageShow).toHaveBeenCalledWith("John 3:16", "nlt-id")
+        expect(vi.mocked(addToProject).mock.calls.map(([call]) => call)).toEqual([
+            { projectId: "p", id: "p1" },
+            { projectId: "p", id: "/v/welcome.mp4", data: { type: "video", name: "welcome" } },
+            { projectId: "p", id: "l", data: { type: "overlay", name: "Welcome notice" } }
+        ])
+    })
+    it("says what it could not add", async () => {
+        bible.passageShow.mockResolvedValueOnce(null)
+        expect((await runAgentTool("add_to_plan", { plan: "Sunday", scripture: "Hezekiah 3:1" })).error).toMatch(/Hezekiah 3:1 was not found/)
+        expect((await runAgentTool("add_to_plan", { plan: "Sunday", scripture: "John 3:16", version: "XYZ" })).error).toMatch(/no XYZ Bible/)
+        expect((await runAgentTool("add_to_plan", { plan: "Sunday" })).error).toMatch(/Say what/)
+        expect(addToProject).not.toHaveBeenCalled()
+    })
+    it("shows a passage in the Bible asked for", async () => {
+        manager.showReference.mockImplementationOnce(async () => (screen.out = { slide: { id: "temp" } }))
+        expect((await runAgentTool("show_scripture", { reference: "John 3:16", version: "NLT" })).ok).toBe(true)
+        expect(bible.setActiveScripture).toHaveBeenCalledWith("nlt-id")
+        expect((await runAgentTool("show_scripture", { reference: "John 3:16", version: "XYZ" })).error).toMatch(/no XYZ Bible/)
+    })
+})
+
+describe("true black and the logo", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        outLocked.set(false)
+        screen.out = {}
+        overlays.set({})
+    })
+
+    it("covers the screen in black, over whatever the style shows", async () => {
+        expect((await runAgentTool("control_screen", { command: "black" })).ok).toBe(true)
+        expect(screen.out.slide.tempItems[0].style).toContain("background-color: #000000")
+        expect(screen.out.slide.tempItems[0].style).toContain("width:1920px")
+    })
+    it("puts up the logo overlay, or says there is none", async () => {
+        expect((await runAgentTool("control_screen", { command: "logo" })).error).toMatch(/no logo/i)
+        outLocked.set(true)
+        expect((await runAgentTool("control_screen", { command: "black" })).ok).toBe(false)
     })
 })

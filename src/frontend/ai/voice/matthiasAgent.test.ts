@@ -14,7 +14,7 @@ vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeake
 vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
 const chat = vi.hoisted(() => ({ run: vi.fn() }))
 vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))
-vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), openVersion: vi.fn(() => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
 const lead = vi.hoisted(() => ({ confirmed: true }))
 vi.mock("../agent/control", async () => {
     const { writable } = await import("svelte/store")
@@ -41,7 +41,7 @@ vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 import { get } from "svelte/store"
 import { ai, aiSuggestions, outLocked } from "../../stores"
 import { handMoves } from "../agent/control"
-import { runAgentTool } from "../agent/agentTools"
+import { openVersion, runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, clearChatHistory } from "../llm/llmManager"
 import { planProblem } from "../../scriptural/planNotice"
@@ -377,4 +377,28 @@ it("never lets the model start or stop recording from words spoken in the room",
     chat.run.mockImplementationOnce(async (_history, deps) => ({ content: deps.refuse("control_recording") + " | " + deps.refuse("control_stream") }))
     await Matthias.ask("could you get the cameras rolling", true)
     expect(chat.run.mock.calls[0][1].refuse("control_stream")).toMatch(/Hey Matthias/)
+})
+
+it("shows a passage in the Bible named with it", async () => {
+    await Matthias.ask("show John 3:16 in the NLT")
+    expect(openVersion).toHaveBeenCalledWith("nlt")
+    expect(manager.showReference).toHaveBeenCalledWith("John 3:16")
+})
+
+it("adds a passage, a video or the logo to the open plan", async () => {
+    const added = async (words: string) => {
+        vi.mocked(runAgentTool).mockClear()
+        await Matthias.ask(words)
+        return vi.mocked(runAgentTool).mock.calls[0]
+    }
+    expect(await added("add John 3:16 in the NLT to the plan")).toEqual(["add_to_plan", { plan: "p", scripture: "John 3:16", version: "nlt" }])
+    expect(await added("add the welcome video to the plan")).toEqual(["add_to_plan", { plan: "p", media: "welcome" }])
+    expect(await added("add the logo to the plan")).toEqual(["add_to_plan", { plan: "p", overlay: "l" }])
+    expect(await added("add Amazing Grace to the plan")).toEqual(["add_to_plan", { plan: "p", song: "a" }])
+})
+
+it("goes to true black, and can bring it back", async () => {
+    await Matthias.ask("true black")
+    expect(manager.clearScreen).toHaveBeenCalledWith(true)
+    expect(runAgentTool).toHaveBeenCalledWith("control_screen", { command: "black" })
 })

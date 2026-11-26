@@ -104,7 +104,8 @@ export type Request =
     | { type: "song"; name: string }
     | { type: "find-song"; line: string }
     | { type: "search"; query: string; topic?: boolean }
-    | { type: "show"; what: string }
+    | { type: "show"; what: string; version?: string }
+    | { type: "black" }
     | { type: "unknown"; words: string }
 
 export const PAGES = ["show", "edit", "stage", "draw", "settings", "songs", "scripture", "media", "audio", "overlays", "templates", "calendar"] as const
@@ -157,7 +158,7 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan", "video", "named-timer", "recording", "stream"]
+const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan", "video", "named-timer", "recording", "stream", "black"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
@@ -241,6 +242,8 @@ function parseWords(t: string): Request {
     if (/^(?:lock|hold|freeze)(?: the| that| it)?(?: screen| there)?$/.test(t)) return { type: "lock", on: true }
     if (/^(?:turn|switch) (?:the )?screens? on$|^(?:turn|switch) on (?:the )?screens?$/.test(t)) return { type: "screen", on: true }
     if (/^(?:turn|switch) (?:the )?screens? off$|^(?:turn|switch) off (?:the )?screens?$/.test(t)) return { type: "screen", on: false }
+    // "go to black" clears; asking for true black also covers the style's own background
+    if (/^(?:(?:go|fade|cut|switch)(?: to)? |make (?:the screen |it )?)?(?:a )?(?:true|pure|completely|totally|fully|solid) black(?: screen| out)?$/.test(t)) return { type: "black" }
     if (/^(?:clear|hear|clean|clay) (?:all|everything)$|^(?:go )?(?:to )?(?:black|blank)(?: the screen| screen| out)?$|^(?:black|blank) (?:it|everything) out$|^remove everything$/.test(t)) return { type: "clear", all: true }
     if (/^(?:(?:clear|hear|clean|wipe)(?: (?:the|that|it|this))?(?: screen| words| text| lyrics| verse| scripture| song| off)?|take (?:it|that|this|the (?:verse|scripture|song|words|lyrics|text|slide)) (?:down|off)|take (?:down|off) (?:the )?(?:verse|scripture|song|words|lyrics|text|slide)|remove (?:it|that|this)|hide (?:it|that|this))$/.test(t)) return { type: "clear", all: false }
     const sketch = t.match(/^(?:d?raw|daw|drew)(?: me| us)?(?: a| an| the| one)?(?: (?:picture|drawing|image|sketch) of)?(?: a| an| the)? (cross|circle|arrow|box|square|rectangle|line)(?: (?:on|in|onto|over) (?:the )?(?:paint ?board|paint|screen|drawing ?board|board|picture))?$/)
@@ -339,11 +342,23 @@ function parseWords(t: string): Request {
         return search(rest?.[1] || "", rest?.[2] || find[1])
     }
 
-    const show = t.match(new RegExp(`^(?:${SHOW})(?: the)? (.+)$`))
+    const asked = t.match(new RegExp(`^(?:${SHOW})(?: the)? (.+)$`))
+    const named = asked ? splitVersion(asked[1]) : null
+    const show = named ? [asked![0], named.what] : null
     // a long sentence, or one that says what NOT to do, is a request for the model, not a name to look up
-    if (show && !OPEN_SENTENCE.test(show[1]) && show[1].split(" ").length <= MOST_NAME_WORDS) return { type: "show", what: show[1] }
+    if (show && !OPEN_SENTENCE.test(show[1]) && show[1].split(" ").length <= MOST_NAME_WORDS) return { type: "show", what: show[1], ...(named!.version ? { version: named!.version } : {}) }
     if (show) return { type: "unknown", words: t }
     return { type: "unknown", words: t }
+}
+
+const BIBLES = "nlt|niv|kjv|nkjv|esv|amp|msg|nasb|csb|bsb|gnt|cev|(?:new )?king james|new living|new international|english standard|new american standard|american standard|amplified|message|good news|(?:[a-z] ){2,3}[a-z]"
+
+/** "John 3:16 in the NLT": the passage and the Bible. Only after something with a number, so "Christ in the message" stays whole. */
+export function splitVersion(words: string): { what: string; version?: string } {
+    const named = words.match(new RegExp(`^(.+?),?(?: (?:in|from))(?: the)? (?:(${BIBLES})(?: (?:version|translation|bible))?|(.+?) (?:version|translation))$`, "i")) || words.match(/^(.*\d),? (nlt|niv|kjv|nkjv|esv|nasb|csb|bsb)$/i)
+    if (!named || !/\d/.test(normalizeNumberWords(named[1].toLowerCase()))) return { what: words }
+    // "new living translation": the word is part of asking, not of the name
+    return { what: named[1], version: (named[2] || named[3]).replace(/ (?:translation|version)$/i, "") }
 }
 
 const plainWords = (text: string) =>
