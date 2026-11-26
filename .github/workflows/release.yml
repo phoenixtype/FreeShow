@@ -224,6 +224,17 @@ jobs:
           fi
           npm run release
 
+      # a failed check keeps the release a draft (publish_release needs this job)
+      - name: Check the apps are notarized
+        run: |
+          shopt -s nullglob
+          apps=(dist/mac*/*.app)
+          [ ${#apps[@]} -gt 0 ] || { echo "No built app found to check"; exit 1; }
+          for app in "${apps[@]}"; do
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+          done
+
   publish_release:
     name: "Publish the draft"
     needs: [publish_windows, publish_linux, publish_linux_arm, publish_mac]
