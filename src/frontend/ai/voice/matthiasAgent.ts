@@ -9,7 +9,7 @@ import { planProblem } from "../../scriptural/planNotice"
 import { activeProject, ai, aiSuggestions, outLocked, overlays, projects, shows, sttTranscript } from "../../stores"
 import { mediaList } from "../agent/mediaLibrary"
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
-import { changesScreen, changeVersion, liveState, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
+import { changesScreen, changeVersion, liveState, openVersion, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
 import { SIMPLE_SHAPES } from "../agent/illustration"
 import { handMoves, setAgentMode } from "../agent/control"
 import { nextPlanItem } from "../agent/planItems"
@@ -18,7 +18,7 @@ import { addChatMessage, clearChatHistory, getChatHistory, getLLMManager } from 
 import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT } from "../llm/prompts"
 import { AiManager } from "../manager/AiManager"
 import { showSlide } from "../songs/librarySongs"
-import { findCalls, matchTitle, NAME, namesWhatToShow, parseRequests, type Request } from "./matthias"
+import { findCalls, matchTitle, NAME, namesWhatToShow, parseRequests, splitVersion, type Request } from "./matthias"
 
 export interface MatthiasStatus {
     state: "hearing" | "working" | "done" | "failed"
@@ -204,10 +204,10 @@ export class Matthias {
             case "add-to-plan": {
                 const plan = get(projects)[get(activeProject) || ""]
                 if (!plan) throw new ToolError("Open a plan first")
-                const song = matchTitle(request.what, songList())
-                if (!song) return this.think(asked)
-                await this.tool("add_to_plan", { plan: get(activeProject)!, song: song.id })
-                return `Added ${song.name} to ${plan.name}`
+                const item = await this.planItem(request.what)
+                if (!item) return this.think(asked)
+                await this.tool("add_to_plan", { plan: get(activeProject)!, ...item.args })
+                return `Added ${item.label} to ${plan.name}`
             }
             case "remove-from-plan": {
                 const result = await this.tool("remove_from_plan", { item: request.what })
@@ -219,21 +219,45 @@ export class Matthias {
             case "countdown":
                 await this.tool("speaker_timer", { command: request.add ? "add" : "set", minutes: request.seconds / 60 })
                 return request.add ? `Added ${spell(request.seconds)}` : `Timer: ${spell(request.seconds)}`
-            case "audio":
-                await this.tool("control_sound", { command: request.command })
-                return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : "Sound is on"
+            case "recording":
+            case "stream": {
+                const wanted = `${request.on ? "start" : "stop"} ${request.type === "stream" ? "the live stream" : "recording"}`
+                // the name in passing is not enough for something that cannot be taken back
+                if (!asked.certain) throw new ToolError(`To ${wanted}, say "Hey ${NAME}, ${wanted}" or type it`)
+                const result = await this.tool(request.type === "stream" ? "control_stream" : "control_recording", { command: request.on ? "start" : "stop", ...(request.obs ? { with: "obs" } : {}) })
+                return typeof result === "string" ? result.replace(/\.$/, "") : wanted
+            }
+            case "find-song":
+                return this.findSong(request.line)
+            case "audio": {
+                const result = await this.tool("control_sound", { command: request.command, ...(request.percent === undefined ? {} : { percent: request.percent }) })
+                return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : request.command === "unmute" ? "Sound is on" : `Volume: ${result.volume || "changed"}`
+            }
+            case "named-timer": {
+                await this.tool("control_timer", { command: request.command, ...(request.name ? { name: request.name } : {}) })
+                if (request.command === "stop_all") return "All timers stopped"
+                return `${request.name} timer ${request.command === "start" ? "started" : request.command === "pause" ? "paused" : "stopped"}`
+            }
             case "unknown":
                 return this.think(asked)
         }
 
         if (get(outLocked)) throw new ToolError("The screen is locked")
         switch (request.type) {
+            case "video": {
+                await this.tool("control_video", { command: request.command, ...(request.seconds ? { seconds: request.seconds } : {}) })
+                return { play: "Video playing", pause: "Video paused", restart: "Video from the start", forward: "Skipped forward", back: "Skipped back" }[request.command]
+            }
             case "screen":
                 await this.tool("control_screen", { command: request.on ? "screen_on" : "screen_off" })
                 return request.on ? "The screen is on" : "The screen is off"
             case "clear":
                 AiManager.clearScreen(request.all)
                 return "Cleared"
+            case "black":
+                // as the copilot's own change, so "bring it back" takes the black off again
+                await AiManager.asOwnChange("", () => this.tool("control_screen", { command: "black" }))
+                return "Black screen"
             case "draw":
             case "drawing": {
                 const tool = request.type === "draw" ? "draw_on_screen" : request.command === "clean" ? "clean_up_drawing" : "clear_drawing"
@@ -246,6 +270,10 @@ export class Matthias {
                 return "Cleared"
             case "overlay": {
                 const overlay = matchTitle(request.name, nameList(get(overlays)))
+                if (!overlay && request.on && request.name === "logo") {
+                    await AiManager.asOwnChange("", () => this.tool("control_screen", { command: "logo" }))
+                    return "Logo is on"
+                }
                 // "take down the notice overlay" may be a song or slide after all
                 if (!overlay) throw new ToolError(`I do not know the overlay "${request.name}"`)
                 await this.tool("show_overlay", { name: overlay.id, on: request.on })
@@ -326,7 +354,7 @@ export class Matthias {
             case "result":
                 return this.stepResults(request.direction)
             case "show":
-                return this.show(request.what)
+                return this.show(request.what, request.version)
         }
     }
 
@@ -354,8 +382,30 @@ export class Matthias {
         return number ? `${shown} ${number}` : shown
     }
 
-    private static async show(what: string): Promise<string> {
+    /** what "add ... to the plan" means in the church's own things, or null for the model */
+    private static async planItem(wanted: string): Promise<{ args: { [key: string]: string }; label: string } | null> {
+        const name = wanted.replace(/^the /, "")
+        const kind = name.match(/^(.+?) (video|clip|movie|picture|image|photo|background|overlay)$/)
+        const overlay = () => {
+            const found = matchTitle(kind?.[1] || name, nameList(get(overlays)))
+            return found ? { args: { overlay: found.id }, label: found.name } : null
+        }
+        const media = () => {
+            const found = matchTitle(kind?.[1] || name, mediaList())
+            return found ? { args: { media: found.name }, label: found.name } : null
+        }
+        if (kind) return kind[2] === "overlay" ? overlay() : media()
+        const song = matchTitle(wanted, songList())
+        if (song) return { args: { song: song.id }, label: song.name }
+        const { what, version } = splitVersion(wanted)
         const reference = await AiManager.findReference(what)
+        if (reference) return { args: { scripture: reference, ...(version ? { version } : {}) }, label: reference }
+        return overlay() || media()
+    }
+
+    private static async show(what: string, version?: string): Promise<string> {
+        const reference = await AiManager.findReference(what)
+        if (reference && version) openVersion(version)
         if (reference) return this.passage(reference)
         const song = matchTitle(what, songList())
         if (song) return this.present(song)
@@ -366,6 +416,15 @@ export class Matthias {
     private static async passage(reference: string): Promise<string> {
         await AiManager.showReference(reference)
         return reference
+    }
+
+    /** offered, never put up: a remembered line is often half right */
+    private static async findSong(line: string): Promise<string> {
+        const { songs } = await this.tool("find_song_by_words", { line })
+        const offers = (songs as { id: string; name: string; match: string }[]).map(({ id, name, match }) => ({ id: uid(5), timestamp: Date.now(), content: name, confidence: match === "strong" ? 90 : 50, action: "present_song", kind: "song" as const, trigger: () => AiManager.showSong({ id, name }) }))
+        aiSuggestions.update((list) => [...offers, ...list.filter((s) => s.action === "presented" || !offers.some((offer) => offer.content === s.content))])
+        const names = (songs as { name: string }[]).map((song) => song.name)
+        return `Found ${names.join(", ")}. To show one, press it in the heard list or say "sing ${names[0]}"`
     }
 
     private static async song(name: string): Promise<string> {
@@ -421,7 +480,9 @@ export class Matthias {
         // said without "hey": the name may have been said in passing, and a passage in the sentence is not an order
         if (!certain && !get(ai).matthias?.agentMode) return null
         if (namesWhatToShow(words) && !get(outLocked)) {
-            const reference = await AiManager.findReference(words)
+            const { what, version } = splitVersion(words)
+            const reference = await AiManager.findReference(what)
+            if (reference && version) openVersion(version)
             if (reference) return this.passage(reference)
             const song = matchTitle(words, songList()) || matchTitle(words.replace(/^\S+\s+/, ""), songList())
             if (song && words.trim().includes(" ")) return this.present(song)
@@ -446,7 +507,11 @@ export class Matthias {
             context: context(!typed),
             spoken: !typed,
             stopped: () => stopped() || turn.signal.aborted,
-            refuse: (tool) => (changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""),
+            refuse: (tool) => {
+                // a model never starts or ends these from words it may have misread
+                if (/^control_(recording|stream)$/.test(tool) && (!typed || !/record|stream|live|broadcast|air/i.test(words))) return `Recording and the live stream are started and stopped by a plain request: "Hey ${NAME}, start recording".`
+                return changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""
+            },
             run: async (tool, args) => {
                 if (!changesScreen(tool)) return runAgentTool(tool, args)
                 let result: Awaited<ReturnType<typeof runAgentTool>> = { ok: false }

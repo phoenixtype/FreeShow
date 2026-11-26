@@ -88,6 +88,20 @@ export class SongIndex {
         return this.songs[index]
     }
 
+    // a line someone remembers: the songs holding its word triples, with the share of the
+    // line each one has. Copies of one song are listed once.
+    find(line: string, limit = 5): { id: string; name: string; share: number }[] {
+        const wanted = [...new Set(triples(words(line)))]
+        const hits = new Map<number, number>()
+        for (const t of wanted) for (const song of this.lookup(t)?.songs || []) hits.set(song, (hits.get(song) || 0) + 1)
+
+        const ranked: number[] = []
+        for (const [song] of [...hits].sort((a, b) => b[1] - a[1] || a[0] - b[0])) {
+            if (ranked.length < limit && !ranked.some((other) => this.sameSong(song, other))) ranked.push(song)
+        }
+        return ranked.map((song) => ({ id: this.songs[song].id, name: this.songs[song].name, share: hits.get(song)! / wanted.length }))
+    }
+
     // two copies of one song (libraries have plenty): most of their lines are the same
     sameSong(a: number, b: number): boolean {
         const [small, large] = this.sets[a].size < this.sets[b].size ? [this.sets[a], this.sets[b]] : [this.sets[b], this.sets[a]]
@@ -156,6 +170,11 @@ export class SongDetector {
         const song = this.index.song(best)
         const run = this.runs.get(best)!
         return { id: song.id, name: song.name, confidence, sustained: run.chunks >= 2 && now - run.since >= SUSTAINED_MS }
+    }
+
+    /** looks a line up without counting it as heard */
+    find(line: string) {
+        return this.index.find(line)
     }
 
     reset() {

@@ -66,7 +66,7 @@ export function findCalls(words: string): Call[] {
             const stop = call.ends >= 0 && call.ends < next ? call.ends : next
             return { at: call.start, closed: !!found[i + 1], request: words.slice(call.end, stop).trim(), hey: call.hey, loose: call.loose }
         })
-        .filter((call) => !call.loose || call.hey || ["unknown", "search"].indexOf(parseRequest(call.request).type) < 0)
+        .filter((call) => !call.loose || call.hey || ["unknown", "search", "find-song"].indexOf(parseRequest(call.request).type) < 0)
 }
 
 export type Request =
@@ -91,7 +91,10 @@ export type Request =
     | { type: "remove-from-plan"; what: string }
     | { type: "overlay"; name: string; on: boolean }
     | { type: "media"; name: string; kind?: "image" | "video" }
-    | { type: "audio"; command: "stop" | "mute" | "unmute" }
+    | { type: "audio"; command: "stop" | "mute" | "unmute" | "louder" | "quieter" | "set_volume"; percent?: number }
+    | { type: "video"; command: "play" | "pause" | "restart" | "forward" | "back"; seconds?: number }
+    | { type: "recording" | "stream"; on: boolean; obs?: boolean }
+    | { type: "named-timer"; command: "start" | "pause" | "stop" | "stop_all"; name?: string }
     | { type: "countdown"; seconds: number; add?: boolean }
     | { type: "timer"; command: "start" | "next" | "play_pause" }
     | { type: "page"; page: PageName }
@@ -99,8 +102,10 @@ export type Request =
     | { type: "result"; direction: "next" | "previous" }
     | { type: "version"; name: string }
     | { type: "song"; name: string }
+    | { type: "find-song"; line: string }
     | { type: "search"; query: string; topic?: boolean }
-    | { type: "show"; what: string }
+    | { type: "show"; what: string; version?: string }
+    | { type: "black" }
     | { type: "unknown"; words: string }
 
 export const PAGES = ["show", "edit", "stage", "draw", "settings", "songs", "scripture", "media", "audio", "overlays", "templates", "calendar"] as const
@@ -108,6 +113,9 @@ export type PageName = (typeof PAGES)[number]
 
 const SHOW = "show(?: me| us)?|put up|foot up|put on|put|bring up|pull up|pool up|open(?: up)?|go to|turn to|take (?:me|us) to|give (?:me|us)|display|read|let us see|let's see|let us read|let's read|project"
 const FIND = "find(?: me| us)?|fine|search(?: for| the bible for| scripture for)?|look up|look for|where does (?:it|the bible|scripture) say|where is it written|which verse|what verse|what does the bible say about|what does scripture say about|what scripture"
+
+// "the song that says ...", "which hymn goes ..."
+const REMEMBERED = /^(?:(?:find|search(?: for)?|look (?:up|for)|which|what|show|get|play|sing|open)(?: me| us)? )(?:is )?(?:a |the |that )?(?:song|hymn)(?: is it)? (?:(?:that|which) )?(?:says|goes|sings|(?:has |with )(?:the )?(?:words|line|lyrics)) (.+)$/
 
 const OPEN_SENTENCE = /\b(?:without|not|don't|dont|never|instead|except|only|but|because|then)\b|^(?:me|us) (?:the )?(?:words|lyrics|text|chords)\b/
 const MOST_NAME_WORDS = 7
@@ -150,11 +158,13 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan"]
+const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan", "video", "named-timer", "recording", "stream", "black"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
     const whole = () => [parseRequest(spoken)]
+    // a remembered line is quoted as it is: its "and" and "then" are the song's
+    if (parseRequest(spoken).type === "find-song") return whole()
     const parts = spoken.split(THEN).filter((part) => part.trim())
     if (parts.length > 1) {
         const requests = parts.flatMap((part) => parseRequests(part))
@@ -190,13 +200,50 @@ function nearestCommand(words: string): string | null {
     return scored[0].score <= 0.25 && scored[1].score - scored[0].score > 0.05 ? scored[0].command : null
 }
 
+const VIDEO = "(?:the |our |this |that )?(?:video|clip|movie)"
+
+/** only "the video": a video asked for by name is one to put up */
+function videoRequest(t: string): Request | null {
+    if (new RegExp(`^(?:restart|replay) ${VIDEO}$|^(?:start|play) ${VIDEO} (?:again|over|from the (?:start|beginning|top))$`).test(t)) return { type: "video", command: "restart" }
+    if (new RegExp(`^pause ${VIDEO}$|^stop ${VIDEO}$`).test(t)) return { type: "video", command: "pause" }
+    if (new RegExp(`^(?:play|start|resume|unpause|continue) ${VIDEO}$`).test(t)) return { type: "video", command: "play" }
+    const skip = t.match(new RegExp(`^(?:(skip|jump|go|fast forward|forward)(?: ${VIDEO})?(?: (forward|ahead|on|back))?|(rewind|back)(?: ${VIDEO})?)(?: (\\d{1,3}) seconds?)?$`))
+    if (!skip) return null
+    const back = !!skip[3] || skip[2] === "back"
+    // "go on" and "forward" move the reading or the slide: a skip says how long, or names the video
+    if (!skip[4] && !(back && /video|clip|movie/.test(t))) return null
+    return { type: "video", command: back ? "back" : "forward", ...(skip[4] ? { seconds: Number(skip[4]) } : {}) }
+}
+
+const SOUND = "(?:the )?(?:volume|music|sound|audio)"
+function volumeRequest(t: string): Request | null {
+    if (new RegExp(`^(?:turn up ${SOUND}|turn ${SOUND} up|volume up|(?:a (?:bit|little) )?louder|(?:raise|increase) ${SOUND})$`).test(t)) return { type: "audio", command: "louder" }
+    if (new RegExp(`^(?:turn down ${SOUND}|turn ${SOUND} down|volume down|(?:a (?:bit|little) )?(?:quieter|softer)|(?:lower|decrease|reduce) ${SOUND})$`).test(t)) return { type: "audio", command: "quieter" }
+    const set = t.match(/^(?:(?:set|put|turn) (?:the )?)?volume (?:to |at )?(\d{1,3}|half)(?: ?percent| ?%)?$/)
+    return set ? { type: "audio", command: "set_volume", percent: set[1] === "half" ? 50 : Math.min(100, Number(set[1])) } : null
+}
+
+// said in full or not at all: these cannot be taken back, and sermons are full of the words
+const RECORDING = /^(start|begin|stop|end|finish) (?:the |our |a )?recording(?: (?:the )?(?:service|sermon|message))?( (?:in|on|with) obs)?$/
+const STREAM = /^(?:(start|begin|stop|end|finish) (?:the |our )?(?:live ?stream(?:ing)?|stream(?:ing)?|broadcast(?:ing)?)|(go live|go off ?air))( (?:in|on|with) obs)?$/
+
 function parseWords(t: string): Request {
     if (!t) return { type: "unknown", words: "" }
+    const recording = t.match(RECORDING)
+    if (recording) return { type: "recording", on: /start|begin/.test(recording[1]), ...(recording[2] ? { obs: true } : {}) }
+    const stream = t.match(STREAM)
+    if (stream) return { type: "stream", on: /start|begin|go live/.test(stream[1] || stream[2]), ...(stream[3] ? { obs: true } : {}) }
+    // "start recording what God has done": not a song of that name either
+    if (/^(?:start|stop) (?:recording|streaming)\b/.test(t)) return { type: "unknown", words: t }
+    const remembered = t.match(REMEMBERED)
+    if (remembered) return { type: "find-song", line: remembered[1] }
 
     if (/^(?:unlock)(?: the)?(?: screen)?$/.test(t)) return { type: "lock", on: false }
     if (/^(?:lock|hold|freeze)(?: the| that| it)?(?: screen| there)?$/.test(t)) return { type: "lock", on: true }
     if (/^(?:turn|switch) (?:the )?screens? on$|^(?:turn|switch) on (?:the )?screens?$/.test(t)) return { type: "screen", on: true }
     if (/^(?:turn|switch) (?:the )?screens? off$|^(?:turn|switch) off (?:the )?screens?$/.test(t)) return { type: "screen", on: false }
+    // "go to black" clears; asking for true black also covers the style's own background
+    if (/^(?:(?:go|fade|cut|switch)(?: to)? |make (?:the screen |it )?)?(?:a )?(?:true|pure|completely|totally|fully|solid) black(?: screen| out)?$/.test(t)) return { type: "black" }
     if (/^(?:clear|hear|clean|clay) (?:all|everything)$|^(?:go )?(?:to )?(?:black|blank)(?: the screen| screen| out)?$|^(?:black|blank) (?:it|everything) out$|^remove everything$/.test(t)) return { type: "clear", all: true }
     if (/^(?:(?:clear|hear|clean|wipe)(?: (?:the|that|it|this))?(?: screen| words| text| lyrics| verse| scripture| song| off)?|take (?:it|that|this|the (?:verse|scripture|song|words|lyrics|text|slide)) (?:down|off)|take (?:down|off) (?:the )?(?:verse|scripture|song|words|lyrics|text|slide)|remove (?:it|that|this)|hide (?:it|that|this))$/.test(t)) return { type: "clear", all: false }
     const sketch = t.match(/^(?:d?raw|daw|drew)(?: me| us)?(?: a| an| the| one)?(?: (?:picture|drawing|image|sketch) of)?(?: a| an| the)? (cross|circle|arrow|box|square|rectangle|line)(?: (?:on|in|onto|over) (?:the )?(?:paint ?board|paint|screen|drawing ?board|board|picture))?$/)
@@ -208,6 +255,11 @@ function parseWords(t: string): Request {
     if (/^(?:show|put up|read|repeat|give us|put) (?:it|that|this)(?: one)?(?: up)? again$|^(?:repeat|again|once more|one more time)(?: (?:it|that|this))?$/.test(t)) return { type: "again" }
     if (/^(?:(?:go )?back to|show|bring back|put up) (?:the )?(?:(?:previous|last) (?:scripture|passage|song)|one before|what was up before|what we had before)(?: again)?$|^(?:previous|last) (?:scripture|passage)$/.test(t)) return { type: "before", ...(/scripture|passage/.test(t) ? { kind: "scripture" } : /song/.test(t) ? { kind: "song" } : {}) }
     if (/^(?:bring|put) (?:it|that|this) back(?: up)?$|^undo$|^restore(?: it| the screen)?$/.test(t)) return { type: "restore" }
+    const clock = normalizeNumberWords(t)
+    const video = videoRequest(clock)
+    if (video) return video
+    const volume = volumeRequest(clock)
+    if (volume) return volume
     const overlay = t.match(/^(show|put up|put on|bring up|turn on|hide|remove|take down|take off|clear|turn off) (?:the |our )?(?:(logo|watermark)|(.+?) overlay)$/)
     if (overlay) return { type: "overlay", name: overlay[2] || overlay[3], on: /^(?:show|put|bring|turn on)/.test(overlay[1]) }
     const media = t.match(/^(?:show|play|put up|put on|bring up|start|run|project|display) (?:the |our )?(.+?) (video|clip|movie|picture|image|photo|background)$|^(?:change|set|switch) (?:the )?background to (?:the )?(.+)$/)
@@ -215,7 +267,6 @@ function parseWords(t: string): Request {
     if (/^(?:stop|turn off|fade(?: out)?|kill|cut|end) (?:the )?(?:music|audio|sound|track|pads?)$/.test(t)) return { type: "audio", command: "stop" }
     if (/^(?:mute|silence)(?: (?:the )?(?:music|audio|sound|track|speakers?|everything))$/.test(t)) return { type: "audio", command: "mute" }
     if (/^unmute(?: (?:the )?(?:music|audio|sound|track|speakers?|everything))?$/.test(t)) return { type: "audio", command: "unmute" }
-    const clock = normalizeNumberWords(t)
     const count = clock.match(/^(?:start|set|begin|put|run|give(?: (?:him|her|them|the (?:speaker|preacher|pastor)|pastor))?|set up) (?:a |an |the |up )*(?:(?:timer|countdown|clock)(?: (?:for|of|to))? )?(\d{1,3}|a|one|half an)[ -](minutes?|seconds?|hours?)(?: (?:timer|countdown|clock|for the (?:speaker|preacher|sermon)|to speak))?$/)
     const more = clock.match(/^(?:add|give (?:him|her|them|the (?:speaker|preacher|pastor)|pastor)) (\d{1,2}|an?) (?:more |extra )?(minutes?|seconds?)(?: more| to the (?:timer|clock|countdown))?$/)
     const span = (amount: string, unit: string) => (amount === "half an" ? 0.5 : Number(amount) || 1) * (unit.startsWith("hour") ? 3600 : unit.startsWith("min") ? 60 : 1)
@@ -252,8 +303,12 @@ function parseWords(t: string): Request {
     // anything else about a plan is for the model, not for the screen
     if (/\b(?:plan|project|set ?list)\b/.test(t) && !/^(?:find|search|what does|project)/.test(t)) return { type: "unknown", words: t }
     if (/^start (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "start" }
+    if (/^(?:stop|clear|reset) (?:all (?:the )?|the )?timers$|^stop (?:all|every) (?:timers?|countdowns?|clocks?)$/.test(t)) return { type: "named-timer", command: "stop_all" }
     if (/^(?:next|go to the next) (?:segment|speaker)$/.test(t)) return { type: "timer", command: "next" }
     if (/^(?:pause|stop|resume|continue) (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "play_pause" }
+
+    const timer = t.match(/^(start|run|begin|resume|pause|stop|reset) (?:the |our )?(?!(?:speaker|song|hymn|chorus)\b)(.+?) (?:timer|countdown|clock)$/)
+    if (timer) return { type: "named-timer", command: timer[1] === "pause" ? "pause" : /stop|reset/.test(timer[1]) ? "stop" : "start", name: timer[2] }
 
     if (/^(?:what|which) (?:verse|scripture|passage|song) is (?:this|that|it|on|up|showing)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }
     if (/^what(?:'s| is)(?: showing| up)?(?: on)?(?: the)?(?: screen| up| showing)$|^what is (?:up|showing)$/.test(t) || /^what(?:'s| is)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }
@@ -287,11 +342,23 @@ function parseWords(t: string): Request {
         return search(rest?.[1] || "", rest?.[2] || find[1])
     }
 
-    const show = t.match(new RegExp(`^(?:${SHOW})(?: the)? (.+)$`))
+    const asked = t.match(new RegExp(`^(?:${SHOW})(?: the)? (.+)$`))
+    const named = asked ? splitVersion(asked[1]) : null
+    const show = named ? [asked![0], named.what] : null
     // a long sentence, or one that says what NOT to do, is a request for the model, not a name to look up
-    if (show && !OPEN_SENTENCE.test(show[1]) && show[1].split(" ").length <= MOST_NAME_WORDS) return { type: "show", what: show[1] }
+    if (show && !OPEN_SENTENCE.test(show[1]) && show[1].split(" ").length <= MOST_NAME_WORDS) return { type: "show", what: show[1], ...(named!.version ? { version: named!.version } : {}) }
     if (show) return { type: "unknown", words: t }
     return { type: "unknown", words: t }
+}
+
+const BIBLES = "nlt|niv|kjv|nkjv|esv|amp|msg|nasb|csb|bsb|gnt|cev|(?:new )?king james|new living|new international|english standard|new american standard|american standard|amplified|message|good news|(?:[a-z] ){2,3}[a-z]"
+
+/** "John 3:16 in the NLT": the passage and the Bible. Only after something with a number, so "Christ in the message" stays whole. */
+export function splitVersion(words: string): { what: string; version?: string } {
+    const named = words.match(new RegExp(`^(.+?),?(?: (?:in|from))(?: the)? (?:(${BIBLES})(?: (?:version|translation|bible))?|(.+?) (?:version|translation))$`, "i")) || words.match(/^(.*\d),? (nlt|niv|kjv|nkjv|esv|nasb|csb|bsb)$/i)
+    if (!named || !/\d/.test(normalizeNumberWords(named[1].toLowerCase()))) return { what: words }
+    // "new living translation": the word is part of asking, not of the name
+    return { what: named[1], version: (named[2] || named[3]).replace(/ (?:translation|version)$/i, "") }
 }
 
 const plainWords = (text: string) =>

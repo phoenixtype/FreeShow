@@ -5,7 +5,8 @@
 
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { activePage, activeProject, activeTimers, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, playingAudio, projects, scriptures, shows, showsCache, styles, sttTranscript, timers, ai } from "../../stores"
+import { activePage, activeProject, activeTimers, aiSuggestions, audioChannelsData, drawerTabsData, outLocked, outputs, overlays, paintCache, playingAudio, projects, scriptures, shows, showsCache, styles, sttTranscript, timers, ai } from "../../stores"
+import { API_ACTIONS } from "../../components/actions/api"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { clearAudio } from "../../audio/audioFading"
@@ -27,15 +28,18 @@ import { stepScreen } from "./stepScreen"
 import { onScreenTitle } from "../components/floating/onScreen"
 import { openProject } from "../../components/show/project"
 import { readPassage } from "../scripture/passage"
-import { liveShowId, showSection } from "../songs/librarySongs"
+import { findSongsByLine, liveShowId, showSection } from "../songs/librarySongs"
 import { matchTitle, PAGES } from "../voice/matthias"
 import { matchVersion } from "../voice/versions"
 import { isHeld, setAgentMode } from "./control"
 import { listFromPoints } from "./listFromPoints"
+import { passageShow } from "./planPassage"
+import { liveTools } from "./liveTools"
 import { mediaList } from "./mediaLibrary"
 import { openPage } from "./openPage"
 import { nextPlanItem, planItems, removeFromOpenPlan, showPlanItem } from "./planItems"
 import { currentScripture, presentPassage } from "./presentPassage"
+import { confirm, requireUnlocked, settle, text, ToolError, until } from "./toolBasics"
 
 export interface AgentTool {
     name: string
@@ -51,14 +55,9 @@ export interface AgentTool {
     run: (args: any) => Promise<unknown> | unknown
 }
 
-export class ToolError extends Error {}
+export { ToolError }
 
-const text = (description: string) => ({ type: "string", description })
 const none = { type: "object" as const, properties: {} }
-
-const requireUnlocked = () => {
-    if (get(outLocked)) throw new ToolError("The screen is locked in the app. The operator has to unlock it first.")
-}
 
 /** saving a song or list opens it for the operator; Matthias adds quietly, so their page stays put */
 function addQuietly<T>(add: () => T): T {
@@ -70,22 +69,6 @@ function addQuietly<T>(add: () => T): T {
     }
 }
 
-const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-/** waits for the screen to show what was asked, so the answer is what happened and not what was sent */
-async function until(done: () => boolean, timeoutMs = 6000): Promise<boolean> {
-    const end = Date.now() + timeoutMs
-    while (Date.now() < end) {
-        if (done()) return true
-        await settle(100)
-    }
-    return done()
-}
-
-/** throws when the screen never shows it: a tool may only say done when it happened */
-async function confirm(done: () => boolean, otherwise: string, timeoutMs = 3000) {
-    if (!(await until(done, timeoutMs))) throw new ToolError(otherwise)
-}
 const NOT_ON_SCREEN = "It did not reach the screen. Check that a screen is switched on."
 const liveOut = () => getFirstActiveOutput()?.out
 const snapshot = () => JSON.stringify(liveOut() || {})
@@ -102,7 +85,7 @@ export function liveState() {
                   .trim()
             : ""
     const words =
-        slide?.id === "temp"
+        slide?.id === "temp" || slide?.id === "tempText"
             ? (slide.tempItems || [])
                   .flatMap((item) => item?.lines || [])
                   .map((line) => (line?.text || []).map((part) => part?.value || "").join(""))
@@ -173,13 +156,41 @@ function planItemIsUp(item: { id: string; type?: string }): boolean {
     return true
 }
 
-/** the new version's name; what is on screen changes with it */
-export async function changeVersion(name: string): Promise<string> {
+/** the church's Bible a version name means */
+function bibleNamed(name: string): { id: string; label: string } {
     const list = Object.entries(get(scriptures)).map(([id, s]) => ({ id, names: [s?.name, s?.customName, (s as any)?.scripturalVersion, (s as any)?.abbreviation, getShortBibleName(s?.name || "")].filter(Boolean) as string[] }))
     const id = matchVersion(name, list)
     if (!id) throw new ToolError(`There is no ${name.toUpperCase()} Bible here`)
+    return { id, label: get(scriptures)[id]?.customName || get(scriptures)[id]?.name || name }
+}
+
+/** opens a version for what is shown next, without putting anything up again */
+export function openVersion(name: string): string {
+    const { id, label } = bibleNamed(name)
+    setActiveScripture(id)
+    return label
+}
+
+/** the church's own: an overlay named for it, else a picture */
+async function showLogo() {
+    const overlay = matchTitle(
+        "logo",
+        Object.entries(get(overlays)).map(([id, item]) => ({ id, name: item?.name || "" }))
+    )
+    if (overlay) {
+        if (!liveOut()?.overlays?.includes(overlay.id)) setOutput("overlays", overlay.id, true)
+        return confirm(() => !!liveOut()?.overlays?.includes(overlay.id), NOT_ON_SCREEN)
+    }
+    const picture = matchTitle("logo", mediaList())
+    if (!picture) throw new ToolError("There is no logo yet. Make an overlay or add a picture with Logo in its name.")
+    playMedia({ path: picture.id })
+    return confirm(() => liveOut()?.background?.path === picture.id || liveOut()?.slide?.id === picture.id, NOT_ON_SCREEN)
+}
+
+/** the new version's name; what is on screen changes with it */
+export async function changeVersion(name: string): Promise<string> {
+    const { id, label } = bibleNamed(name)
     const { reference } = currentScripture()
-    const label = get(scriptures)[id]?.customName || get(scriptures)[id]?.name || name
     const chapter = reference?.chapters?.[reference.chapters.length - 1]
     const verses = reference?.verses?.[reference.verses.length - 1] || []
     const up = getFirstActiveOutput()?.out?.slide?.id === "temp"
@@ -267,13 +278,15 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "show_scripture",
-        description: "Put a passage on screen in the church's open Bible.",
-        inputSchema: { type: "object", properties: { reference: text('Such as "John 3:16" or "Romans 8:28-30"') }, required: ["reference"] },
+        description: "Put a passage on screen in the church's open Bible, or in the version named, which then stays open.",
+        inputSchema: { type: "object", properties: { reference: text('Such as "John 3:16" or "Romans 8:28-30"'), version: text("Such as KJV or New Living Translation; the open Bible when left out") }, required: ["reference"] },
         screen: true,
-        run: async ({ reference }) => {
+        run: async ({ reference, version }) => {
             requireUnlocked()
-            const passage = await readPassage(String(reference))
+            const bible = version ? bibleNamed(String(version)) : null
+            const passage = await readPassage(String(reference), bible?.id)
             if (!passage) throw new ToolError(`${reference} was not found in the open Bible. Check the reference, or open a Bible in the Scripture drawer.`)
+            if (bible) setActiveScripture(bible.id)
             const before = JSON.stringify(getFirstActiveOutput()?.out?.slide || null)
             // the same way Matthias shows it, so "bring it back" knows about it (it goes through presentPassage)
             try {
@@ -300,6 +313,18 @@ export const agentTools: AgentTool[] = [
                 .filter(([, show]) => show && !show.private && (!needle || show.name?.toLowerCase().includes(needle)))
                 .map(([id, show]) => ({ id, name: show.name }))
             return { count: list.length, songs: list.slice(0, 100) }
+        }
+    },
+    {
+        name: "find_song_by_words",
+        description: 'Find songs by a line someone remembers from the words ("how sweet the sound"). Shows nothing: offer the matches, and use present_song only when asked.',
+        inputSchema: { type: "object", properties: { line: text("Three or more words from the song") }, required: ["line"] },
+        readOnly: true,
+        run: ({ line }) => {
+            if (String(line).trim().split(/\s+/).length < 3) throw new ToolError("Say more of the line, three words or more.")
+            const found = findSongsByLine(String(line))
+            if (!found.length) throw new ToolError(`No song in the library has "${line}".`)
+            return { songs: found.map(({ id, name, share }) => ({ id, name, match: share >= 0.6 ? "strong" : "weak" })), next: "Nothing was put on screen. Use present_song with the id of the one that is wanted." }
         }
     },
     {
@@ -399,8 +424,8 @@ export const agentTools: AgentTool[] = [
     {
         name: "control_screen",
         destructive: true,
-        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. screen_on and screen_off switch the projector window. lock stops anything changing the screen; only the operator can unlock it.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "restore", "screen_on", "screen_off", "lock"] } }, required: ["command"] },
+        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. black covers the screen in true black, whatever the style shows, until clear_words takes it off; logo puts up the church's logo (an overlay or picture named Logo). screen_on and screen_off switch the projector window. lock stops anything changing the screen; only the operator can unlock it.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "black", "logo", "restore", "screen_on", "screen_off", "lock"] } }, required: ["command"] },
         screen: true,
         run: async ({ command }) => {
             // an agent may lock the screen, never unlock it: a lock is the operator's word
@@ -418,6 +443,15 @@ export const agentTools: AgentTool[] = [
             else if (command === "clear_background") clearBackground()
             else if (command === "clear_overlays") clearOverlays()
             else if (command === "clear_all") clearAll(true)
+            else if (command === "black") {
+                // the black covers the background, which stays under it for when the black comes off;
+                // overlays sit above, so they go
+                clearOverlays()
+                const { width, height } = getOutputResolution(getFirstActiveOutput()?.id || "", get(outputs), true, "", get(styles))
+                // a box of its own, so no style background or colour shows through
+                setOutput("slide", { id: "tempText", name: "Black screen", tempItems: [{ type: "text", style: `left:0px;top:0px;width:${width}px;height:${height}px;background-color: #000000;`, lines: [{ align: "", text: [{ value: "", style: "" }] }] }] })
+                await confirm(() => liveOut()?.slide?.id === "tempText", NOT_ON_SCREEN)
+            } else if (command === "logo") await showLogo()
             else if (command === "restore") restoreOutput()
             else if (command === "screen_on" || command === "screen_off") toggleOutputs(null, { state: command === "screen_on" })
             else throw new ToolError(`Unknown command "${command}".`)
@@ -453,23 +487,48 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "add_to_plan",
-        description: "Add songs or presentations to a service plan, in order. Several at once in songs.",
-        inputSchema: { type: "object", properties: { plan: text("Plan name or id"), song: text("One song, by name or id"), songs: { type: "array", items: { type: "string" }, description: "Several songs, by name or id" } }, required: ["plan"] },
-        run: ({ plan, song, songs }) => {
+        description: "Add songs or presentations, a Bible passage, a picture or video, or an overlay (such as a logo) to a service plan, in that order. Call it again for another order.",
+        inputSchema: {
+            type: "object",
+            properties: { plan: text("Plan name or id"), song: text("One song, by name or id"), songs: { type: "array", items: { type: "string" }, description: "Several songs, by name or id" }, scripture: text('A passage, such as "John 3:16"; it is saved as slides'), version: text("The Bible for the passage; the open one when left out"), media: text("A picture or video, by name"), overlay: text("An overlay, by name or id") },
+            required: ["plan"]
+        },
+        run: async ({ plan, song, songs, scripture, version, media, overlay }) => {
             const target = findByName(get(projects), plan)
             const wanted: string[] = [...(song ? [song] : []), ...(songs || [])].map(String)
-            if (!wanted.length) throw new ToolError("Say which songs.")
+            if (!wanted.length && !scripture && !media && !overlay) throw new ToolError("Say what to add: a song, a passage, a picture or video, or an overlay.")
             const added: string[] = []
             const notAdded: string[] = []
-            for (const name of wanted) {
+            const add = async (name: string, find: () => Promise<{ name: string; id: string; data?: object }> | { name: string; id: string; data?: object }) => {
                 try {
-                    const found = findByName(get(shows), name)
-                    addToProject({ projectId: target.id, id: found.id })
-                    added.push(found.name)
+                    const { name: label, ...item } = await find()
+                    addToProject({ projectId: target.id, ...item })
+                    added.push(label)
                 } catch (err) {
                     notAdded.push(err instanceof ToolError ? err.message : name)
                 }
             }
+            for (const name of wanted) await add(name, () => findByName(get(shows), name))
+            if (scripture)
+                await add(String(scripture), async () => {
+                    const open = get(drawerTabsData).scripture?.activeSubTab || ""
+                    const tab = version ? bibleNamed(String(version)).id : get(scriptures)[open] ? open : Object.keys(get(scriptures))[0] || ""
+                    const show = tab ? await passageShow(String(scripture), tab) : null
+                    if (!show) throw new ToolError(`${scripture} was not found. Check the reference, or open a Bible in the Scripture drawer.`)
+                    return show
+                })
+            if (media)
+                await add(String(media), () => {
+                    const list = mediaList()
+                    const item = list.find((entry) => entry.id === media) || matchTitle(String(media), list)
+                    if (!item) throw new ToolError(`No picture or video named "${media}" was found.`)
+                    return { name: item.name, id: item.id, data: { type: item.kind, name: item.name } }
+                })
+            if (overlay)
+                await add(String(overlay), () => {
+                    const found = findByName(get(overlays) as any, overlay)
+                    return { name: found.name, id: found.id, data: { type: "overlay", name: found.name } }
+                })
             if (!added.length) throw new ToolError(notAdded.join(" "))
             return { plan: target.name, added, ...(notAdded.length ? { notAdded } : {}), items: get(projects)[target.id].shows.length }
         }
@@ -569,9 +628,16 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "control_sound",
-        description: "The sound the app is playing: stop it, or mute and unmute it.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["stop", "mute", "unmute"] } }, required: ["command"] },
-        run: async ({ command }) => {
+        description: "The sound the app is playing: stop it, mute and unmute it, or change the main volume.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["stop", "mute", "unmute", "louder", "quieter", "set_volume"] }, percent: { type: "number", description: "For set_volume, 0 to 100" } }, required: ["command"] },
+        run: async ({ command, percent }) => {
+            if (command === "louder" || command === "quieter" || command === "set_volume") {
+                if (command === "set_volume" && !(Number(percent) >= 0 && Number(percent) <= 100 && percent !== undefined)) throw new ToolError("Say how loud, from 0 to 100 percent.")
+                const now = Math.round((get(audioChannelsData).main?.volume ?? 1) * 100)
+                const wanted = Math.min(100, Math.max(0, command === "set_volume" ? Math.round(Number(percent)) : now + (command === "louder" ? 10 : -10)))
+                API_ACTIONS.change_volume({ volume: wanted / 100 })
+                return { volume: `${wanted} percent` }
+            }
             if (command === "stop") {
                 clearAudio("", { clearPlaylist: true, commonClear: true })
                 // the music fades out; microphones are left alone
@@ -618,6 +684,7 @@ export const agentTools: AgentTool[] = [
             return "Done."
         }
     },
+    ...liveTools,
     {
         name: "show_media",
         description: "Show a media file by path.",

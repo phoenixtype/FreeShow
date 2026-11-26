@@ -14,7 +14,7 @@ vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeake
 vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
 const chat = vi.hoisted(() => ({ run: vi.fn() }))
 vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))
-vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), openVersion: vi.fn(() => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
 const lead = vi.hoisted(() => ({ confirmed: true }))
 vi.mock("../agent/control", async () => {
     const { writable } = await import("svelte/store")
@@ -39,9 +39,9 @@ const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn(), f
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 
 import { get } from "svelte/store"
-import { ai, outLocked } from "../../stores"
+import { ai, aiSuggestions, outLocked } from "../../stores"
 import { handMoves } from "../agent/control"
-import { runAgentTool } from "../agent/agentTools"
+import { openVersion, runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, clearChatHistory } from "../llm/llmManager"
 import { planProblem } from "../../scriptural/planNotice"
@@ -92,6 +92,18 @@ it("searches, shows the best, and moves to another", async () => {
     expect(manager.showReference).toHaveBeenLastCalledWith("Philippians 4:6")
     await Matthias.ask("another one")
     expect(manager.showReference).toHaveBeenLastCalledWith("Matthew 6:25")
+})
+
+it("offers the songs that have a remembered line, and shows none by itself", async () => {
+    vi.mocked(runAgentTool).mockResolvedValueOnce({ ok: true, result: { songs: [{ id: "a", name: "Amazing Grace", match: "weak" }] } })
+    await Matthias.ask("find the song that says how sweet the sound")
+    expect(runAgentTool).toHaveBeenCalledWith("find_song_by_words", { line: "how sweet the sound" })
+    expect(manager.showSong).not.toHaveBeenCalled()
+    const [offer] = get(aiSuggestions)
+    expect(offer.content).toBe("Amazing Grace")
+    offer.trigger?.()
+    expect(manager.showSong).toHaveBeenCalledWith({ id: "a", name: "Amazing Grace" })
+    expect(get(matthiasStatus)?.text).toMatch(/Amazing Grace/)
 })
 
 it("plays a song of the library", async () => {
@@ -321,4 +333,72 @@ it("says that the plan is the reason there is no answer", async () => {
     await Matthias.ask("compose a welcome", true, true)
     expect(get(matthiasStatus)).toEqual({ state: "failed", text: "Scriptural AI comes with a Church plan." })
     planProblem.set("")
+})
+
+it("moves the video, turns the volume and runs a named timer", async () => {
+    await Matthias.ask("pause the video")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_video", { command: "pause" })
+    await Matthias.ask("skip ahead ten seconds")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_video", { command: "forward", seconds: 10 })
+    await Matthias.ask("set the volume to 40")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_sound", { command: "set_volume", percent: 40 })
+    await Matthias.ask("louder")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_sound", { command: "louder" })
+    await Matthias.ask("start the offering timer")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_timer", { command: "start", name: "offering" })
+    await Matthias.ask("stop all timers")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_timer", { command: "stop_all" })
+})
+
+it("starts and stops recording or the stream only when clearly asked", async () => {
+    await Matthias.ask("start recording")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_recording", { command: "start" })
+    await Matthias.ask("stop the stream in OBS")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_stream", { command: "stop", with: "obs" })
+
+    vi.mocked(runAgentTool).mockClear()
+    ai.set({ matthias: { agentMode: true } })
+    const sermon = ["We need to start recording what God has done", "Matthias was recording the names, stop recording", "Matthias. Stop recording.", "Matthias, start recording.", "They said to Matthias, go live your life", "Matthias, go live.", "Hey Matthew, stop the stream"]
+    for (const words of sermon) {
+        position += 2000
+        hear(words, true)
+        await settle()
+    }
+    expect(runAgentTool).not.toHaveBeenCalled()
+
+    position += 2000
+    hear("hey matthias stop recording", true)
+    await settle()
+    expect(runAgentTool).toHaveBeenCalledWith("control_recording", { command: "stop" })
+})
+
+it("never lets the model start or stop recording from words spoken in the room", async () => {
+    model.llm = { request: vi.fn() }
+    chat.run.mockImplementationOnce(async (_history, deps) => ({ content: deps.refuse("control_recording") + " | " + deps.refuse("control_stream") }))
+    await Matthias.ask("could you get the cameras rolling", true)
+    expect(chat.run.mock.calls[0][1].refuse("control_stream")).toMatch(/Hey Matthias/)
+})
+
+it("shows a passage in the Bible named with it", async () => {
+    await Matthias.ask("show John 3:16 in the NLT")
+    expect(openVersion).toHaveBeenCalledWith("nlt")
+    expect(manager.showReference).toHaveBeenCalledWith("John 3:16")
+})
+
+it("adds a passage, a video or the logo to the open plan", async () => {
+    const added = async (words: string) => {
+        vi.mocked(runAgentTool).mockClear()
+        await Matthias.ask(words)
+        return vi.mocked(runAgentTool).mock.calls[0]
+    }
+    expect(await added("add John 3:16 in the NLT to the plan")).toEqual(["add_to_plan", { plan: "p", scripture: "John 3:16", version: "nlt" }])
+    expect(await added("add the welcome video to the plan")).toEqual(["add_to_plan", { plan: "p", media: "welcome" }])
+    expect(await added("add the logo to the plan")).toEqual(["add_to_plan", { plan: "p", overlay: "l" }])
+    expect(await added("add Amazing Grace to the plan")).toEqual(["add_to_plan", { plan: "p", song: "a" }])
+})
+
+it("goes to true black, and can bring it back", async () => {
+    await Matthias.ask("true black")
+    expect(manager.asOwnChange).toHaveBeenCalled()
+    expect(runAgentTool).toHaveBeenCalledWith("control_screen", { command: "black" })
 })

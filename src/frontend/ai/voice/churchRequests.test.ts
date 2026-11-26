@@ -4,13 +4,31 @@ import { namesWhatToShow, parseRequests } from "./matthias"
 // What people say and type in a church meeting, and what is meant. Add the ones that fail in
 // real use here first.
 const SAID: Record<string, string[]> = {
-    show: ["show John 3:16", "put up Psalm 23", "please show Romans eight verse twenty eight on the screen", "turn to Ephesians 2", "let us read Genesis one one", "go to Matthew chapter five verse three", "pull up First Corinthians thirteen", "I would like you to show Isaiah 53 5", "please bring up Amazing Grace", "could you put up the announcements", "display the offering slide", "open Philippians four six", "project the sermon notes"],
+    show: [
+        "show John 3:16",
+        "put up Psalm 23",
+        "please show Romans eight verse twenty eight on the screen",
+        "turn to Ephesians 2",
+        "let us read Genesis one one",
+        "go to Matthew chapter five verse three",
+        "pull up First Corinthians thirteen",
+        "I would like you to show Isaiah 53 5",
+        "please bring up Amazing Grace",
+        "could you put up the announcements",
+        "display the offering slide",
+        "open Philippians four six",
+        "show John 3:16 in the NLT",
+        "read Psalm 23 in the King James version",
+        "put up Romans 8 28 from the message translation",
+        "project the sermon notes"
+    ],
     navigate: ["next verse", "previous verse", "go to verse 10", "next chapter", "last verse", "read on", "keep reading", "continue reading", "from the top", "go on", "first verse please", "back"],
     slide: ["next slide", "previous slide", "go forward two slides", "next three verses", "go back 2 slides", "next line"],
     "goto-slide": ["slide three", "go to slide 4", "last slide", "first slide"],
     section: ["chorus", "back to the chorus", "take us back to the bridge", "repeat the chorus", "chorus again", "go to the bridge please", "sing verse two", "outro", "show the pre-chorus"],
     song: ["sing Amazing Grace", "play How Great Thou Art", "let's sing Way Maker", "the hymn Blessed Assurance", "start the song Holy Forever", "show the song Goodness of God"],
     search: ["find the verse about being anxious", "what does the Bible say about forgiveness", "search for love is patient", "where does it say be still and know", "show me a scripture about healing", "look up the passage about the prodigal son", "give us a verse on giving", "which verse says I can do all things"],
+    black: ["true black", "go to true black", "pure black screen", "completely black", "fade to true black", "make the screen completely black"],
     result: ["another one", "not that one", "next result", "wrong one"],
     version: ["use the NLT", "switch to King James", "read it in the message", "change the version to NIV", "show it in the Amplified", "change it to ESV"],
     clear: ["clear the screen", "take it down", "clear everything", "black", "go blank", "remove it", "take down the verse", "clear the lyrics", "black out", "take the song off", "remove everything", "hide it"],
@@ -20,10 +38,14 @@ const SAID: Record<string, string[]> = {
     before: ["go back to the last scripture", "back to the previous song", "show the previous passage again"],
     plan: ["start the service", "next item", "next song", "go to the next item in the plan", "previous item", "begin the programme"],
     "open-plan": ["open the plan Sunday morning", "open the Easter service plan", "open the project Youth Night"],
-    "add-to-plan": ["add Amazing Grace to the plan", "put Way Maker in the service", "add the song Holy Forever to today's plan"],
+    "add-to-plan": ["add Amazing Grace to the plan", "put Way Maker in the service", "add the song Holy Forever to today's plan", "add John 3:16 to the plan", "add Psalm 23 in the NLT to the service", "add the welcome video to the plan", "put the logo in the plan"],
     overlay: ["show the logo", "take down the logo", "put up the welcome overlay", "turn off the lower third overlay"],
     media: ["play the welcome video", "show the sunrise picture", "change the background to the mountains", "run the announcement clip", "put up the cross image"],
-    audio: ["stop the music", "mute the sound", "unmute", "fade out the music", "turn off the pad"],
+    audio: ["stop the music", "mute the sound", "unmute", "fade out the music", "turn off the pad", "turn the volume up", "turn down the music", "turn the music down", "volume up", "louder", "a bit quieter", "set the volume to 50", "volume fifty percent"],
+    video: ["pause the video", "play the video", "resume the video", "stop the video", "restart the video", "start the video again", "skip forward ten seconds", "skip ahead 30 seconds", "rewind 10 seconds", "rewind the video", "go back 15 seconds"],
+    recording: ["start recording", "stop recording", "start the recording", "please start recording the service", "stop the recording now", "end the recording", "start recording in OBS"],
+    stream: ["go live", "start the live stream", "stop the stream", "end the livestream", "start streaming", "stop broadcasting", "start the stream in OBS", "go off air"],
+    "named-timer": ["start the offering timer", "pause the sermon countdown", "stop the worship timer", "stop all timers", "start the altar call clock"],
     countdown: ["start a five minute countdown", "set a timer for ten minutes", "give the preacher thirty minutes", "add two minutes", "give him five more minutes", "start a 30 second timer"],
     timer: ["start the timer", "pause the timer", "stop the countdown", "next segment"],
     lock: ["lock the screen", "unlock the screen", "freeze the screen"],
@@ -32,8 +54,26 @@ const SAID: Record<string, string[]> = {
     listen: ["stop listening", "go to sleep"],
     page: ["open settings", "go to the scripture tab", "open the song library", "take me to the media page"],
     tell: ["what's on the screen", "what's next", "what can you do", "which song is this", "what verse is this"],
+    "find-song": ["find the song that says how sweet the sound", "which song says you make a way", "what song goes great is your faithfulness", "find me a hymn with the words blessed assurance", "show the song that says then sings my soul", "search for the song which says waymaker miracle worker", "find the song with the line I once was lost but now am found"],
     // for the model: never to be put on screen by a guess
-    unknown: ["make a plan for Sunday with Amazing Grace and Way Maker", "who wrote the book of Romans", "prepare the Easter service", "create a welcome slide", "how many songs do we have", "is the projector working", "thank you", "read me the words of Morning Hill without showing them", "read me the words of Morning Hill", "put up Morning Hill but not the chorus", "show me what the preacher said last week because I missed it"],
+    unknown: [
+        "start recording what God has done in your life",
+        "we need to start recording our testimonies",
+        "stop the stream of living water",
+        "go live your life for Christ",
+        "start streaming into your family",
+        "make a plan for Sunday with Amazing Grace and Way Maker",
+        "who wrote the book of Romans",
+        "prepare the Easter service",
+        "create a welcome slide",
+        "how many songs do we have",
+        "is the projector working",
+        "thank you",
+        "read me the words of Morning Hill without showing them",
+        "read me the words of Morning Hill",
+        "put up Morning Hill but not the chorus",
+        "show me what the preacher said last week because I missed it"
+    ],
     "remove-from-plan": ["remove Amazing Grace from the plan", "take Way Maker out of the service", "delete the song Holy Forever from today's plan", "drop Morning Hill off the plan"]
 }
 
@@ -50,6 +90,14 @@ for (const [type, requests] of Object.entries(SAID)) {
         expect(wrong).toEqual([])
     })
 }
+
+it("a Bible named with a passage is taken apart from it", () => {
+    const shown = (words: string) => parseRequests(words)[0]
+    expect(shown("show John 3:16 in the NLT")).toEqual({ type: "show", what: "john 3:16", version: "nlt" })
+    expect(shown("read Psalm 23 in the King James version")).toEqual({ type: "show", what: "psalm 23", version: "king james" })
+    expect(shown("show first corinthians thirteen verse four in the new living translation")).toMatchObject({ what: "first corinthians thirteen verse four", version: "new living" })
+    expect(shown("show Christ in the message")).toEqual({ type: "show", what: "christ in the message" })
+})
 
 it("several in one breath", () => {
     const types = (words: string) => parseRequests(words).map((r) => r.type)
