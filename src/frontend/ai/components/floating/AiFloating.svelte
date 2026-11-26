@@ -1,12 +1,15 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte"
+    import { onDestroy, onMount, tick } from "svelte"
     import { fly } from "svelte/transition"
+    import { Main } from "../../../../types/IPC/Main"
+    import { sendMain } from "../../../IPC/main"
     import Icon from "../../../components/helpers/Icon.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import Tabs from "../../../components/main/Tabs.svelte"
-    import { activePage, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, focusMode, language, mediaDownloads, resized, settingsTab, sttTempDisabled } from "../../../stores"
-    import { resolveSttEngine, SpeechToText } from "../../stt/stt"
+    import { activePage, activePopup, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, focusMode, language, mediaDownloads, popupData, resized, settingsTab, sttTempDisabled } from "../../../stores"
+    import { classifyListenError, listenNotice, type ListenProblem, shouldRetryListening } from "../../stt/listenStatus"
+    import { audioLevelStore, listenProblem, micSilent, resolveSttEngine, SpeechToText } from "../../stt/stt"
     import { copilotListening, copilotOpen, copilotState, type CopilotState } from "../../liveCopilot"
     import { AiManager } from "../../manager/AiManager"
     import AiChat from "./AiChat.svelte"
@@ -92,8 +95,11 @@
                 const engineResult = engineChanged ? await SpeechToText.restartEngine() : { ok: true }
                 if (currentLock !== sessionToken || engineResult.aborted) return
 
-                if (!capture.ok || !engineResult.ok) state = "error"
-                else state = "listening"
+                if (!capture.ok || !engineResult.ok) {
+                    const reason = "error" in capture ? capture.error : "error" in engineResult ? engineResult.error : ""
+                    listenProblem.set(classifyListenError(reason))
+                    state = "error"
+                } else state = "listening"
             }
             return
         }
@@ -122,20 +128,35 @@
         if (state !== "inactive") SpeechToText.disable()
     })
 
-    // leading by itself, it also gets its own microphone back
+    // what is wrong, in words, with the one thing to do about it
+    let problem: ListenProblem | "" = ""
+    $: problem = state === "error" ? $listenProblem || classifyListenError($aiSttStatus.message) : state === "listening" ? $listenProblem : ""
+
+    function fixProblem(what: ListenProblem) {
+        if (what === "model") {
+            popupData.set({ mode: "setup" })
+            activePopup.set("ai_model_manager")
+            return
+        }
+        if (what === "permission") sendMain(Main.ACCESS_MICROPHONE_PERMISSION)
+        toggleListening(true)
+    }
+
+    // it gets its own microphone back whenever listening was on and nobody stopped it
     const RETRY_MS = [5000, 15_000, 30_000, 60_000]
     let retries = 0
     let retryTimer: NodeJS.Timeout | null = null
     $: if (state === "listening") retries = 0
-    $: if (state === "error" && $ai.matthias?.agentMode && !$sttTempDisabled && !retryTimer) {
-        retryTimer = setTimeout(
-            () => {
-                retryTimer = null
-                retries++
-                if (state === "error" && $ai.matthias?.agentMode && !$sttTempDisabled) void enableListening()
-            },
-            RETRY_MS[Math.min(retries, RETRY_MS.length - 1)]
-        )
+    $: if (shouldRetryListening({ state, asked: !$sttTempDisabled, problem }) && !retryTimer) {
+        retryTimer = setTimeout(retryListening, RETRY_MS[Math.min(retries, RETRY_MS.length - 1)])
+    }
+    function retryListening() {
+        retryTimer = null
+        retries++
+        if (!shouldRetryListening({ state, asked: !$sttTempDisabled, problem })) return
+        // "loading" holds the next retry until this one has answered: starting the engine can take a while
+        state = "loading"
+        void enableListening()
     }
 
     // LISTEN TOGGLE
@@ -155,7 +176,9 @@
         } else {
             if (!isListening && state === "inactive") return
             sttTempDisabled.set(true)
-            SpeechToText.stopCapture()
+            // disable, not just stop the capture: it also ends any attempt to get the microphone back
+            SpeechToText.disable()
+            listenProblem.set("")
             state = "inactive"
         }
     }
@@ -177,10 +200,28 @@
     let innerWidth = 1440
     $: needsPreview = $focusMode || innerWidth < 1180 || $resized.rightPanel < 100
 
+    // opening moves the focus into the panel, closing gives it back
+    let opener: HTMLElement | null = null
+    let wasOpen = false
+    $: moveFocus(isOpen)
+    async function moveFocus(open: boolean) {
+        if (open === wasOpen) return
+        wasOpen = open
+        if (open) {
+            opener = document.activeElement as HTMLElement | null
+            await tick()
+            panel?.focus({ preventScroll: true })
+            return
+        }
+        const active = document.activeElement
+        if ((active === document.body || panel?.contains(active)) && opener?.isConnected) opener.focus({ preventScroll: true })
+    }
+
     // Escape in the panel leaves its box and nothing else. Anywhere else it clears the screen, as always.
     let panel: HTMLElement | undefined
     function onKeydown(e: KeyboardEvent) {
-        if (!isOpen || e.key !== "Escape" || !panel?.contains(document.activeElement)) return
+        // the panel itself holding the focus is not "in its box": Escape clears the screen as usual
+        if (!isOpen || e.key !== "Escape" || document.activeElement === panel || !panel?.contains(document.activeElement)) return
         e.preventDefault()
         e.stopImmediatePropagation()
         ;(document.activeElement as HTMLElement)?.blur()
@@ -198,15 +239,27 @@
     <SmartAction listening={isListening} />
 {:else}
     <!-- beside the app, not over it: everything stays usable while it works -->
-    <aside class="panel" bind:this={panel} aria-label={NAME} transition:fly={{ x: 60, duration: 160 }}>
+    <aside class="panel" tabindex="-1" bind:this={panel} aria-label={NAME} transition:fly={{ x: 60, duration: 160 }}>
         <header>
             <Icon id="ai" size={1.2} white />
             <h2>{NAME}</h2>
-            <span class="listening">{isListening ? "Listening" : state === "error" ? ($ai.matthias?.agentMode ? "Microphone problem, trying again" : "Microphone problem") : "Not listening"}</span>
-            <MaterialToggleSwitch label="" title="Listen" checked={isListening} disabled={state !== "inactive" && state !== "listening"} on:change={() => toggleListening()} small />
+            <span class="listening" role="status">{isListening ? "Listening" : state === "loading" && !$sttTempDisabled ? "Starting" : "Not listening"}</span>
+            {#if isListening}
+                <span class="level" role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round($audioLevelStore * 100)}><span style="width: {Math.round($audioLevelStore * 100)}%"></span></span>
+            {/if}
+            <MaterialToggleSwitch label="" title="Listen" checked={isListening || (state === "error" && !$sttTempDisabled)} disabled={state === "loading" || state === "processing"} on:change={(e) => toggleListening(e.detail)} small />
             <MaterialButton icon="settings" title="menu.settings" style="padding: 10px;" on:click={openSettings} />
             <MaterialButton icon="close" title="actions.close" style="padding: 10px;" on:click={toggleExpand} />
         </header>
+
+        {#if problem}
+            <div class="notice" role="alert">
+                <span>{listenNotice(problem).message}</span>
+                <MaterialButton variant="outlined" on:click={() => problem && fixProblem(problem)}>{listenNotice(problem).action}</MaterialButton>
+            </div>
+        {:else if isListening && $micSilent}
+            <p class="notice" role="status">Listening, but no sound is coming in. Check the microphone.</p>
+        {/if}
 
         <ScreenControl listening={isListening} />
         {#if needsPreview}<CopilotPreview />{/if}
@@ -214,7 +267,8 @@
         <div class="tabs"><Tabs {tabs} bind:active={activeTab} /></div>
         {#if activeTab === "transcription" || $matthiasStatus?.state === "hearing"}<MatthiasStatus />{/if}
         {#if activeTab === "transcription"}
-            <AiTranscription {state} on:listen={() => toggleListening(true)} />
+            <!-- the notice above says what went wrong and what to do; the transcript stays in view -->
+            <AiTranscription state={state === "error" ? "inactive" : state} on:listen={() => toggleListening(true)} />
         {:else}
             <AiChat sessionKey="default" />
         {/if}
@@ -256,6 +310,30 @@
         font-size: 0.85em;
         color: var(--muted-text);
         margin-inline-end: 4px;
+    }
+
+    .level {
+        width: 36px;
+        height: 4px;
+        margin-inline-end: 6px;
+        border-radius: 2px;
+        overflow: hidden;
+        background-color: var(--primary-lighter);
+    }
+    .level span {
+        display: block;
+        height: 100%;
+        background-color: var(--secondary);
+    }
+
+    .notice {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--primary-lighter);
     }
 
     .tabs {
