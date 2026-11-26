@@ -3,6 +3,7 @@
     import { Main } from "../../../../types/IPC/Main"
     import MaterialDropdown from "../../../components/inputs/MaterialDropdown.svelte"
     import MaterialTextInput from "../../../components/inputs/MaterialTextInput.svelte"
+    import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Loader from "../../../components/main/Loader.svelte"
     import Tip from "../../../components/main/Tip.svelte"
     import { requestMain } from "../../../IPC/main"
@@ -105,6 +106,17 @@
         llmSession.refreshConfig()
         fetchModelsForProvider(provider)
     }
+
+    // an empty key takes the saved one away
+    async function removeKey() {
+        if (provider === "none" || provider === "ollama") return
+        await requestMain(Main.AI_SET_KEY, { providerId: provider, key: "" })
+        keyInput = ""
+        status = null
+        llmSession.refreshConfig()
+        fetchedModels = []
+        newToast("Key removed from this computer")
+    }
 </script>
 
 <MaterialDropdown label="AI model" options={providerOptions} value={provider} on:change={(e) => setProvider(e.detail)} />
@@ -120,6 +132,9 @@
     <Tip type="warning" value="ai.privacy_cloud" top={10} bottom={10} />
 
     <MaterialTextInput label="ai.api_key" value={keyInput} type="password" pasteBtn on:change={updateKey} />
+    <div class="removeKey">
+        <MaterialButton variant="text" small on:click={removeKey}>Remove saved key</MaterialButton>
+    </div>
 {/if}
 
 {#if provider !== "none" && provider !== "scriptural"}
@@ -138,6 +153,11 @@
 {/if}
 
 <style>
+    .removeKey {
+        display: flex;
+        justify-content: flex-end;
+    }
+
     .backupTitle {
         margin-top: 20px;
         font-weight: 600;

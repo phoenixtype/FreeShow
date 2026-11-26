@@ -16,6 +16,7 @@ import { browserSignIn, cancelBrowserSignIn } from "../scriptural/browserSignIn"
 import { aiHandleLocalSetup, LocalModelManager } from "../ai/setup/LocalModelManager"
 import { aiGetModelStatus } from "../ai/setup/status"
 import { isAllowedExternalUrl } from "../utils/safeNavigation"
+import { seal, unseal } from "../utils/secretStore"
 import { SpeechToText } from "../ai/stt/SpeechToTextManager"
 import { getAudioMetadata } from "../audio/audio"
 import { openNowPlaying, setPlayingState, unsetPlayingAudio } from "../audio/nowPlaying"
@@ -303,6 +304,8 @@ export const mainResponses: MainResponses = {
     [Main.SAVE_MEDIA]: (data) => saveMedia(data).catch(() => ({ error: "It could not be saved." })),
     [Main.BROWSER_SIGN_IN]: (data) => browserSignIn(data),
     [Main.BROWSER_SIGN_IN_CANCEL]: () => cancelBrowserSignIn(),
+    // the sign-in the app keeps is encrypted with this computer's keychain
+    [Main.SECRET]: (data) => (typeof data?.seal === "string" ? seal(data.seal) : typeof data?.open === "string" ? unseal(data.open) : ""),
     [Main.AI_LLM_COMPLETE]: (data) => completeLLM(data),
     [Main.AI_OLLAMA_STATUS]: () => ollamaProvider.status(),
     [Main.AI_OLLAMA_PULL]: (data) => ollamaProvider.pull(data.model, (percent) => sendToMain(ToMain.AI_OLLAMA_PULL, { model: data.model, percent }))

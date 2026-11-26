@@ -4,7 +4,7 @@
 // their public (anon) keys, which ship in every client.
 //
 // Sign-in is with Google, in the browser, or by a code emailed to the account. The session is kept on this
-// computer only and refreshed when it expires. What an account may read or
+// computer only, encrypted with its keychain, and refreshed when it expires. What an account may read or
 // change is decided by each database (row-level security), never by this app.
 
 import { Main } from "../../types/IPC/Main"
@@ -42,21 +42,80 @@ class AuthRejected extends ScripturalError {
     }
 }
 
+const SEALED = "sealed:"
+
+/** encrypts or opens with the computer's keychain (in the main process); null outside the app */
+async function keychain(request: { seal: string } | { open: string }): Promise<string | null> {
+    if (typeof window === "undefined" || !(window as any).api) return null
+    const { requestMain } = await import("../IPC/main")
+    return (await requestMain(Main.SECRET, request)) || null
+}
+
 function makeConnection(projectUrl: string, anonKey: string, sessionKey: string, createUsers: boolean) {
     const REST_URL = `${projectUrl}/rest/v1`
     const AUTH_URL = `${projectUrl}/auth/v1`
 
-    function getSession(): ScripturalSession | null {
+    // what is stored, and the session it holds once opened
+    let known: { raw: string; session: ScripturalSession | null } | null = null
+    let opening: Promise<void> | null = null
+    // moves on every change, so a slow encryption never brings back a signed-out session
+    let changes = 0
+
+    const parse = (text: string | null): ScripturalSession | null => {
         try {
-            return JSON.parse(localStorage.getItem(sessionKey) || "null")
+            return JSON.parse(text || "null")
         } catch {
             return null
         }
     }
 
-    function storeSession(session: ScripturalSession | null) {
-        if (session) localStorage.setItem(sessionKey, JSON.stringify(session))
-        else localStorage.removeItem(sessionKey)
+    function getSession(): ScripturalSession | null {
+        const raw = localStorage.getItem(sessionKey)
+        if (!raw) return null
+        if (known?.raw === raw) return known.session
+        if (raw.startsWith(SEALED)) {
+            void open()
+            return null
+        }
+
+        // saved before sessions were encrypted
+        const session = parse(raw)
+        known = { raw, session }
+        if (session) void storeSession(session)
+        return session
+    }
+
+    function open(): Promise<void> {
+        opening ||= (async () => {
+            const raw = localStorage.getItem(sessionKey)
+            if (!raw?.startsWith(SEALED)) return
+            const text = await keychain({ open: raw })
+            // not opened (the keychain said no): asked again next time
+            if (text && localStorage.getItem(sessionKey) === raw) known = { raw, session: parse(text) }
+        })().finally(() => (opening = null))
+        return opening
+    }
+
+    /** the session, waiting for the keychain when it is still closed */
+    async function current(): Promise<ScripturalSession | null> {
+        const session = getSession()
+        if (session) return session
+        await open()
+        return getSession()
+    }
+
+    async function storeSession(session: ScripturalSession | null) {
+        const change = ++changes
+        if (!session) {
+            known = null
+            localStorage.removeItem(sessionKey)
+            return
+        }
+        const text = JSON.stringify(session)
+        const raw = (await keychain({ seal: text })) || text
+        if (change !== changes) return
+        known = { raw, session }
+        localStorage.setItem(sessionKey, raw)
     }
 
     async function authRequest(path: string, body: object): Promise<any> {
@@ -75,7 +134,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
 
     async function verifySignInCode(email: string, code: string): Promise<ScripturalSession> {
         const session = toSession(await authRequest("/verify", { type: "email", email: email.trim(), token: code.trim() }), email.trim())
-        storeSession(session)
+        await storeSession(session)
         return session
     }
 
@@ -88,13 +147,13 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         if (!answer?.code || !answer.verifier) throw new ScripturalError("The browser could not be opened. Sign in with your email instead.")
         const data = await authRequest("/token?grant_type=pkce", { auth_code: answer.code, code_verifier: answer.verifier })
         const session = toSession(data, data.user?.email || "")
-        storeSession(session)
+        await storeSession(session)
         return session
     }
 
     async function signOut() {
-        const session = getSession()
-        storeSession(null)
+        const session = await current()
+        await storeSession(null)
         if (!session) return
         // best effort: the local session is already gone either way
         await fetch(`${AUTH_URL}/logout`, { method: "POST", headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` } }).catch(() => null)
@@ -105,7 +164,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
 
     /** A current access token, refreshed when within a minute of expiring; null when signed out. */
     async function accessToken(): Promise<string | null> {
-        const session = getSession()
+        const session = await current()
         if (!session) return null
         if (session.expires_at - 60 > Date.now() / 1000) return session.access_token
         refreshing ||= refresh(session).finally(() => (refreshing = null))
@@ -115,12 +174,12 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
     async function refresh(session: ScripturalSession): Promise<string | null> {
         try {
             const refreshed = toSession(await authRequest("/token?grant_type=refresh_token", { refresh_token: session.refresh_token }), session.email)
-            storeSession(refreshed)
+            await storeSession(refreshed)
             return refreshed.access_token
         } catch (err) {
             // only a refused refresh token ends the session; offline in the meeting room, it is kept
             if (err instanceof AuthRejected && [400, 401, 403].includes(err.status)) {
-                storeSession(null)
+                await storeSession(null)
                 return null
             }
             throw new ScripturalError("Could not reach the church library. Check the connection and try again.")
@@ -153,6 +212,9 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         const response = await fetch(`${projectUrl}/functions/v1/${name}`, { method: "POST", headers: { apikey: anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(FUNCTION_WAIT_MS) })
         return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T }
     }
+
+    // opened as the app starts, so screens that ask at once find it
+    if (typeof window !== "undefined" && (window as any).api) setTimeout(() => getSession(), 0)
 
     return { getSession, sendSignInCode, verifySignInCode, signInWithGoogle, signOut, rest, invoke }
 }
