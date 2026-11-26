@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { GUIDE_URL } from "../../../../types/links"
     import type { MediaStyle } from "../../../../types/Main"
     import type { BibleContent } from "../../../../types/Scripture"
     import type { Item } from "../../../../types/Show"
@@ -269,7 +270,7 @@
 
             {#if useOldSystem || (styleScriptureTemplate ? useOldScriptureSystem(styleScriptureTemplate) : false)}
                 <p style="margin-bottom: 10px;font-size: 0.9rem;opacity: 0.7;white-space: normal;">
-                    You are using a template with no scripture values! - <Link url="https://freeshow.app/docs/scripture#template">Read more</Link>
+                    You are using a template with no scripture values! - <Link url={GUIDE_URL}>Read more</Link>
                 </p>
             {/if}
             {#if useOldSystem}

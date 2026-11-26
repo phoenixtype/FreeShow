@@ -83,7 +83,7 @@ export class NemotronTranscriber {
         try {
             const { utilityProcess } = require("electron") as typeof import("electron")
             if (!utilityProcess?.fork) return false
-            child = utilityProcess.fork(path.join(__dirname, "./nemotronWorker.js"), [], { serviceName: "FreeShow AI transcription" })
+            child = utilityProcess.fork(path.join(__dirname, "./nemotronWorker.js"), [], { serviceName: "Scriptural transcription" })
         } catch (err) {
             console.error("[nemotron] Could not spawn the decode process:", err)
             return false

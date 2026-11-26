@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { GUIDE_URL } from "../../../../types/links"
     import qrcode from "qrcode-generator"
     import { onMount } from "svelte"
     import { Main } from "../../../../types/IPC/Main"
@@ -161,7 +162,7 @@
 {:else}
     <MaterialButton class="popup-options {options ? 'active' : ''}" icon="options" iconSize={1.3} title={options ? "actions.close" : "create_show.more_options"} on:click={() => (options = !options)} white />
 
-    <MaterialButton class="popup-reset" icon="help" iconSize={1.1} title="titlebar.help" on:click={() => sendMain(Main.URL, "https://freeshow.app/docs/connecting")} white />
+    <MaterialButton class="popup-reset" icon="help" iconSize={1.1} title="titlebar.help" on:click={() => sendMain(Main.URL, GUIDE_URL)} white />
 {/if}
 
 {#if id === "agents"}
@@ -195,11 +196,7 @@
 {:else}
     <div on:mouseup={mouseup}>
         {#if id === "companion"}
-            <Link url="https://freeshow.app/api">
-                API Docs
-                <Icon id="launch" white />
-            </Link>
-            <Link url="https://freeshow.app/docs/companion">
+            <Link url={GUIDE_URL}>
                 Bitfocus Companion Connection
                 <Icon id="launch" white />
             </Link>

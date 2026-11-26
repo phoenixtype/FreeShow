@@ -63,7 +63,7 @@ export async function setupCloudSync(auto: boolean = false) {
         return
     }
 
-    if (auto && !(await confirmCustom("You can sync your data with FreeShow Cloud! Do you want to enable cloud sync now?"))) {
+    if (auto && !(await confirmCustom("You can keep your data in step between computers with cloud sync. Do you want to turn it on now?"))) {
         syncFinished()
         return
     }

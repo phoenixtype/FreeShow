@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { GUIDE_URL } from "../../../../types/links"
     import { onDestroy, onMount } from "svelte"
     import type { ContentFile, ContentLibraryCategory } from "../../../../electron/contentProviders/base/types"
     import { Main } from "../../../../types/IPC/Main"
@@ -83,7 +84,7 @@
 {:else}
     <div class="gridgap">
         <Center style="flex-direction: column;">
-            <Link url="https://freeshow.app/docs/media#connecting-to-canva">
+            <Link url={GUIDE_URL}>
                 <T id="main.docs" />
                 <Icon id="launch" white />
             </Link>

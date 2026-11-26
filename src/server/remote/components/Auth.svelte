@@ -18,7 +18,7 @@
     <div class="panel">
         <div class="brand">
             <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
-            <h1>RemoteShow</h1>
+            <h1>Scriptural Remote</h1>
         </div>
 
         <form on:submit|preventDefault={submit} class="auth-form">

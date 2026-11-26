@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { GUIDE_URL } from "../../../../types/links"
     import Icon from "../../../components/helpers/Icon.svelte"
     import T from "../../../components/helpers/T.svelte"
     import HRule from "../../../components/input/HRule.svelte"
@@ -46,7 +47,7 @@
 
 {#if !mode || mode === "setup"}
     <div style="display: flex;justify-content: center;font-size: 0.9em;">
-        <Link url="https://freeshow.app/docs/smart">
+        <Link url={GUIDE_URL}>
             <T id="main.docs" />
             <Icon id="launch" white />
         </Link>
