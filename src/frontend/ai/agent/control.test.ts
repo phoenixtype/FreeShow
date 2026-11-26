@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it, vi } from "vitest"
 vi.mock("../../components/actions/apiHelper", () => ({ toggleSttListening: vi.fn() }))
 vi.mock("../../stores", async () => {
@@ -12,7 +13,7 @@ vi.mock("../scripture/BibleCacheManager", () => ({ BibleCacheManager: { getCanon
 import { get } from "svelte/store"
 import { toggleSttListening } from "../../components/actions/apiHelper"
 import { ai } from "../../stores"
-import { handBack, HOLD_MS, heldUntil, isHeld, movedByHand, OwnChanges, screenHolder, setAgentMode } from "./control"
+import { askingToLead, cancelAgentMode, confirmAgentMode, handBack, HOLD_MS, heldUntil, isHeld, movedByHand, OwnChanges, screenHolder, setAgentMode } from "./control"
 
 describe("who has the screen", () => {
     it("is the operator's after a move by hand, until handed back", () => {
@@ -24,10 +25,40 @@ describe("who has the screen", () => {
         expect(isHeld()).toBe(false)
         expect(screenHolder(false, 0, 0)).toBe("operator")
     })
-    it("starts listening when it is given the lead", () => {
-        setAgentMode(true)
+})
+
+describe("agent mode", () => {
+    it("is asked about once before it is first turned on, never switched on by one click", () => {
+        expect(setAgentMode(true)).toBe(false)
+        expect(get(askingToLead)).toBe(true)
+        expect(get(ai).matthias?.agentMode).toBeFalsy()
+        expect(toggleSttListening).not.toHaveBeenCalled()
+
+        cancelAgentMode()
+        expect(get(askingToLead)).toBe(false)
+        expect(setAgentMode(true)).toBe(false)
+
+        confirmAgentMode()
+        expect(get(askingToLead)).toBe(false)
         expect(get(ai).matthias?.agentMode).toBe(true)
+        // it can only lead what it hears
         expect(toggleSttListening).toHaveBeenCalledWith({ value: true })
+
+        // asked once each time the app runs
+        setAgentMode(false)
+        expect(setAgentMode(true)).toBe(true)
+        expect(get(ai).matthias?.agentMode).toBe(true)
+    })
+
+    it("asks in these words, with Turn on and Cancel, everywhere it can be turned on", () => {
+        const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8")
+        const confirm = read("../components/floating/AgentConfirm.svelte")
+        expect(confirm).toContain("will change the screen on its own and use AI requests.")
+        expect(confirm).toContain(">Turn on<")
+        expect(confirm).toContain(">Cancel<")
+        expect(confirm).toContain("justify-content: flex-end")
+        expect(read("../components/floating/ScreenControl.svelte")).toContain("<AgentConfirm />")
+        expect(read("../components/settings/MatthiasOptions.svelte")).toContain("<AgentConfirm />")
     })
 })
 

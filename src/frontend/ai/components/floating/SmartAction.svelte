@@ -7,6 +7,7 @@
     import { ai, aiSmartAction, scriptures } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import ScreenControl from "./ScreenControl.svelte"
+    import { askingToLead } from "../../agent/control"
     import MatthiasStatus from "./MatthiasStatus.svelte"
     import { matthiasStatus } from "../../voice/matthiasAgent"
     import AiRing from "./AiRing.svelte"
@@ -85,7 +86,7 @@
             </AiRing>
         </MaterialButton>
     </div>
-{:else if $ai.matthias?.agentMode}
+{:else if $ai.matthias?.agentMode || $askingToLead}
     <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;">
         <AiRing opacity={0.95} borderRadius="30px"><div><ScreenControl {listening} /></div></AiRing>
     </div>

@@ -5,6 +5,7 @@ import type { ConfidenceLevels } from "../../../types/ai/AiSettings"
 import { clone, keysToID } from "../../components/helpers/array"
 import { getFirstActiveOutput, setOutput } from "../../components/helpers/output"
 import { loadJsonBible, screenScripture } from "../../components/drawer/bible/scripture"
+import { startShow } from "../../components/helpers/showActions"
 import { clearAll, clearSlide, restoreOutput } from "../../components/output/clear"
 import { setActiveScripture } from "../../converters/bible"
 import { ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputCache, outputs, scriptures } from "../../stores"
@@ -406,8 +407,9 @@ export class AiManager {
         await this.present(reference, reference)
         this.addSuggestion({ id: uid(5), timestamp: Date.now(), content: reference, confidence: 100, action: "presented", trigger: () => this.showReference(reference) })
     }
-    static async showSong(song: { id: string; name: string }) {
-        const show = () => this.asOwnChange(song.name, () => presentSong(song.id, ""), { show: song.id })
+    /** slide: which one to start at (from 0); left out, the one that matches what is being sung */
+    static async showSong(song: { id: string; name: string }, slide?: number) {
+        const show = () => this.asOwnChange(song.name, () => (slide === undefined ? presentSong(song.id, "") : startShow(song.id, slide)), { show: song.id })
         await show()
         this.remember(song.name, "song", show)
     }

@@ -3,25 +3,21 @@
 
 import { get, writable } from "svelte/store"
 import { uid } from "uid"
-import { addToProject, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
-import { getFirstActiveOutput, setOutput, toggleOutputs } from "../../components/helpers/output"
-import { clearBackground, clearOverlays } from "../../components/output/clear"
-import { addSpeakerTime, nextProgramSegment, playPauseSpeaker, setSpeakerDuration, startProgram } from "../../components/drawer/timers/speakerTimerActions"
-import { openProject } from "../../components/show/project"
-import { activeProject, ai, aiSuggestions, audioChannelsData, outLocked, overlays, projects, shows, sttTranscript } from "../../stores"
-import { clearAudio } from "../../audio/audioFading"
+import { toggleSttListening } from "../../components/actions/apiHelper"
+import { getFirstActiveOutput } from "../../components/helpers/output"
+import { planProblem } from "../../scriptural/planNotice"
+import { activeProject, ai, aiSuggestions, outLocked, overlays, projects, shows, sttTranscript } from "../../stores"
 import { mediaList } from "../agent/mediaLibrary"
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { changesScreen, changeVersion, liveState, runAgentTool, searchBible, ToolError } from "../agent/agentTools"
 import { SIMPLE_SHAPES } from "../agent/illustration"
 import { handMoves, setAgentMode } from "../agent/control"
-import { openPage } from "../agent/openPage"
-import { nextPlanItem, removeFromOpenPlan, showPlanItem } from "../agent/planItems"
+import { nextPlanItem } from "../agent/planItems"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, clearChatHistory, getChatHistory, getLLMManager } from "../llm/llmManager"
 import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT } from "../llm/prompts"
 import { AiManager } from "../manager/AiManager"
-import { showSection, showSlide } from "../songs/librarySongs"
+import { showSlide } from "../songs/librarySongs"
 import { findCalls, matchTitle, NAME, namesWhatToShow, parseRequests, type Request } from "./matthias"
 
 export interface MatthiasStatus {
@@ -33,6 +29,7 @@ export const matthiasStatus = writable<MatthiasStatus | null>(null)
 export const matthiasSteps = writable<{ tool: string; ok: boolean }[]>([])
 /** the one conversation with Matthias, spoken and typed */
 export const MATTHIAS_CHAT = "default"
+const ASKED_TO_LEAD = 'Press "Turn on" in the Matthias panel to let me lead the screen'
 const HELP = 'You can ask for a passage ("John 3:16"), a song, "next verse", "back to the chorus", "read that in the NLT", "start the service", "next item", "add Amazing Grace to the plan", "clear the screen", "draw a cross", "bring it back", or "take over".'
 
 const SHOWN_MS = 6000
@@ -49,6 +46,9 @@ const PAUSE_AFTER_PHRASE_MS = 500
 const LONGEST_REQUEST_MS = 9000
 const REPEAT_MS = 8000
 const REWRITE_CHARS = 12
+// how long a model may work on one request: nobody in the room waits longer for a spoken one
+const SPOKEN_TURN_MS = 45_000
+const TYPED_TURN_MS = 120_000
 
 export class Matthias {
     // where the last answered call stood, counted over everything heard
@@ -113,10 +113,14 @@ export class Matthias {
     // one request at a time, in the order they came
     private static queue: Promise<unknown> = Promise.resolve()
     private static round = 0
+    // the model turn under way, if there is one
+    private static thinking: AbortController | null = null
 
     /** drops what is being worked on and all that waits behind it */
     static stop() {
         this.round++
+        this.thinking?.abort()
+        this.thinking = null
         this.queue = Promise.resolve()
         matthiasSteps.set([])
         matthiasStatus.set(null)
@@ -133,8 +137,9 @@ export class Matthias {
     /** a request in words. Spoken ones (certain: plainly said to Matthias) are only written down when something came of them. */
     static ask(words: string, certain = true, typed = false): Promise<void> {
         const requests = parseRequests(words)
-        // taking the screen back never waits its turn
-        if (requests.length === 1 && ((requests[0].type === "agent" && !requests[0].on) || requests[0].type === "lock")) this.stop()
+        // taking the screen back never waits its turn, and a plain command never waits behind a model
+        const takesBack = requests.length === 1 && ((requests[0].type === "agent" && !requests[0].on) || requests[0].type === "lock")
+        if (takesBack || (this.thinking && requests.every((request) => request.type !== "unknown"))) this.stop()
         if (typed) addChatMessage(MATTHIAS_CHAT, "user", words)
         const round = this.round
         const turn = this.queue.then(() => (round === this.round ? this.work(requests, words, certain, typed, round) : undefined))
@@ -183,17 +188,17 @@ export class Matthias {
                 toggleSttListening({ value: false })
                 return "Not listening"
             case "agent":
-                setAgentMode(request.on)
+                if (!setAgentMode(request.on)) return ASKED_TO_LEAD
                 return request.on ? "Leading the screen" : "You have the screen"
             case "page":
-                openPage(request.page)
+                await this.tool("open_page", { page: request.page })
                 return `Opened ${request.page}`
             case "tell":
                 return this.tell(request.about)
             case "open-plan": {
                 const plan = matchTitle(request.name, nameList(get(projects)))
                 if (!plan) throw new ToolError(`I do not know which plan "${request.name}" is`)
-                openProject(plan.id, false)
+                await this.tool("open_plan", { plan: plan.id })
                 return `Opened ${plan.name}`
             }
             case "add-to-plan": {
@@ -201,29 +206,21 @@ export class Matthias {
                 if (!plan) throw new ToolError("Open a plan first")
                 const song = matchTitle(request.what, songList())
                 if (!song) return this.think(asked)
-                addToProject({ projectId: get(activeProject)!, id: song.id })
+                await this.tool("add_to_plan", { plan: get(activeProject)!, song: song.id })
                 return `Added ${song.name} to ${plan.name}`
             }
             case "remove-from-plan": {
-                const result = removeFromOpenPlan(request.what)
-                if ("error" in result) throw new ToolError(result.error)
+                const result = await this.tool("remove_from_plan", { item: request.what })
                 return `Took ${result.removed} off ${result.plan}. Ctrl+Z brings it back`
             }
             case "timer":
-                if (request.command === "start") startProgram()
-                else if (request.command === "next") nextProgramSegment()
-                else playPauseSpeaker()
+                await this.tool("speaker_timer", { command: request.command })
                 return request.command === "start" ? "Timer started" : request.command === "next" ? "Next segment" : "Timer"
             case "countdown":
-                if (request.add) addSpeakerTime(request.seconds)
-                else {
-                    setSpeakerDuration(request.seconds)
-                    playPauseSpeaker()
-                }
+                await this.tool("speaker_timer", { command: request.add ? "add" : "set", minutes: request.seconds / 60 })
                 return request.add ? `Added ${spell(request.seconds)}` : `Timer: ${spell(request.seconds)}`
             case "audio":
-                if (request.command === "stop") clearAudio("", { clearPlaylist: true, commonClear: true })
-                else audioChannelsData.update((a) => ({ ...a, main: { ...(a.main || {}), isMuted: request.command === "mute" } }))
+                await this.tool("control_sound", { command: request.command })
                 return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : "Sound is on"
             case "unknown":
                 return this.think(asked)
@@ -232,7 +229,7 @@ export class Matthias {
         if (get(outLocked)) throw new ToolError("The screen is locked")
         switch (request.type) {
             case "screen":
-                toggleOutputs(null, { state: request.on })
+                await this.tool("control_screen", { command: request.on ? "screen_on" : "screen_off" })
                 return request.on ? "The screen is on" : "The screen is off"
             case "clear":
                 AiManager.clearScreen(request.all)
@@ -241,21 +238,17 @@ export class Matthias {
             case "drawing": {
                 const tool = request.type === "draw" ? "draw_on_screen" : request.command === "clean" ? "clean_up_drawing" : "clear_drawing"
                 const args = request.type === "draw" ? { shapes: SIMPLE_SHAPES[request.shape] } : {}
-                let result: Awaited<ReturnType<typeof runAgentTool>> = { ok: false }
-                await AiManager.asOwnChange("", async () => (result = await runAgentTool(tool, args)))
-                if (!result.ok) throw new ToolError(result.error || "I could not draw that")
+                await AiManager.asOwnChange("", () => this.tool(tool, args))
                 return request.type === "draw" ? `Drew a ${request.shape}` : request.command === "clean" ? "Drawing tidied" : "Drawing cleared"
             }
             case "clear-layer":
-                if (request.layer === "background") clearBackground()
-                else clearOverlays()
+                await this.tool("control_screen", { command: request.layer === "background" ? "clear_background" : "clear_overlays" })
                 return "Cleared"
             case "overlay": {
                 const overlay = matchTitle(request.name, nameList(get(overlays)))
                 // "take down the notice overlay" may be a song or slide after all
                 if (!overlay) throw new ToolError(`I do not know the overlay "${request.name}"`)
-                const showing = (getFirstActiveOutput()?.out?.overlays || []).includes(overlay.id)
-                if (showing !== request.on) setOutput("overlays", overlay.id, true)
+                await this.tool("show_overlay", { name: overlay.id, on: request.on })
                 return request.on ? `${overlay.name} is on` : `${overlay.name} is off`
             }
             case "media": {
@@ -266,7 +259,7 @@ export class Matthias {
                     if (show) return this.present(show)
                     throw new ToolError(`I do not know which ${request.kind === "video" ? "video" : "picture"} "${request.name}" is`)
                 }
-                playMedia({ path: item.id })
+                await this.tool("show_picture_or_video", { name: item.id })
                 return item.name
             }
             case "restore":
@@ -300,7 +293,7 @@ export class Matthias {
             case "plan": {
                 const item = nextPlanItem(request.step)
                 if (!item) throw new ToolError(get(activeProject) ? (request.step === "next" ? "That was the last item" : "There is nothing before that") : "Open a plan first")
-                await AiManager.asOwnChange(item.label, () => showPlanItem(item))
+                await AiManager.asOwnChange(item.label, () => this.tool("show_plan_item", { item: request.step }))
                 return item.label
             }
             case "navigate": {
@@ -337,6 +330,13 @@ export class Matthias {
         }
     }
 
+    /** one of the app's own tools: one implementation of each action, spoken or asked of the model */
+    private static async tool(name: string, args: object): Promise<any> {
+        const answer = await runAgentTool(name, args)
+        if (!answer.ok) throw new ToolError(answer.error || "I could not do that")
+        return answer.result
+    }
+
     private static tell(about: "screen" | "next" | "help"): string {
         if (about === "help") return HELP
         if (about === "next") {
@@ -349,9 +349,8 @@ export class Matthias {
     }
 
     private static async section(name: string, number?: number): Promise<string> {
-        let shown: string | null = null
-        await AiManager.asOwnChange("", async () => (shown = await showSection(name, number)))
-        if (!shown) throw new ToolError(getFirstActiveOutput()?.out?.slide?.id ? `This song has no ${name}${number ? ` ${number}` : ""}` : "No song is on screen")
+        let shown = ""
+        await AiManager.asOwnChange("", async () => (shown = (await this.tool("show_section", { section: name, ...(number ? { number } : {}) })).shown))
         return number ? `${shown} ${number}` : shown
     }
 
@@ -417,15 +416,14 @@ export class Matthias {
 
     /** not a plain command: the model, when there is one, with the app's own tools */
     private static async think({ certain, typed, words, stopped }: Asked): Promise<string | null> {
+        // said without "hey": the name may have been said in passing, and a passage in the sentence is not an order
+        if (!certain && !get(ai).matthias?.agentMode) return null
         if (namesWhatToShow(words) && !get(outLocked)) {
             const reference = await AiManager.findReference(words)
             if (reference) return this.passage(reference)
             const song = matchTitle(words, songList()) || matchTitle(words.replace(/^\S+\s+/, ""), songList())
             if (song && words.trim().includes(" ")) return this.present(song)
         }
-        // the name may have been said in passing
-        if (!certain && !get(ai).matthias?.agentMode) return null
-
         const llm = getLLMManager()
         if (!llm) {
             if (/^(?:d?raw|daw|drew|sketch|illustrate)\b/i.test(words.trim())) throw new ToolError(`Drawing what is described needs an AI model: choose one in Settings, Live Copilot. Without one I can draw a cross, circle, arrow, box or line, clean up the drawing, and clear it.`)
@@ -438,10 +436,14 @@ export class Matthias {
         const systemPrompt = `${CHAT_SYSTEM_PROMPT}${agentInstructions()}\n\nYour name is ${NAME}.${spoken}`
         const history = getChatHistory(MATTHIAS_CHAT).map(({ role, content }) => ({ role, content }))
         const movesBefore = get(handMoves)
+        const turn = new AbortController()
+        this.thinking = turn
+        const deadline = setTimeout(() => turn.abort(), typed ? TYPED_TURN_MS : SPOKEN_TURN_MS)
         const answer = await runAgentChat(typed ? history : [...history, { role: "user", content: words }], {
-            ask: (prompt, struggling) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt, struggling }),
+            ask: (prompt, struggling) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt, struggling, signal: turn.signal }),
             context: context(!typed),
-            stopped,
+            spoken: !typed,
+            stopped: () => stopped() || turn.signal.aborted,
             refuse: (tool) => (changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""),
             run: async (tool, args) => {
                 if (!changesScreen(tool)) return runAgentTool(tool, args)
@@ -450,9 +452,13 @@ export class Matthias {
                 return result
             },
             onStep: (tool, ok) => matthiasSteps.update((steps) => [...steps, { tool, ok }])
+        }).finally(() => {
+            clearTimeout(deadline)
+            if (this.thinking === turn) this.thinking = null
         })
         if (stopped()) return null
-        if (!answer) throw new ToolError("I could not get an answer. Check the internet connection and the model in Settings, Live Copilot.")
+        if (turn.signal.aborted) throw new ToolError("That took too long, so I stopped. Ask again, or ask for less at once.")
+        if (!answer) throw new ToolError(get(planProblem) || "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot.")
         if (typed && answer.action) {
             // nothing is made until the button is pressed, whatever the model says it did
             addChatMessage(MATTHIAS_CHAT, "assistant", "It is ready. Press the button to add it.", answer.action)

@@ -6,6 +6,7 @@
     import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
+    import { planProblem } from "../../../scriptural/planNotice"
     import { activeEdit, activeShow, ai, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { addChatMessage, chatSessions, getLLMManager } from "../../llm/llmManager"
@@ -100,22 +101,26 @@
         if (!inputPrompt || isSending) return
 
         const llm = getLLMManager()
+        // what was typed stays in the box until there is something to send it to
+        if (!llm) {
+            addChatMessage(activeSessionKey, "assistant", "Choose a model in Settings, Live Copilot, then send this again.")
+            return
+        }
         chatInput = ""
-
-        if (!llm) return
 
         isSending = true
         setTimeout(scrollToBottomChat)
 
         try {
             const res = await llm.sendMessage(activeSessionKey, inputPrompt, { systemPrompt: getSlideChatSystemPrompt(targetType, getEditItems()) })
-            if (!res) addChatMessage(activeSessionKey, "assistant", "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot, then try again.")
+            if (!res) addChatMessage(activeSessionKey, "assistant", $planProblem || "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot, then try again.")
             if (res?.action && res.action.type === "APPLY_TO_SLIDE") {
                 ChatAction.handle(res.action)
             }
             setTimeout(scrollToBottomChat)
         } catch (err) {
             console.error("Failed to send message:", err)
+            addChatMessage(activeSessionKey, "assistant", "That did not work. Try again.")
         } finally {
             isSending = false
             setTimeout(scrollToBottomChat)

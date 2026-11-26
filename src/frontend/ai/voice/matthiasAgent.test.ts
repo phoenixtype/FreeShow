@@ -14,11 +14,19 @@ vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeake
 vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
 const chat = vi.hoisted(() => ({ run: vi.fn() }))
 vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))
-vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+const lead = vi.hoisted(() => ({ confirmed: true }))
 vi.mock("../agent/control", async () => {
     const { writable } = await import("svelte/store")
     const { ai } = await import("../../stores")
-    return { handMoves: writable(0), setAgentMode: (on: boolean) => ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } })) }
+    return {
+        handMoves: writable(0),
+        setAgentMode: (on: boolean) => {
+            if (on && !lead.confirmed) return false
+            ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } }))
+            return true
+        }
+    }
 })
 vi.mock("../agent/openPage", () => ({ openPage: vi.fn() }))
 vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), removeFromOpenPlan: vi.fn(() => ({ plan: "Sunday", removed: "Amazing Grace" })), showPlanItem: vi.fn() }))
@@ -31,14 +39,12 @@ const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn(), f
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 
 import { get } from "svelte/store"
-import { addToProject } from "../../components/actions/apiHelper"
 import { ai, outLocked } from "../../stores"
 import { handMoves } from "../agent/control"
-import { showPlanItem } from "../agent/planItems"
 import { runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, clearChatHistory } from "../llm/llmManager"
-import { showSection } from "../songs/librarySongs"
+import { planProblem } from "../../scriptural/planNotice"
 import { Matthias, matthiasStatus } from "./matthiasAgent"
 
 let position = 0
@@ -47,6 +53,7 @@ beforeEach(() => {
     vi.clearAllMocks()
     ai.set({})
     outLocked.set(false)
+    vi.mocked(runAgentTool).mockImplementation(async (name) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} }))
     model.llm = null
     screen.slide = { id: "temp" }
     Matthias.stop()
@@ -57,16 +64,16 @@ const hear = (words: string, ended = false) => Matthias.hear(words, position, en
 const settle = () => vi.advanceTimersByTimeAsync(10_000)
 
 it("waits for the request to be finished, then does it once", async () => {
-    expect(hear("so the love of God is real matthias show")).toBe(true)
+    expect(hear("so the love of God is real. matthias show")).toBe(true)
     await vi.advanceTimersByTimeAsync(1000)
-    expect(hear("so the love of God is real matthias show john three")).toBe(true)
+    expect(hear("so the love of God is real. matthias show john three")).toBe(true)
     await vi.advanceTimersByTimeAsync(1000)
     expect(manager.showReference).not.toHaveBeenCalled()
-    hear("so the love of God is real, Matthias, show John three sixteen.", true)
+    hear("so the love of God is real. Matthias, show John three sixteen.", true)
     await settle()
     expect(manager.showReference).toHaveBeenCalledTimes(1)
     // the same words, heard again as the transcript grows
-    expect(hear("so the love of God is real, Matthias, show John three sixteen. And we know")).toBe(false)
+    expect(hear("so the love of God is real. Matthias, show John three sixteen. And we know")).toBe(false)
     await settle()
     expect(manager.showReference).toHaveBeenCalledTimes(1)
 })
@@ -74,7 +81,7 @@ it("waits for the request to be finished, then does it once", async () => {
 it("does one request after another", async () => {
     hear("matthias next verse", true)
     await settle()
-    hear("matthias next verse and the light matthias clear the screen", true)
+    hear("matthias next verse and the light. matthias clear the screen", true)
     await settle()
     expect(manager.navigateNow).toHaveBeenCalledTimes(1)
     expect(manager.clearScreen).toHaveBeenCalledTimes(1)
@@ -106,12 +113,34 @@ it("takes and gives back the lead", async () => {
     expect(get(ai).matthias?.agentMode).toBe(false)
 })
 
+it("does not turn agent mode on by itself before the operator has said yes once", async () => {
+    lead.confirmed = false
+    await Matthias.ask("take over")
+    expect(get(ai).matthias?.agentMode).toBeFalsy()
+    expect(get(matthiasStatus)?.text).toMatch(/Turn on/)
+    lead.confirmed = true
+})
+
 it("says nothing when the name was only said in passing, or is switched off", async () => {
     hear("matthias was a faithful man", true)
     await settle()
     expect(get(matthiasStatus)).toBeNull()
     ai.set({ matthias: { name: false } })
     expect(hear("and then matthias next verse", true)).toBe(false)
+})
+
+it("does nothing for the name in a sermon, with the ask setting off", async () => {
+    const sermon = ["They prayed. Matthias. Next verse", "They prayed, Matthias, next verse", "Peter stood up and Matthias next verse", "Matthias, Acts 1 verse 26, was numbered with the eleven apostles.", "Matthias was numbered with the eleven. Next verse", "So Matthias clear the screen"]
+    for (const words of sermon) {
+        position += 2000
+        hear(words, true)
+        await settle()
+    }
+    expect(manager.showReference).not.toHaveBeenCalled()
+    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(manager.clearScreen).not.toHaveBeenCalled()
+    expect(manager.findReference).not.toHaveBeenCalled()
+    expect(get(matthiasStatus)).toBeNull()
 })
 
 it("does everything asked for in one breath, in order", async () => {
@@ -123,9 +152,9 @@ it("does everything asked for in one breath, in order", async () => {
 it("goes to a part of the song, and takes verse two for the song's when one is up", async () => {
     screen.slide = { id: "a" }
     await Matthias.ask("back to the chorus")
-    expect(showSection).toHaveBeenLastCalledWith("chorus", undefined)
+    expect(runAgentTool).toHaveBeenLastCalledWith("show_section", { section: "chorus" })
     await Matthias.ask("go to verse two")
-    expect(showSection).toHaveBeenLastCalledWith("verse", 2)
+    expect(runAgentTool).toHaveBeenLastCalledWith("show_section", { section: "verse", number: 2 })
 })
 
 it("steps several at once", async () => {
@@ -137,9 +166,9 @@ it("steps several at once", async () => {
 
 it("runs the plan and adds to it, and never shows what is only added", async () => {
     await Matthias.ask("next item")
-    expect(showPlanItem).toHaveBeenCalledTimes(1)
+    expect(runAgentTool).toHaveBeenLastCalledWith("show_plan_item", { item: "next" })
     await Matthias.ask("add Amazing Grace to the plan")
-    expect(addToProject).toHaveBeenCalledWith({ projectId: "p", id: "a" })
+    expect(runAgentTool).toHaveBeenLastCalledWith("add_to_plan", { plan: "p", song: "a" })
     expect(manager.showSong).not.toHaveBeenCalled()
 })
 
@@ -160,15 +189,49 @@ it("works on one request at a time, and stops at once when told to", async () =>
     let finish: (a: unknown) => void = () => {}
     chat.run.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)))
     const first = Matthias.ask("prepare something long", true, true)
-    const second = Matthias.ask("next verse", true, true)
+    const second = Matthias.ask("compose another long thing", true, true)
     await vi.advanceTimersByTimeAsync(10)
-    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(chat.run).toHaveBeenCalledTimes(1)
     await Matthias.ask("stand down", true, true)
     expect(get(ai).matthias?.agentMode).toBe(false)
     finish({ content: "All done" })
     await Promise.all([first, second])
-    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(chat.run).toHaveBeenCalledTimes(1)
     expect(vi.mocked(addChatMessage).mock.calls.some((c) => c[2] === "All done")).toBe(false)
+})
+
+// a model that only ends when it is told to stop
+function hungModel() {
+    const request = vi.fn((options: { signal: AbortSignal }) => new Promise<null>((resolve) => options.signal.addEventListener("abort", () => resolve(null))))
+    model.llm = { request }
+    chat.run.mockImplementationOnce(async (_history, deps) => {
+        await deps.ask("prompt", false)
+        return deps.stopped() ? { content: "Stopped." } : null
+    })
+    return request
+}
+
+it("does not make a plain command wait behind a model turn, and ends that turn", async () => {
+    const request = hungModel()
+    const first = Matthias.ask("prepare something long")
+    await vi.advanceTimersByTimeAsync(10)
+    await Matthias.ask("next verse")
+    await first
+    expect(manager.navigateNow).toHaveBeenCalledTimes(1)
+    expect(request.mock.calls[0][0].signal.aborted).toBe(true)
+})
+
+it.each([
+    ["spoken", false, 45_000],
+    ["typed", true, 120_000]
+])("gives up on a %s model turn at its deadline", async (_, typed, deadline) => {
+    const request = hungModel()
+    const turn = Matthias.ask("prepare something long", true, typed)
+    await vi.advanceTimersByTimeAsync(deadline - 1000)
+    expect(request.mock.calls[0][0].signal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(1000)
+    await turn
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: expect.stringMatching(/took too long/) })
 })
 
 it("leaves the screen alone once the operator has moved it, and still does the rest", async () => {
@@ -223,4 +286,39 @@ it("does not draw on a locked screen, and reports a drawing that failed", async 
 it("forgets the conversation and stops what is being done when the chat is cleared", () => {
     Matthias.clearChat()
     expect(clearChatHistory).toHaveBeenCalledWith("default")
+})
+
+// one implementation of each action, the tools: so what they check is checked when spoken too
+it.each([
+    ["start the timer", "speaker_timer", { command: "start" }],
+    ["next segment", "speaker_timer", { command: "next" }],
+    ["set a timer for ten minutes", "speaker_timer", { command: "set", minutes: 10 }],
+    ["start a 30 second timer", "speaker_timer", { command: "set", minutes: 0.5 }],
+    ["add two minutes", "speaker_timer", { command: "add", minutes: 2 }],
+    ["stop the music", "control_sound", { command: "stop" }],
+    ["turn the screen off", "control_screen", { command: "screen_off" }],
+    ["clear the background", "control_screen", { command: "clear_background" }],
+    ["remove the overlay", "control_screen", { command: "clear_overlays" }],
+    ["show the logo", "show_overlay", { name: "l", on: true }],
+    ["play the welcome video", "show_picture_or_video", { name: "/v/welcome.mp4" }],
+    ["open settings", "open_page", { page: "settings" }],
+    ["open the plan Sunday", "open_plan", { plan: "p" }]
+])('does "%s" with the %s tool', async (words, tool, args) => {
+    await Matthias.ask(words)
+    expect(runAgentTool).toHaveBeenCalledWith(tool, args)
+})
+
+it("says what the tool said when it could not", async () => {
+    vi.mocked(runAgentTool).mockResolvedValue({ ok: false, error: "The sound is still playing." })
+    await Matthias.ask("stop the music")
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: "The sound is still playing." })
+})
+
+it("says that the plan is the reason there is no answer", async () => {
+    model.llm = {}
+    chat.run.mockResolvedValueOnce(null)
+    planProblem.set("Scriptural AI comes with a Church plan.")
+    await Matthias.ask("compose a welcome", true, true)
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: "Scriptural AI comes with a Church plan." })
+    planProblem.set("")
 })

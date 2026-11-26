@@ -7,7 +7,7 @@ describe("findCalls", () => {
     it("hears the name and what follows", () => {
         expect(calls("And that is why we trust him. Matthias, show John three sixteen.")).toEqual(["show John three sixteen."])
         expect(calls("hey Matias next verse")).toEqual(["next verse"])
-        expect(calls("Let us stand Mathias clear the screen Matthias next verse")).toEqual(["clear the screen", "next verse"])
+        expect(calls("Let us stand. Mathias clear the screen. Matthias next verse")).toEqual(["clear the screen.", "next verse"])
         expect(calls("okay Matthias")).toEqual([""])
     })
     it("does not answer when Matthias is only spoken about", () => {
@@ -22,6 +22,21 @@ describe("findCalls", () => {
     it("hears the name run together with hey, and never takes Matthew for it", () => {
         expect(calls("HeMatthias put up Ps twenty three")).toEqual(["put up Ps twenty three"])
         expect(calls("turn to Matthew chapter five verse three")).toEqual([])
+    })
+})
+
+describe("the name in a sermon", () => {
+    // without "hey", the name has to start the utterance and the request has to be all of it
+    const sermon = ["They prayed. Matthias. Next verse", "They prayed, Matthias, next verse", "and the lot fell upon Matthias next verse", "Peter stood up and Matthias next verse", "So Matthias clear the screen", "Then they cast lots, and Matthias was chosen."]
+    it.each(sermon)("does nothing for: %s", (words) => expect(calls(words)).toEqual([]))
+    it("still answers a plain call that starts a sentence, or any call with hey", () => {
+        expect(calls("Amen. Matthias, next verse.")).toEqual(["next verse."])
+        expect(calls("Matthias next verse")).toEqual(["next verse"])
+        expect(calls("so then hey Matthias next verse")).toEqual(["next verse"])
+        expect(calls("They prayed. Hey Matthias. Next verse")).toEqual(["Next verse"])
+    })
+    it("ends the request at the end of its sentence", () => {
+        expect(calls("Matthias, clear the screen. And then Peter said")).toEqual(["clear the screen."])
     })
 })
 

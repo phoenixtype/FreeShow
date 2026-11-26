@@ -25,22 +25,35 @@ function resolveApiKey(providerId: AIProviderId) {
     return key
 }
 
-export async function completeLLM(data: { providerId: AIProviderId; model: string; options: { systemPrompt?: string; prompt: string; jsonSchema?: any; temperature?: number; maxTokens?: number } }): Promise<{ text: string; error?: string; code?: string; retryAfter?: number }> {
+// calls still out, so one that nobody is waiting for any more can be ended
+const running = new Map<string, AbortController>()
+
+export function cancelLLM(requestId: string) {
+    running.get(requestId)?.abort()
+}
+
+export async function completeLLM(data: { providerId: AIProviderId; model: string; options: { systemPrompt?: string; prompt: string; jsonSchema?: any; temperature?: number; maxTokens?: number }; requestId?: string }): Promise<{ text: string; error?: string }> {
+    const controller = new AbortController()
+    if (data.requestId) running.set(data.requestId, controller)
     try {
         if (data.providerId === "scriptural") throw new Error("Scriptural AI is answered in the app")
         const key = resolveApiKey(data.providerId)
-        const text = await llmProviders[data.providerId as LocalProviderId].complete(key, data.model, data.options)
+        const text = await llmProviders[data.providerId as LocalProviderId].complete(key, data.model, { ...data.options, signal: controller.signal })
         return { text }
     } catch (err: any) {
-        return { text: "", error: err?.message, retryAfter: err?.retryAfter }
+        return { text: "", error: err?.message }
+    } finally {
+        if (data.requestId) running.delete(data.requestId)
     }
 }
 
-export function fetchProviderModels(providerId: AIProviderId) {
+export async function fetchProviderModels(providerId: AIProviderId) {
     try {
         if (providerId === "scriptural") return []
         const key = resolveApiKey(providerId)
-        return llmProviders[providerId as LocalProviderId].fetchModels(key)
+        const provider = llmProviders[providerId as LocalProviderId]
+        // the one a request uses when none is chosen: cheap and quick enough for a service
+        return (await provider.fetchModels(key)).map((model) => ({ ...model, recommended: model.id === provider.fallbackModel }))
     } catch (err: any) {
         return { text: "", error: err?.message }
     }

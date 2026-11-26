@@ -26,17 +26,39 @@ export function handBack() {
     if (get(heldUntil)) heldUntil.set(0)
 }
 
-/** full agent mode: the copilot leads the screen by itself until told otherwise */
-export function setAgentMode(on: boolean) {
+/** the operator is being asked whether Matthias may lead */
+export const askingToLead = writable(false)
+// said yes once since the app was started; never saved
+let allowed = false
+
+export function confirmAgentMode() {
+    allowed = true
+    askingToLead.set(false)
+    setAgentMode(true)
+}
+
+export function cancelAgentMode() {
+    askingToLead.set(false)
+}
+
+/**
+ * full agent mode: the copilot leads the screen by itself until told otherwise.
+ * It spends AI requests, so the first time each session the operator is asked:
+ * false when it is not on yet.
+ */
+export function setAgentMode(on: boolean): boolean {
+    askingToLead.set(on && !allowed)
+    if (on && !allowed) return false
     ai.update((a) => ({ ...a, matthias: { ...(a.matthias || {}), agentMode: on } }))
     handBack()
-    if (!on) return
+    if (!on) return true
 
     // it can only lead what it hears
     const settings = get(ai)
     if (settings.enabled && settings.stt?.micDeviceId && !get(copilotListening)) toggleSttListening({ value: true })
     // whatever Bible is needed should be ready before the first word of it
     void BibleCacheManager.getCanon()
+    return true
 }
 
 export type ScreenHolder = "operator" | "matthias" | "held"

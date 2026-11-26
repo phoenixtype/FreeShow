@@ -1,7 +1,7 @@
 // Scriptural AI: the app's AI features for churches on a paid plan, with no
 // key of their own. One request is counted per call against the church's
 // monthly allowance (use_ai_request_for). Claude answers; Gemini if Claude fails.
-// POST { churchId, prompt, systemPrompt?, jsonSchema?, maxTokens? } -> { text }
+// POST { churchId, prompt, systemPrompt?, jsonSchema?, maxTokens?, task? } -> { text }
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
 import { geminiConfig, geminiMicros, usableAnswer } from "../_shared/gemini.ts"
@@ -64,6 +64,9 @@ Deno.serve(async (req) => {
         if (size > MAX_PROMPT_CHARS) return json({ error: "bad_request", message: "That request is too long." }, 400)
         if (body.systemPrompt !== undefined && typeof body.systemPrompt !== "string") return json({ error: "bad_request" }, 400)
         if (body.maxTokens !== undefined && !(Number.isInteger(body.maxTokens) && body.maxTokens > 0)) return json({ error: "bad_request" }, 400)
+        // "listen" (all through a sermon) or "ask" (someone waiting); older apps send neither. Both
+        // are answered by the same model until a cheaper one for listening has been evaluated.
+        if (body.task !== undefined && body.task !== "listen" && body.task !== "ask") return json({ error: "bad_request" }, 400)
         const caller = await callerRole(req, String(body.churchId || ""))
         if (!caller) return json({ error: "unauthorized" }, 401)
 

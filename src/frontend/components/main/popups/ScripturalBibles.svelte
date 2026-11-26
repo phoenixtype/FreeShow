@@ -16,6 +16,7 @@
     let signedIn = false
     let plan = "free"
     let requests: { [code: string]: string } = {}
+    let planUnknown = false
 
     // read again when the app is back in front: signing in and paying happen in the browser
     async function readAccess() {
@@ -25,8 +26,10 @@
             const [{ data: limits }, { data: rows }] = await Promise.all([churchLibrary.rest<{ plan: string }[]>("rpc/church_limits", { method: "POST", body: { target: churchId } }), churchLibrary.rest<{ version: string; status: string }[]>(`bible_access_requests?select=version,status&church_id=eq.${churchId}`)])
             plan = limits?.[0]?.plan || "free"
             requests = Object.fromEntries((rows || []).map((r) => [r.version, r.status]))
-        } catch {
+        } catch (err) {
             // shown as the free plan; downloads of public-domain versions still work
+            console.warn("Church plan could not be read:", err)
+            planUnknown = true
         }
     }
     onMount(readAccess)
@@ -56,7 +59,8 @@
             const { data } = await churchLibrary.rest<string>("rpc/request_bible_access", { method: "POST", body: { target: churchId, version_code: version.code } })
             requests[version.code] = data || "pending"
         } catch (err) {
-            messages[version.code] = err instanceof ScripturalError ? err.message : "The request could not be sent."
+            console.warn("Bible access request failed:", err)
+            messages[version.code] = "The request could not be sent. Check the internet connection, then try again."
             messages = messages
         }
     }
@@ -71,6 +75,10 @@
 <svelte:window on:focus={readAccess} />
 
 <p class="muted">Download a version once and it works offline. Each one is about 5 MB. Free versions download now; the NIV, NKJV and other licensed versions come with a Church plan, once approved.</p>
+
+{#if planUnknown}
+    <p>Your church plan could not be checked. Free versions still download. Check the internet connection and open this again.</p>
+{/if}
 
 <MaterialTextInput label="Search versions" value={search} on:input={(e) => (search = e.detail)} />
 

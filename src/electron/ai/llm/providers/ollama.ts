@@ -69,9 +69,9 @@ class OllamaProvider extends APIModel {
             const base = model.split(":")[0]
             const found = models.some((entry) => entry.id === model || entry.id.split(":")[0] === base)
 
-            return found ? { ok: true as const } : { ok: false as const, error: "Model not found" }
+            return found ? { ok: true as const } : { ok: false as const, error: "That model is not downloaded on this computer yet." }
         } catch {
-            return { ok: false as const, error: "Ollama server is not running on localhost" }
+            return { ok: false as const, error: "Ollama is not running on this computer. Open it and try again." }
         }
     }
 

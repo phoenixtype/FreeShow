@@ -1,7 +1,7 @@
 import { get, writable, type Writable } from "svelte/store"
 import type { AIProviderId, MatchResult } from "../../../types/ai/Ai"
 import { Main } from "../../../types/IPC/Main"
-import { requestMain } from "../../IPC/main"
+import { requestMain, sendMain } from "../../IPC/main"
 import { completeWithScripturalAI } from "../../scriptural/ai"
 import { ai } from "../../stores"
 import { getEditItems } from "../../components/edit/scripts/itemHelpers"
@@ -9,7 +9,7 @@ import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT, getSlideChatSystemPrompt, SLI
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { readPassage } from "../scripture/passage"
 import { closeSchema, parseReply } from "./schema"
-import { fitsSchema, listenWords, modelSteps, type ModelStep } from "./routing"
+import { fitsSchema, listenWords, modelSteps, type AiTask, type ModelStep } from "./routing"
 import type { FreeShowAction } from "../manager/ChatAction"
 
 export interface ChatMessage {
@@ -34,10 +34,27 @@ interface LLMRequestOptions {
     jsonSchema?: any
     temperature?: number
     maxTokens?: number
+    /** left out: "ask" */
+    task?: AiTask
     /** the model on this computer already got this request wrong: ask the stronger one first */
     struggling?: boolean
     /** skips a model this request should not be spent on */
     allow?: (step: ModelStep) => boolean
+    /** nobody is waiting any more: the call is dropped and no other model is asked */
+    signal?: AbortSignal
+}
+
+/** the answer, or null as soon as the signal says to stop; onStop ends the call itself */
+function unlessStopped<T>(answer: Promise<T>, signal: AbortSignal | undefined, onStop: () => void): Promise<T | null> {
+    if (!signal) return answer
+    return new Promise((resolve, reject) => {
+        const stop = () => {
+            onStop()
+            resolve(null)
+        }
+        signal.addEventListener("abort", stop, { once: true })
+        answer.then(resolve, reject).finally(() => signal.removeEventListener("abort", stop))
+    })
 }
 
 // someone is waiting: past this, the next model is asked
@@ -49,10 +66,7 @@ export function getLLMManager(): LLMManager | null {
     const { provider = "none", model = "" } = get(ai).llm || {}
     if (provider === "none") return null
 
-    if (llmManager && (llmManager.providerId !== provider || llmManager.model !== model)) {
-        llmManager.stop()
-        llmManager = null
-    }
+    if (llmManager && (llmManager.providerId !== provider || llmManager.model !== model)) llmManager = null
 
     if (!llmManager) llmManager = new LLMManager(provider as AIProviderId, model)
 
@@ -68,22 +82,21 @@ export class LLMManager {
         this.model = model
     }
 
-    private retryTimeout: ReturnType<typeof setTimeout> | null = null
     async request<T>(asked: LLMRequestOptions): Promise<T | null> {
         const options = asked.jsonSchema ? { ...asked, jsonSchema: closeSchema(asked.jsonSchema) } : asked
-        if (this.retryTimeout) {
-            clearTimeout(this.retryTimeout)
-            this.retryTimeout = null
-        }
-
-        const { struggling, allow, ...completion } = options
+        const { struggling, allow, signal, task = "ask", ...completion } = options
         const steps = modelSteps({ provider: this.providerId, model: this.model, local: get(ai).llm?.localFallback, struggling })
 
         for (const [index, step] of steps.entries()) {
+            if (signal?.aborted) return null
             if (allow && !allow(step)) continue
             try {
                 const isLast = index === steps.length - 1
-                const response = step.providerId === "scriptural" ? await completeWithScripturalAI(completion) : await requestMain(Main.AI_LLM_COMPLETE, { ...step, options: completion }, undefined, isLast ? 60000 : FIRST_ANSWER_MS)
+                const requestId = crypto.randomUUID()
+                const proxied = step.providerId === "scriptural"
+                const asking = proxied ? completeWithScripturalAI(completion, task) : requestMain(Main.AI_LLM_COMPLETE, { ...step, options: completion, requestId }, undefined, isLast ? 60000 : FIRST_ANSWER_MS)
+                const response = await unlessStopped<Awaited<typeof asking>>(asking, signal, () => !proxied && sendMain(Main.AI_LLM_CANCEL, { requestId }))
+                if (signal?.aborted) return null
 
                 if (response?.error || !response?.text) {
                     if (response?.error) console.error("LLM error:", response.error)
@@ -98,11 +111,6 @@ export class LLMManager {
             }
         }
         return null
-    }
-
-    stop() {
-        if (this.retryTimeout) clearTimeout(this.retryTimeout)
-        this.retryTimeout = null
     }
 
     // --- STT Match Detection ---
@@ -136,6 +144,7 @@ export class LLMManager {
                 systemPrompt: STT_CONTROLLER_PROMPT,
                 jsonSchema: STT_CONTROLLER_SCHEMA,
                 prompt: chunkWithOverlap,
+                task: "listen",
                 allow
             })
             if (!result?.content) return null

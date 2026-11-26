@@ -34,7 +34,7 @@
     $: provider = (llmOptions.provider || "none") as AIProviderId | "none"
 
     // DYNAMIC MODEL FETCHING
-    let fetchedModels: { id: string; name: string }[] = []
+    let fetchedModels: { id: string; name: string; recommended?: boolean }[] = []
     let loadingModels = false
 
     $: if (provider && provider !== "none" && provider !== "scriptural") fetchModelsForProvider(provider)
@@ -60,7 +60,7 @@
 
     $: modelOptions = activeModelList.map((model) => ({ value: model.id, label: model.name }))
     $: storedModel = llmOptions.model || ""
-    $: defaultModel = activeModelList[0]?.id || ""
+    $: defaultModel = (activeModelList.find((model) => model.recommended) || activeModelList[0])?.id || ""
     $: selectedModel = activeModelList.find((model) => model.id === storedModel) ? storedModel : defaultModel
 
     function setProvider(id: string) {
@@ -98,7 +98,7 @@
         const isValid = await requestMain(Main.AI_SET_KEY, { providerId: provider, key: keyInput })
         if (!isValid) {
             keyInput = ""
-            newToast("Invalid key")
+            newToast("That key was not accepted. Check that you copied all of it and that the computer is online, then paste it again.")
             return
         }
 
