@@ -63,6 +63,9 @@ export const receiver = {
             return a
         })
     },
+    COPILOT: (data: any) => {
+        _set("copilot", data)
+    },
     ACCESS: () => {
         const storedPwd = _get("password").stored
         if (storedPwd && storedPwd.length) localStorage.password = storedPwd
@@ -70,6 +73,7 @@ export const receiver = {
 
         // Request current output data which should include scripture state
         send("API:get_output")
+        send("COPILOT")
     },
 
     /////

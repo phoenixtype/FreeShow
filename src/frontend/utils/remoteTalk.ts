@@ -18,6 +18,7 @@ import { lastClickTime } from "./common"
 import { translateText } from "./language"
 import { send } from "./request"
 import { formatSearch, showSearch } from "./search"
+import { remoteCopilot } from "./remoteCopilot"
 import { sendData, setConnectedState } from "./sendData"
 
 export function getFilteredAudioChannels() {
@@ -33,6 +34,8 @@ export function getFilteredAudioChannels() {
 let currentOut = ""
 let loadingShow = ""
 export const receiveREMOTE: any = {
+    // behind the password like every channel but PASSWORD and ACCESS
+    COPILOT: (msg: any) => remoteCopilot(msg),
     PASSWORD: (msg: any) => {
         sendThemeToRemote()
 

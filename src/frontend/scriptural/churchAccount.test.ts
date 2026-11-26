@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const server = vi.hoisted(() => ({ calls: [] as { path: string; init: any }[], answer: (_path: string): any => [], invoked: [] as { name: string; body: any }[], reply: { ok: true, status: 200, data: {} as any } }))
@@ -37,6 +39,24 @@ describe("the church's plan", () => {
         ])
         expect(priceId("church", false)).toBe("church_monthly")
         expect(priceId("multi_campus", true)).toBe("multi_campus_yearly")
+    })
+})
+
+describe("what Multi-campus is said to add", () => {
+    const file = (path: string) => readFileSync(join(__dirname, "../../..", path), "utf8")
+    const limits = file("supabase/migrations/20261126110000_church_limits_members_only.sql")
+    const [, manyPeople, people] = limits.match(/when 'multi_campus' then (\d+) when 'church' then (\d+) else 3 end/)!
+    const [, manyAsks, asks] = limits.match(/when 'multi_campus' then (\d+) when 'church' then (\d+) else 0 end/)!
+    const spoken = (n: string) => Number(n).toLocaleString("en-US")
+    const section = file("site/pricing/index.html").split("<h2>Multi-campus")[1].split("</ul>")[0]
+
+    it("is, on the pricing page and in the app, the real extra room and nothing else", () => {
+        for (const text of [section, PLANS.find((p) => p.id === "multi_campus")!.includes]) {
+            expect(text).toContain(`${manyPeople} people instead of ${people}`)
+            expect(text).toContain(`${spoken(manyAsks)} Scriptural AI requests a month instead of ${spoken(asks)}`)
+            // songs are already unlimited on Church, and media sync is not sold
+            expect(text).not.toMatch(/more songs|storage|media|\d\s?GB|per campus|across campuses/i)
+        }
     })
 })
 
