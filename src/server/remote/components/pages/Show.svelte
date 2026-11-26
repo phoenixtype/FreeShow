@@ -151,13 +151,13 @@
         <div class="buttons" style="position: relative; z-index: 2;">
             <div class="edit-actions">
                 {#if groupsOpened && !addGroups}
-                    <Button on:click={() => (addGroups = true)} style="width: 100%;" center dark>
+                    <Button on:click={() => (addGroups = true)} center dark>
                         <Icon id="add" right />
                         {translate("settings.add", $dictionary)}
                     </Button>
                 {/if}
 
-                <Button on:click={done} style="width: 100%;" center dark class="done-button">
+                <Button on:click={done} center dark class="done-button">
                     <Icon id={addGroups ? "back" : "check"} right />
                     {translate(`actions.${addGroups ? "back" : "done"}`, $dictionary)}
                 </Button>
@@ -174,11 +174,13 @@
                     <!-- disabled={slideNum <= 0}  -->
                     <Button on:click={() => navigate("previous_slide")} variant="outlined" center compact>
                         <Icon id="previous" size={1.2} />
+                        <span>Previous</span>
                     </Button>
                     <span class="counter">{slideNum < 0 ? 0 : slideNum + 1}/{totalSlides}</span>
                     <!-- disabled={slideNum + 1 >= totalSlides} -->
                     <Button on:click={() => navigate("next_slide")} variant="outlined" center compact>
                         <Icon id="next" size={1.2} />
+                        <span>Next</span>
                     </Button>
                 </div>
 
@@ -192,15 +194,15 @@
             <div class="buttons">
                 {#if layouts.length > 1}
                     {@const currentLayout = layouts.find((a) => a.id == $activeShow.settings?.activeLayout)}
-                    <Dropdown value={currentLayout?.name || "—"} options={layouts} on:click={changeLayout} style="width: 100%;" up />
+                    <Dropdown value={currentLayout?.name || "—"} options={layouts} on:click={changeLayout} up />
                 {/if}
 
                 <div class="edit">
-                    <Button on:click={() => (groupsOpened = true)} style="width: 100%;" center dark>
+                    <Button on:click={() => (groupsOpened = true)} center dark>
                         <Icon id="groups" right />
                         {translate("tools.groups", $dictionary)}
                     </Button>
-                    <Button on:click={() => (editOpened = true)} style="width: 100%;" center dark>
+                    <Button on:click={() => (editOpened = true)} center dark>
                         <Icon id="edit" right />
                         {translate("titlebar.edit", $dictionary)}
                     </Button>
@@ -227,6 +229,21 @@
         border-radius: 8px 8px 0 0;
     }
 
+    /* buttons are as wide as their words: actions at the right edge, the two tools in the middle */
+    .edit-actions,
+    .edit {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px;
+    }
+    .edit-actions {
+        justify-content: flex-end;
+    }
+    .edit {
+        justify-content: center;
+    }
+
     .controls-section :global(.clearAll) {
         border-radius: 8px 8px 0 0 !important;
     }
@@ -247,7 +264,6 @@
         min-width: 32px;
         min-height: 44px !important;
         padding: 2px 6px !important;
-        flex: 1;
     }
 
     .slide-progress :global(button) :global(svg) {
