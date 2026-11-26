@@ -402,7 +402,9 @@ export class Matthias {
         this.resultIndex = 0
         // the others wait in the list, one tap away
         const others = found.slice(1, 5).map((content) => ({ id: uid(5), timestamp: Date.now(), content, confidence: 60, action: "present", trigger: () => AiManager.showReference(content) }))
-        aiSuggestions.update((list) => [...others, ...list.filter((s) => !found.includes(s.content))].slice(0, 15))
+        // only offers are cut to fit: what was already shown stays for the session
+        let offered = 0
+        aiSuggestions.update((list) => [...others, ...list.filter((s) => s.action === "presented" || !found.includes(s.content))].filter((s) => s.action === "presented" || ++offered <= 15))
         return this.passage(found[0])
     }
 

@@ -262,10 +262,10 @@ export class NemotronDriver implements TranscriptionDriver {
         this.inUtterance = false
     }
 
+    // every word goes with the part that is cut off: a last word held back would arrive alone,
+    // and a sentence ending in "back" or "next" would then step the verse
     private splitUtterance(hypothesis: Hypothesis) {
-        this.emitFromHypothesis(hypothesis, "growing")
-        if (this.emittedChars > 0) this.emitText("", true)
-        this.inUtterance = false
+        this.closeUtterance(hypothesis, true)
     }
 
     private emitText(text: string, utteranceEnd: boolean, confidence?: number, glue = false) {

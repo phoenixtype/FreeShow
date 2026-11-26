@@ -15,10 +15,16 @@ const svelteIn = (dir: string) =>
 
 // screens that have been cleared of them; add a file here once it is
 const FILES = [
-    ...svelteIn("frontend/ai/components/popups").filter((file) => !file.endsWith("LlmOptions.svelte")),
+    ...svelteIn("frontend/ai/components/popups"),
     ...svelteIn("frontend/ai/components/settings"),
     "frontend/ai/components/floating/AiFloating.svelte",
     "frontend/ai/components/floating/CopilotPreview.svelte",
+    "frontend/ai/components/floating/AiChat.svelte",
+    "frontend/ai/components/floating/AiTranscription.svelte",
+    "frontend/ai/components/floating/SmartAction.svelte",
+    "frontend/ai/components/floating/ScreenControl.svelte",
+    "frontend/components/main/popups/ChurchLibrary.svelte",
+    ...svelteIn("frontend/components/main/popups/church"),
     "frontend/ai/components/floating/MatthiasInput.svelte",
     "frontend/components/output/preview/ClearButtons.svelte",
     "frontend/components/settings/tabs/Connection.svelte",

@@ -4,8 +4,7 @@
     import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
-    import { ai, aiSmartAction, aiSttStatus, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript, transcriptLog } from "../../../stores"
-    import { translateText } from "../../../utils/language"
+    import { ai, aiSmartAction, aiSuggestions, outLocked, outputs, scriptures, shows, sttTranscript, transcriptLog } from "../../../stores"
     import type { AiSuggestion } from "../../../../types/ai/Ai"
     import { getFirstActiveOutput } from "../../../components/helpers/output"
     import { readPassage } from "../../scripture/passage"
@@ -120,12 +119,7 @@
             </div>
         {/if}
         <div class="card-body">
-            {#if state === "error"}
-                <div class="message">
-                    <p class="error">{translateText($aiSttStatus.message || "The microphone could not be opened.")}</p>
-                    <MaterialButton variant="outlined" icon="refresh" on:click={() => dispatch("listen")}>Try again</MaterialButton>
-                </div>
-            {:else if state === "processing"}
+            {#if state === "processing"}
                 <div class="message">
                     <div class="spinner"></div>
                     <p><T id="ai.processing" /></p>
@@ -229,10 +223,6 @@
     .message p {
         white-space: initial;
     }
-    .error {
-        color: #ff6b6b;
-    }
-
     .transcript-box {
         width: 100%;
         height: 100%;

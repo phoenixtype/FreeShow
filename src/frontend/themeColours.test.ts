@@ -55,11 +55,9 @@ describe("assistant panel text colours", () => {
     const files = (at: string): string[] => readdirSync(at).flatMap((name) => (statSync(join(at, name)).isDirectory() ? files(join(at, name)) : name.endsWith(".svelte") ? [join(at, name)] : []))
 
     // edited by another change on 2026-11-26; take a file off this list once its colours are variables
-    const PENDING = ["floating/AiTranscription.svelte"]
 
     it("uses theme variables, never a fixed colour, for text", () => {
         const found = files(dir)
-            .filter((file) => !PENDING.some((name) => file.endsWith(name)))
             .flatMap((file) => [...readFileSync(file, "utf8").matchAll(/(?<![-\w])color:\s*(#[0-9a-f]{3,8}|rgba?\()[^;"]*/gi)].map((match) => `${file.slice(dir.length + 1)}: ${match[0]}`))
         expect(found).toEqual([])
     })
