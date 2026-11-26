@@ -229,3 +229,37 @@ export function showToSong(show: ShowLike): CleanSong {
         arrangement: order.map(({ id }) => labelOf.get(id)).filter((l): l is string => !!l)
     }
 }
+
+// SYNC //
+
+/** The words and credits of a song as one short value: equal when nothing a reader would see differs. */
+export function songSignature(song: Pick<CleanSong, "title" | "authors" | "copyright" | "ccli" | "sections" | "arrangement">): string {
+    const byLabel = new Map(song.sections.map((s) => [s.label, s.lines.map((line) => line.trim()).filter(Boolean)]))
+    const order = song.arrangement.length ? song.arrangement : song.sections.map((s) => s.label)
+    const text = JSON.stringify([song.title, song.authors || "", song.copyright || "", song.ccli || "", order.map((label) => byLabel.get(label) || [])])
+    // FNV-1a, twice with different offsets: small enough to keep one per song
+    const hash = (seed: number) => {
+        let value = seed
+        for (let i = 0; i < text.length; i++) value = Math.imul(value ^ text.charCodeAt(i), 16777619)
+        return (value >>> 0).toString(36)
+    }
+    return hash(2166136261) + hash(84696351)
+}
+
+export interface SyncedSong {
+    /** the library's words at the last sync */
+    r: string
+    /** this computer's words at the last sync */
+    l: string
+}
+
+/**
+ * What to do with a song the library sent.
+ * keep: this computer's copy stays. apply: replace it. later: edited here and not sent yet.
+ */
+export function pullChoice(remote: string, local: string | null, synced: SyncedSong | undefined, canWrite: boolean): "keep" | "apply" | "later" {
+    if (local === null) return "apply"
+    if (local === remote || synced?.r === remote) return "keep"
+    if (synced && synced.l !== local && canWrite) return "later"
+    return "apply"
+}

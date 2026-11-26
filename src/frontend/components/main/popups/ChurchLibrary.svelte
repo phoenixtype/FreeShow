@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
-    import { createChurch, createInvite, joinChurch, myChurches, pushSongs, syncSongs, type Church } from "../../../scriptural/churchSync"
+    import { createChurch, createInvite, joinChurch, myChurches, syncChurch, syncStatus, type Church } from "../../../scriptural/churchSync"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import { Main } from "../../../../types/IPC/Main"
     import { sendMain } from "../../../IPC/main"
@@ -59,6 +59,7 @@
         try {
             session = (await churchLibrary.signInWithGoogle()) || session
             if (session) await loadChurches()
+            if (session && activeId) void sync()
         } catch (err) {
             message = errorText(err, "Google could not sign you in. Try again.")
         }
@@ -74,6 +75,7 @@
             codeSent = false
             code = ""
             await loadChurches()
+            if (activeId) void sync()
         } catch (err) {
             message = errorText(err, "That code did not work. Try again.")
         }
@@ -81,6 +83,7 @@
     }
 
     async function leave() {
+        syncStatus.set({ running: false, at: null, error: "" })
         await churchLibrary.signOut()
         session = null
         churches = []
@@ -92,6 +95,7 @@
             activeId = await createChurch(newChurchName)
             newChurchName = ""
             await loadChurches()
+            if (activeId) void sync()
         } catch (err) {
             message = errorText(err, "The church could not be created. Try again.")
         }
@@ -104,27 +108,26 @@
             activeId = await joinChurch(inviteCode)
             inviteCode = ""
             await loadChurches()
+            if (activeId) void sync()
         } catch (err) {
             message = errorText(err, "That invite code did not work.")
         }
         busy = false
     }
 
-    let syncing = false
     let received = 0
+    $: syncing = $syncStatus.running
     async function sync() {
-        syncing = true
         message = ""
         received = 0
         try {
-            const sent = await pushSongs(activeId)
-            const count = await syncSongs(activeId, (n) => (received = n))
-            message = [sent ? `${sent} songs sent to the library.` : "", count ? `${count} songs updated on this computer.` : "", !sent && !count ? "Everything is already up to date." : ""].filter(Boolean).join(" ")
+            const done = await syncChurch(activeId, (n) => (received = n))
+            message = [done.sent ? `${done.sent} songs sent to the library.` : "", done.received ? `${done.received} songs updated on this computer.` : "", !done.sent && !done.received && !done.refused ? "Everything is already up to date." : "", done.refused].filter(Boolean).join(" ")
         } catch (err) {
             message = errorText(err, "The sync stopped. Try again.")
         }
-        syncing = false
     }
+    const syncedAt = (at: number) => new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 
     $: if (activeId) localStorage.setItem(ACTIVE_KEY, activeId)
     $: active = churches.find((c) => c.id === activeId)
@@ -216,8 +219,13 @@
         {/if}
 
         <div class="row spaced">
-            <p class="muted">{syncing ? `${received} songs received` : "Sends your changes and brings in everyone else's."}</p>
-            <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync songs</MaterialButton>
+            <p class="muted">
+                {#if syncing}Syncing. {received ? `${received} songs received` : ""}
+                {:else if $syncStatus.error}{$syncStatus.error}
+                {:else if $syncStatus.at}Songs sync by themselves. Last synced at {syncedAt($syncStatus.at)}.
+                {:else}Songs sync by themselves while you are online.{/if}
+            </p>
+            <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync now</MaterialButton>
         </div>
 
         {#if canInvite}

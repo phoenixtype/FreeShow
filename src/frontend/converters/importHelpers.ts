@@ -37,7 +37,7 @@ export function createCategory(name: string, icon = "song", { isDefault, isArchi
 }
 
 // quiet: a background sync; nothing is opened, added to the project or put on screen
-export function setTempShows(tempShows: { id: string; show: Show }[], options: { suppressFinishedToast?: boolean; quiet?: boolean } = {}) {
+export function setTempShows(tempShows: { id: string; show: Show }[], options: { suppressFinishedToast?: boolean; quiet?: boolean; background?: boolean } = {}) {
     const batchIds = new Set(tempShows.map((a) => a.id))
     const taken = Object.entries(get(shows) || {})
         .filter(([id]) => !batchIds.has(id))
@@ -53,7 +53,8 @@ export function setTempShows(tempShows: { id: string; show: Show }[], options: {
         const selectedIndex = get(activeShow)?.index === undefined ? undefined : get(activeShow)!.index! + 1
         history({ id: "UPDATE", newData: { data: tempShows[0].show, remember: { project: get(activeProject), index: selectedIndex } }, oldData: { id: tempShows[0].id }, location: { page: "show", id: "show" } })
     } else {
-        history({ id: "SHOWS", newData: { data: tempShows, replace: true }, location: { page: "show" } })
+        // background: no undo step and no page change, the person did not ask for it
+        history({ id: "SHOWS", newData: { data: tempShows, replace: true }, location: { page: "show" }, save: !options.background })
     }
 
     if (!options.quiet) activePopup.set(null)

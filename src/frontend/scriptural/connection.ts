@@ -9,6 +9,11 @@
 
 import { Main } from "../../types/IPC/Main"
 
+// nothing waits on the network for ever: a hung request would stop every later sync
+const REQUEST_WAIT_MS = 30_000
+// AI answers and whole Bibles take longer
+const FUNCTION_WAIT_MS = 3 * 60_000
+
 // a little longer than the app waits for the browser
 const GOOGLE_WAIT_MS = 5 * 60 * 1000 + 5000
 
@@ -55,7 +60,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
     }
 
     async function authRequest(path: string, body: object): Promise<any> {
-        const response = await fetch(`${AUTH_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", apikey: anonKey }, body: JSON.stringify(body) })
+        const response = await fetch(`${AUTH_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", apikey: anonKey }, body: JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_WAIT_MS) })
         const data = await response.json().catch(() => ({}))
         if (!response.ok) throw new AuthRejected(data?.msg || data?.error_description || data?.message || "Could not be reached. Try again.", response.status)
         return data
@@ -95,18 +100,26 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         await fetch(`${AUTH_URL}/logout`, { method: "POST", headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` } }).catch(() => null)
     }
 
+    // one refresh at a time: a refresh token works once, and a second use signs the computer out
+    let refreshing: Promise<string | null> | null = null
+
     /** A current access token, refreshed when within a minute of expiring; null when signed out. */
     async function accessToken(): Promise<string | null> {
         const session = getSession()
         if (!session) return null
         if (session.expires_at - 60 > Date.now() / 1000) return session.access_token
+        refreshing ||= refresh(session).finally(() => (refreshing = null))
+        return refreshing
+    }
+
+    async function refresh(session: ScripturalSession): Promise<string | null> {
         try {
             const refreshed = toSession(await authRequest("/token?grant_type=refresh_token", { refresh_token: session.refresh_token }), session.email)
             storeSession(refreshed)
             return refreshed.access_token
         } catch (err) {
             // only a refused refresh token ends the session; offline in the meeting room, it is kept
-            if (err instanceof AuthRejected && err.status >= 400 && err.status < 500) {
+            if (err instanceof AuthRejected && [400, 401, 403].includes(err.status)) {
                 storeSession(null)
                 return null
             }
@@ -123,7 +136,8 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         const response = await fetch(`${REST_URL}/${pathAndQuery}`, {
             method: init.method || "GET",
             headers: { apikey: anonKey, Authorization: `Bearer ${token}`, ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}), ...init.headers },
-            body: init.body !== undefined ? JSON.stringify(init.body) : undefined
+            body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+            signal: AbortSignal.timeout(REQUEST_WAIT_MS)
         })
         if (!response.ok) {
             const detail = await response.json().catch(() => null)
@@ -136,7 +150,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
     /** Calls one of the project's edge functions as the signed-in account. Answers with its JSON, errors included. */
     async function invoke<T>(name: string, body: unknown): Promise<{ ok: boolean; status: number; data: T }> {
         const token = (await accessToken()) || anonKey
-        const response = await fetch(`${projectUrl}/functions/v1/${name}`, { method: "POST", headers: { apikey: anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        const response = await fetch(`${projectUrl}/functions/v1/${name}`, { method: "POST", headers: { apikey: anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(FUNCTION_WAIT_MS) })
         return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T }
     }
 

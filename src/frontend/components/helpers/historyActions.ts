@@ -2,7 +2,7 @@ import { get } from "svelte/store"
 import { uid } from "uid"
 import type { Item, Slide, SlideData, Template } from "../../../types/Show"
 import { breakLongLines, removeItemValues } from "../../show/slides"
-import { activeEdit, activePage, activePopup, activeProject, activeShow, alertMessage, cachedShowsData, deletedShows, groups, notFound, projects, refreshEditSlide, renamedShows, shows, showsCache, templates } from "../../stores"
+import { activeEdit, activePage, activePopup, activeProject, activeShow, alertMessage, cachedShowsData, deletedShows, groups, notFound, projects, refreshEditSlide, renamedShows, shows, showsCache, templates, outputs } from "../../stores"
 import { save } from "../../utils/save"
 import { EMPTY_SHOW_SLIDE } from "../../values/empty"
 import { customActionActivation } from "../actions/actions"
@@ -357,6 +357,12 @@ async function handleShows(obj, _data, initializing) {
     if (!deleting && Object.keys(get(showsCache)).length >= 100) {
         if (initializing) save()
         setTimeout(() => {
+            // a background update frees the memory too, but never takes the open or live show away
+            if (obj.save === false) {
+                const keep = [get(activeShow)?.id, ...Object.values(get(outputs)).map((a) => a.out?.slide?.id)]
+                showsCache.update((a) => Object.fromEntries(Object.entries(a).filter(([id]) => keep.includes(id))))
+                return
+            }
             showsCache.set({})
             activeShow.set(null)
         }, 2000)
@@ -369,7 +375,7 @@ async function handleShows(obj, _data, initializing) {
             newShows = newShows.filter((a) => a.id !== id)
         })
         if (showsList.length < projectItems.length) {
-            history({ id: "UPDATE", newData: { key: "shows", data: newShows }, oldData: { id: get(activeProject) }, location: { page: "show", id: "project_key" } })
+            history({ id: "UPDATE", newData: { key: "shows", data: newShows }, oldData: { id: get(activeProject) }, location: { page: "show", id: "project_key" }, save: obj.save })
         }
     }
 }
