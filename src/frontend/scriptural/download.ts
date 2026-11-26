@@ -73,12 +73,15 @@ export function downloadedId(code: string): string | null {
 }
 
 /** A licensed version, through the church library once Samuel has granted it to the church. */
-async function licensedRows(version: ScripturalVersion): Promise<VerseRow[]> {
+export async function licensedRows(version: ScripturalVersion): Promise<VerseRow[]> {
     const churchId = localStorage.getItem(ACTIVE_CHURCH_KEY)
     if (!churchId || !churchLibrary.getSession()) throw new ScripturalError("Sign in to your church library first (Import > Church library).")
-    const { ok, data } = await churchLibrary.invoke<{ rows?: VerseRow[]; message?: string }>("bible-download", { churchId, version: version.code })
-    if (!ok || !data.rows) throw new ScripturalError(data.message || "This version could not be downloaded.")
-    return data.rows
+    const { ok, data } = await churchLibrary.invoke<{ url?: string; rows?: VerseRow[]; message?: string }>("bible-download", { churchId, version: version.code, format: "url" })
+    // a short-lived link to the whole version
+    const file = ok && data.url ? await fetch(data.url) : null
+    const rows = file ? (file.ok ? ((await file.json()) as { rows?: VerseRow[] }).rows : undefined) : data.rows
+    if (!ok || !rows) throw new ScripturalError(data.message || "This version could not be downloaded.")
+    return rows
 }
 
 export async function downloadVersion(version: ScripturalVersion, onProgress: (fraction: number) => void): Promise<void> {
