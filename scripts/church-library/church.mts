@@ -206,6 +206,8 @@ async function importMedia(churchId: string, folder: string, files: string[]) {
         }
         const id = randomUUID()
         const path = `${churchId}/${id}/${storageName(basename(m.file))}`
+        const room = await api<number>("/rest/v1/rpc/church_storage_room", { body: { target: churchId } })
+        if (bytes > room) fail(`No room left for ${basename(m.file)}. Remove some files, or upgrade.`)
         await api(`/storage/v1/object/church-media/${path.split("/").map(encodeURIComponent).join("/")}`, { raw: readFileSync(m.file), headers: { "Content-Type": m.mime, "x-upsert": "false" } })
         await api("/rest/v1/rpc/bulk_register_media", { body: { target: churchId, media_id: id, media_kind: m.kind, media_title: title, media_path: path, media_mime: m.mime, file_bytes: bytes } })
         uploaded++

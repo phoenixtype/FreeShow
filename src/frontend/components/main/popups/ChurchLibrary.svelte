@@ -151,11 +151,14 @@
     // PLAN //
     const PLAN_NAMES = { free: "Free", church: "Church", multi_campus: "Multi-campus" }
     let plan = ""
+    let overPlan = false
     $: if (activeId && session) loadPlan(activeId)
     async function loadPlan(id: string) {
         try {
             const { data } = await churchLibrary.rest<{ plan: string }[]>("rpc/church_limits", { method: "POST", body: { target: id } })
             plan = data?.[0]?.plan || "free"
+            const within = await churchLibrary.rest<boolean>("rpc/church_within_plan", { method: "POST", body: { target: id } }).catch(() => null)
+            overPlan = within?.data === false
         } catch {
             plan = ""
         }
@@ -234,6 +237,10 @@
                     <MaterialButton variant="outlined" small icon="add" on:click={makeInvite}>Invite someone</MaterialButton>
                 {/if}
             </div>
+        {/if}
+
+        {#if overPlan}
+            <p class="muted">Your church is over its plan, so new songs, files and people cannot be added. You can still open and download everything.</p>
         {/if}
 
         {#if plan}
