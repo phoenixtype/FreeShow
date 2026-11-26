@@ -254,9 +254,9 @@
     {@const disabled = server.id === "companion" ? $serverData?.companion?.enabled !== true : server.enabledByDefault ? $disabledServers[server.id] === true : $disabledServers[server.id] !== false}
     {@const connections = Object.keys($connections[server.id.toUpperCase()] || {})?.length || 0}
 
-    <InputRow>
+    <InputRow style="justify-content: space-between;">
         <MaterialButton
-            style="flex: 1;justify-content: space-between;"
+            style="justify-content: space-between;gap: 15px;"
             {disabled}
             on:click={() => {
                 popupData.set({ ip, id: server.id })
@@ -291,9 +291,9 @@
     </InputRow>
 {/each}
 
-<InputRow>
+<InputRow style="justify-content: space-between;">
     <MaterialButton
-        style="flex: 1;justify-content: space-between;"
+        style="justify-content: space-between;gap: 15px;"
         disabled={!agentsOn}
         on:click={() => {
             popupData.set({ ip, id: "agents" })
@@ -312,9 +312,9 @@
     <MaterialToggleSwitch label="" checked={agentsOn} on:change={toggleAgents} />
 </InputRow>
 
-<InputRow>
+<InputRow style="justify-content: space-between;">
     <MaterialButton
-        style="flex: 1;justify-content: space-between;"
+        style="justify-content: space-between;gap: 15px;"
         disabled={!$special.remoteController}
         on:click={() => {
             popupData.set({ remoteController: true })
@@ -335,38 +335,38 @@
     <!-- No provider connected - show connection options -->
     <Title label="settings.content_provider" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("planningcenter")} style="flex: 1;" icon="login">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("planningcenter")} icon="login">
             <T id="settings.connect_to" replace={["Planning Center"]} />
         </MaterialButton>
     </InputRow>
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("churchApps")} style="flex: 1;" icon="login">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("churchApps")} icon="login">
             <T id="settings.connect_to" replace={["ChurchApps"]} />
         </MaterialButton>
     </InputRow>
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("amazinglife")} style="flex: 1;" icon="login">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("amazinglife")} icon="login">
             <T id="settings.connect_to" replace={["APlay"]} />
         </MaterialButton>
     </InputRow>
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("onstage")} style="flex: 1;" icon="login">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("onstage")} icon="login">
             <T id="settings.connect_to" replace={["OnStage"]} />
         </MaterialButton>
     </InputRow>
 
-    <InputRow>
-        <MaterialButton on:click={() => (templeTokenOpen = !templeTokenOpen)} style="flex: 1;" icon="login" isActive={templeTokenOpen}>
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => (templeTokenOpen = !templeTokenOpen)} icon="login" isActive={templeTokenOpen}>
             <T id="settings.connect_to" replace={["Temple"]} />
         </MaterialButton>
     </InputRow>
 
     {#if templeTokenOpen}
-        <InputRow>
+        <InputRow style="justify-content: space-between;">
             <MaterialTextInput label="Temple API token" type="password" value={templeToken} pasteBtn autofocus on:input={(e) => (templeToken = e.detail)} on:change={(e) => (templeToken = e.detail)} />
             <MaterialButton on:click={() => sendMain(Main.URL, TEMPLE_TOKEN_URL)} title="Make a token in Temple with the services:read permission">
                 <Icon id="launch" white />
@@ -380,8 +380,8 @@
     <!-- Temple connected -->
     <Title label="Content Provider: Temple" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("temple")} style="flex: 1;border-bottom: 2px solid var(--connected) !important;" icon="logout">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("temple")} style="border-bottom: 2px solid var(--connected) !important;" icon="logout">
             <T id="settings.disconnect_from" replace={["Temple"]} />
         </MaterialButton>
         <MaterialButton icon="cloud_sync" on:click={syncContentProvider}>
@@ -399,8 +399,8 @@
     <!-- Planning Center connected -->
     <Title label="Content Provider: Planning Center" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("planningcenter")} style="flex: 1;border-bottom: 2px solid var(--connected) !important;" icon="logout">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("planningcenter")} style="border-bottom: 2px solid var(--connected) !important;" icon="logout">
             <T id="settings.disconnect_from" replace={["Planning Center"]} />
         </MaterialButton>
         <MaterialButton icon="cloud_sync" on:click={syncContentProvider}>
@@ -414,9 +414,9 @@
     <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.planningcenter?.autoSync === true} on:change={(e) => updateProvider("planningcenter", "autoSync", e.detail)} />
 
     {#if $contentProviderData.planningcenter?.autoSync === true}
-        <InputRow>
+        <InputRow style="justify-content: space-between;">
             <!-- <MaterialPopupButton label="popup.sync_folders" value="" name="" icon="folder" popupId="sync_folders" on:click={() => activePopup.set("sync_folders")} style="flex: 1;" /> -->
-            <MaterialButton icon="folder" on:click={() => activePopup.set("sync_folders")} style="flex: 1;">
+            <MaterialButton icon="folder" on:click={() => activePopup.set("sync_folders")}>
                 <T id="popup.sync_folders" />
             </MaterialButton>
         </InputRow>
@@ -430,8 +430,8 @@
     <!-- ChurchApps connected -->
     <Title label="Content Provider: ChurchApps" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("churchApps")} style="flex: 1;border-bottom: 2px solid var(--connected) !important;" icon="logout">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("churchApps")} style="border-bottom: 2px solid var(--connected) !important;" icon="logout">
             <T id="settings.disconnect_from" replace={["ChurchApps"]} />
         </MaterialButton>
         <MaterialButton icon="cloud_sync" on:click={syncContentProvider}>
@@ -452,8 +452,8 @@
     <!-- APlay connected -->
     <Title label="Content Provider: APlay" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("amazinglife")} style="flex: 1;border-bottom: 2px solid var(--connected) !important;" icon="logout">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("amazinglife")} style="border-bottom: 2px solid var(--connected) !important;" icon="logout">
             <T id="settings.disconnect_from" replace={["APlay"]} />
         </MaterialButton>
         <!-- Nothing to sync yet -->
@@ -465,8 +465,8 @@
     <!-- OnStage connected -->
     <Title label="Content Provider: OnStage" icon="list" />
 
-    <InputRow>
-        <MaterialButton on:click={() => contentProviderConnect("onstage")} style="flex: 1;border-bottom: 2px solid var(--connected) !important;" icon="logout">
+    <InputRow style="justify-content: space-between;">
+        <MaterialButton on:click={() => contentProviderConnect("onstage")} style="border-bottom: 2px solid var(--connected) !important;" icon="logout">
             <T id="settings.disconnect_from" replace={["OnStage"]} />
         </MaterialButton>
         <MaterialButton icon="cloud_sync" on:click={syncContentProvider}>
