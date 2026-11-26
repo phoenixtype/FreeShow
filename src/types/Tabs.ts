@@ -30,6 +30,7 @@ export interface BibleCategories extends Category {
     attributionRequired?: boolean // API needs attribution
     attributionString?: string // API needs custom attribution
     favorite?: boolean // marked as favorite
+    ancientWritings?: boolean // the other ancient writings: never used by listening
     collection?: {
         versions: string[]
         previewIndex?: number

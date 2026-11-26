@@ -3,6 +3,7 @@
     import { ApiBible } from "json-bible/lib/api"
     import type { Verse } from "json-bible/lib/Bible"
     import type { VerseReference } from "json-bible/lib/reference"
+    import { ANCIENT_NOTICE, bookFitsBible } from "../../../scriptural/ancientRules"
     import { searchScriptural } from "../../../scriptural/search"
     import { onMount } from "svelte"
     import { defaultBibleBookNames } from "../../../converters/bebliaBible"
@@ -38,6 +39,8 @@
 
     $: isApi = !!previewBibleData?.api
     $: isCollection = activeScriptures.length > 1
+    $: isAncient = !!previewBibleData?.ancientWritings
+    $: ancientBook = isAncient ? (books?.find((book) => Number(book.number) === Number(activeReference.book)) as any) : null
 
     // custom data
     $: if (previewBibleData?.copyright) previewBibleData.metadata = { ...(previewBibleData.metadata || {}), copyright: previewBibleData.copyright }
@@ -325,10 +328,17 @@
     async function openBook(bookNumber?: number | string, chapterNumbers?: (number | string)[], verseNumbers?: (number | string)[][], navId?: number): Promise<boolean> {
         const currentNavId = navId ?? ++navigationId
 
-        const targetBookNumber = bookNumber ?? activeReference.book ?? 1
+        let targetBookNumber = bookNumber ?? activeReference.book ?? 1
 
         const currentData = data[previewBibleId]?.bibleData
         if (!currentData) return false
+
+        // the book left open in another Bible is not in this one
+        if (!bookFitsBible(previewBibleId, targetBookNumber)) {
+            targetBookNumber = currentData.data.books[0]?.number
+            activeReference.chapters = []
+            activeReference.verses = []
+        }
 
         // remove current data so loading shows again
         delete data[previewBibleId].bookData
@@ -361,9 +371,10 @@
 
     async function openChapter(chapterNumbers?: (number | string)[], verseNumbers?: (number | string)[][], navId?: number): Promise<boolean> {
         const currentNavId = navId ?? ++navigationId
-        const targetChapterNumbers = chapterNumbers?.length ? chapterNumbers : activeReference.chapters?.length ? activeReference.chapters : [1]
         const currentData = data[previewBibleId]?.bookData
         if (!currentData) return false
+        // the Additions to Esther start at chapter 10
+        const targetChapterNumbers = chapterNumbers?.length ? chapterNumbers : activeReference.chapters?.length ? activeReference.chapters : [currentData.data.chapters[0]?.number ?? 1]
 
         // remove current data so loading shows again
         delete data[previewBibleId].chapterData
@@ -398,7 +409,7 @@
 
     let playWhenLoaded = false
     async function openVerse(verseNumbers?: (number | string)[][]) {
-        verseNumbers = verseNumbers?.length ? verseNumbers : activeReference.verses.length ? activeReference.verses : [[1]]
+        verseNumbers = verseNumbers?.length ? verseNumbers : activeReference.verses.length ? activeReference.verses : [[data[previewBibleId]?.chapterData?.data.verses[0]?.number ?? 1]]
         activeReference.verses = verseNumbers
 
         const currentData = data[previewBibleId]?.chapterData
@@ -445,7 +456,8 @@
     // select book & chapter when opening bible show reference
     $: if ($openScripture) setTimeout(openReference, 200)
     function openReference() {
-        if ($openScripture?.book === undefined) {
+        // a Bible reference never opens (or shows) one of the other ancient writings
+        if ($openScripture?.book === undefined || !bookFitsBible(previewBibleId, $openScripture.book)) {
             openScripture.set(null)
             return
         }
@@ -854,6 +866,7 @@
 
     let meaningSearchTimeout: ReturnType<typeof setTimeout> | undefined
     async function addPassagesByMeaning(query: string) {
+        if (isAncient) return
         const found = await searchScriptural(query)
         if (query !== contentSearchValue || !found.length) return
 
@@ -1007,6 +1020,8 @@
                 }
             }
         }
+
+        if (isAncient && Number(chapters?.[0]?.number) !== 1) return
 
         let versesCount = verses?.length || 0 // splittedVerses.length
 
@@ -1175,6 +1190,13 @@
                         {/if}
                     </div>
                     <div class="verses context #scripture_verse" class:showFloatingButtons={$resized.rightPanelDrawer > 5 && splittedVerses.length > 10} bind:this={versesScrollElem} class:center={!splittedVerses.length}>
+                        {#if isAncient}
+                            <p class="ancientNote">
+                                {ANCIENT_NOTICE}
+                                {#if ancientBook}<br />{ancientBook.name}: {ancientBook.warning}<br />Translation: {ancientBook.translation}{/if}
+                            </p>
+                        {/if}
+
                         {#if isCollection && useOffset && splittedVerses.length}
                             <InputRow style="width: 100%;margin-bottom: 5px;">
                                 {#each activeScriptures as scriptureId, i}
@@ -1602,5 +1624,15 @@
         font-size: 0.7em;
         border-radius: 20px;
         opacity: 0.9;
+    }
+
+    .ancientNote {
+        width: 100%;
+        padding: 4px 10px 8px;
+        font-size: 0.85em;
+        line-height: 1.4;
+        white-space: normal;
+        opacity: 0.8;
+        border-bottom: 1px solid var(--primary-lighter);
     }
 </style>

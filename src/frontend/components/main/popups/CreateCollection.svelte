@@ -11,7 +11,7 @@
 
     registerPopupSubmit(create)
 
-    $: scripturesList = keysToID($scriptures).filter((a) => !a.collection)
+    $: scripturesList = keysToID($scriptures).filter((a) => !a.collection && !a.ancientWritings)
     $: localScripturesList = sortByName(scripturesList.filter((a) => !a.api))
     $: apiScripturesList = sortByName(scripturesList.filter((a) => a.api))
 

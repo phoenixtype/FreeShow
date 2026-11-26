@@ -1,6 +1,7 @@
 import { Bible } from "json-bible/lib/Bible"
 import { get } from "svelte/store"
 import { loadJsonBible } from "../../components/drawer/bible/scripture"
+import { isAncientWritings } from "../../scriptural/ancientRules"
 import { scriptures } from "../../stores"
 import { CANON } from "./canon"
 import { BibleSearchDetector } from "./BibleSearchDetector"
@@ -46,7 +47,8 @@ export class BibleCacheManager {
 
         const load = async () => {
             const scriptureData = get(scriptures)[bibleId]
-            if (!scriptureData || scriptureData?.api) return null
+            // the other ancient writings are never searched by listening
+            if (!scriptureData || scriptureData?.api || isAncientWritings(bibleId)) return null
 
             const bible = (await loadJsonBible(bibleId))?.data
             if (!bible) return null
@@ -106,7 +108,7 @@ export class BibleCacheManager {
      * Preloads the first local Bibles sequentially in the background without blocking frames.
      */
     public static preloadAllInBackground(allIds: string[]) {
-        const bibleIds = allIds.slice(0, this.MAX_LOADED)
+        const bibleIds = allIds.filter((id) => !isAncientWritings(id)).slice(0, this.MAX_LOADED)
         let index = 0
         const loadNext = () => {
             if (index >= bibleIds.length) return

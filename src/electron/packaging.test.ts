@@ -1,4 +1,4 @@
-import { readFileSync } from "fs"
+import { existsSync, readFileSync } from "fs"
 import { join } from "path"
 import { describe, expect, it } from "vitest"
 
@@ -12,6 +12,11 @@ function platformFiles(platform: string): string[] {
 }
 
 describe("what goes into an installer", () => {
+    it("includes the other ancient writings, so they work offline", () => {
+        // public/** is on every platform's list (below)
+        expect(existsSync(join(__dirname, "../../public/ancient-writings.json"))).toBe(true)
+    })
+
     it.each(["win", "linux", "mac"])("%s names the app's own folders, never the whole repository", (platform) => {
         const included = platformFiles(platform).filter((entry) => !entry.startsWith("!"))
         expect(included).toEqual(["build/electron/**", "build/types/**", "public/**", "LICENSE"])

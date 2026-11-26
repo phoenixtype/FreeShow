@@ -1,6 +1,7 @@
 import { get } from "svelte/store"
 import type { MatchResult } from "../../../types/ai/Ai"
 import { keysToID } from "../../components/helpers/array"
+import { isAncientWritings } from "../../scriptural/ancientRules"
 import { drawerTabsData, scriptures } from "../../stores"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { similarity } from "../../converters/txt"
@@ -18,7 +19,7 @@ const ORDINARY = new Set(["message", "themessage", "easy", "web", "living", "amp
 export async function detectBibleVersion(textChunk: string, isCancelled?: () => boolean): Promise<MatchResult | null> {
     if (!textChunk || isCancelled?.()) return null
 
-    const scripturesList = keysToID(get(scriptures)).filter((a) => !a.api && !a.collection)
+    const scripturesList = keysToID(get(scriptures)).filter((a) => !a.api && !a.collection && !isAncientWritings(a.id))
     if (!scripturesList.length) return null
 
     // 1. Build and sort candidate match list

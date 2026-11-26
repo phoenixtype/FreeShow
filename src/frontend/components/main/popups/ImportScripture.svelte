@@ -3,6 +3,8 @@
     import { uid } from "uid"
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain, sendMain } from "../../../IPC/main"
+    import { ANCIENT_NOTICE } from "../../../scriptural/ancientRules"
+    import { addAncientWritings } from "../../../scriptural/ancientWritings"
     import { scriptures, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { replace } from "../../../utils/languageData"
@@ -100,6 +102,19 @@
         { id: "local", name: translateText("cloud.local"), icon: "folder" } // scripture
     ]
 
+    // shipped with the app: added only when asked for
+    $: hasAncient = Object.values($scriptures).some((a) => a.ancientWritings)
+    let ancientError = ""
+    async function addAncient() {
+        ancientError = ""
+        try {
+            await addAncientWritings()
+        } catch (err) {
+            console.warn("Other ancient writings could not be added:", err)
+            ancientError = "The books could not be added. Close this and try again."
+        }
+    }
+
     let localBibles: { path: string; name: string }[] = []
     $: if (importType === "local") getLocalBibles()
     async function getLocalBibles() {
@@ -188,6 +203,18 @@
     </MaterialButton>
 {:else}
     <MaterialMultiChoice options={importTypes} on:click={(e) => (importType = e.detail)} />
+
+    <div class="ancient">
+        <div>
+            <p><strong>Other ancient writings</strong></p>
+            <p>{ANCIENT_NOTICE} Listening never searches them: a verse goes on screen only when you pick it.</p>
+            {#if hasAncient}<p>Added. To remove it, right-click it in the list of Bibles.</p>{/if}
+            {#if ancientError}<p>{ancientError}</p>{/if}
+        </div>
+        {#if !hasAncient}
+            <MaterialButton variant="outlined" icon="add" on:click={addAncient}>Add</MaterialButton>
+        {/if}
+    </div>
 {/if}
 
 <style>
@@ -229,6 +256,20 @@
         padding: 10px 20px;
         font-size: 0.7em;
         opacity: 0.3;
+    }
+
+    .ancient {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid var(--primary-lighter);
+    }
+    .ancient p {
+        margin: 0 0 4px;
+        white-space: normal;
     }
 
     .existingBiblesList {
