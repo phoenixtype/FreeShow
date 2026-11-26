@@ -5,7 +5,8 @@ import { scriptureDrawerOpen } from "../../components/drawer/bible/scripture"
 import { outLocked } from "../../stores"
 import { triggerFunction } from "../../utils/common"
 import { passageStep } from "../manager/passageStep"
-import { presentPassage } from "./presentPassage"
+import { currentScripture, presentPassage } from "./presentPassage"
+import { isAncientWritings } from "../../scriptural/ancientRules"
 
 /** Next or previous, whatever is up: a verse follows its verse, a slide its slide. False when there was nothing to step. */
 export async function stepScreen(direction: "next" | "previous"): Promise<boolean> {
@@ -16,6 +17,8 @@ export async function stepScreen(direction: "next" | "previous"): Promise<boolea
     }
     // the Scripture tab also steps through the parts of a long verse
     if (get(scriptureDrawerOpen)) {
+        // a verse the operator picked from the ancient writings is stepped by hand only
+        if (isAncientWritings(currentScripture().id)) return false
         triggerFunction(`scripture_${direction}`)
         return true
     }

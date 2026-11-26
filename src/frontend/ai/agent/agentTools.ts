@@ -40,6 +40,7 @@ import { openPage } from "./openPage"
 import { nextPlanItem, planItems, removeFromOpenPlan, showPlanItem } from "./planItems"
 import { currentScripture, presentPassage } from "./presentPassage"
 import { confirm, requireUnlocked, settle, text, ToolError, until } from "./toolBasics"
+import { isAncientWritings } from "../../scriptural/ancientRules"
 
 export interface AgentTool {
     name: string
@@ -158,7 +159,7 @@ function planItemIsUp(item: { id: string; type?: string }): boolean {
 
 /** the church's Bible a version name means */
 function bibleNamed(name: string): { id: string; label: string } {
-    const list = Object.entries(get(scriptures)).map(([id, s]) => ({ id, names: [s?.name, s?.customName, (s as any)?.scripturalVersion, (s as any)?.abbreviation, getShortBibleName(s?.name || "")].filter(Boolean) as string[] }))
+    const list = Object.entries(get(scriptures)).filter(([id]) => !isAncientWritings(id)).map(([id, s]) => ({ id, names: [s?.name, s?.customName, (s as any)?.scripturalVersion, (s as any)?.abbreviation, getShortBibleName(s?.name || "")].filter(Boolean) as string[] }))
     const id = matchVersion(name, list)
     if (!id) throw new ToolError(`There is no ${name.toUpperCase()} Bible here`)
     return { id, label: get(scriptures)[id]?.customName || get(scriptures)[id]?.name || name }

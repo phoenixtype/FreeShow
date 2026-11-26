@@ -6,18 +6,22 @@ import { resolveScriptureRequest, startScripture } from "../../components/action
 import { playScripture, scriptureDrawerOpen, screenScripture } from "../../components/drawer/bible/scripture"
 import { setActiveScripture } from "../../converters/bible"
 import { getFirstActiveOutput } from "../../components/helpers/output"
+import { ANCIENT_FIRST_BOOK, isAncientWritings, listeningBibleId } from "../../scriptural/ancientRules"
 import { activeScripture, drawerTabsData, outLocked, scriptures } from "../../stores"
 
 export async function presentPassage(reference: string, id = ""): Promise<boolean> {
     if (get(outLocked)) return false
+    // the ancient writings go up only when the operator picks a verse in them, never from a request
+    if ((id && isAncientWritings(id)) || Number(reference.split(".")[0]) >= ANCIENT_FIRST_BOOK) return false
+    const open = get(drawerTabsData).scripture?.activeSubTab || ""
     if (get(scriptureDrawerOpen)) {
-        await startScripture({ reference, ...(id ? { id } : {}) })
+        const other = id || (isAncientWritings(open) ? listeningBibleId(open) : "")
+        await startScripture({ reference, ...(other ? { id: other } : {}) })
         return true
     }
 
     // the Scripture tab opens the first Bible when the last one is gone
-    const open = get(drawerTabsData).scripture?.activeSubTab || ""
-    const tab = id || (get(scriptures)[open] ? open : Object.keys(get(scriptures))[0] || "")
+    const tab = id || listeningBibleId(get(scriptures)[open] ? open : Object.keys(get(scriptures))[0] || "")
     if (!tab) return false
     const resolved = await resolveScriptureRequest({ reference, id: tab })
     if (!resolved) return false

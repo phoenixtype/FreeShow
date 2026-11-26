@@ -54,7 +54,8 @@ function trueNumbers(book, index) {
 }
 
 // angle brackets are the translator's marks, but would be read as HTML and dropped
-const clean = (text) => text.replace(/</g, "⟨").replace(/>/g, "⟩").replace(/_{3,}/g, "").trim()
+// a footnote that ran into a verse ("... | Greek fragment from ...") is not part of it
+const clean = (text) => text.replace(/\s*\|\s*Greek fragment.*$/s, "").replace(/</g, "⟨").replace(/>/g, "⟩").replace(/_{3,}/g, "").trim()
 
 // the grid view shows these; the names would otherwise shorten to the same few letters
 function shorten(name) {

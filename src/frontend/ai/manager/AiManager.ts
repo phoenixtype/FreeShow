@@ -25,6 +25,7 @@ import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceComm
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
 import { spokenLanguage, resolveSttEngine } from "../stt/stt"
 import { passageStep } from "./passageStep"
+import { isAncientWritings } from "../../scriptural/ancientRules"
 
 /** the words something was found in, and how */
 interface Heard {
@@ -219,7 +220,7 @@ export class AiManager {
         if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return true
 
         const step = await passageStep(command)
-        if (!step) return false
+        if (!step || (step.id && isAncientWritings(step.id))) return false
 
         this.lastCommand = Date.now()
         const { content } = step
@@ -256,7 +257,7 @@ export class AiManager {
 
     private static getLocalScriptureIds() {
         return keysToID(get(scriptures))
-            .filter((a) => !a.api && !a.collection)
+            .filter((a) => !a.api && !a.collection && !isAncientWritings(a.id))
             .map((a) => a.id)
     }
 
