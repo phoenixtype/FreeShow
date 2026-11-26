@@ -519,60 +519,60 @@
 <!-- TABS -->
 
 {#if active === "inputs"}
-    <div class="tabs">
-        <MaterialButton style="flex: 1;" isActive={inputsTab === "cameras"} on:click={() => setSubSubTab("cameras")}>
+    <div class="tabs" style="justify-content: center;">
+        <MaterialButton isActive={inputsTab === "cameras"} on:click={() => setSubSubTab("cameras")}>
             <Icon size={1.2} id="camera" white />
             <p><T id="live.cameras" /></p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={inputsTab === "screens"} on:click={() => setSubSubTab("screens")}>
+        <MaterialButton isActive={inputsTab === "screens"} on:click={() => setSubSubTab("screens")}>
             <Icon size={1.2} id="screen" white />
             <p><T id="live.screens" /></p>
         </MaterialButton>
-        <!-- <MaterialButton style="flex: 1;" isActive={inputsTab === "windows"} on:click={() => setSubSubTab("windows")}>
+        <!-- <MaterialButton isActive={inputsTab === "windows"} on:click={() => setSubSubTab("windows")}>
             <Icon size={1.2} id="window" white />
             <p><T id="live.windows" /></p>
         </MaterialButton> -->
-        <MaterialButton style="flex: 1;" isActive={inputsTab === "ndi"} on:click={() => setSubSubTab("ndi")}>
+        <MaterialButton isActive={inputsTab === "ndi"} on:click={() => setSubSubTab("ndi")}>
             <Icon size={1.1} id="ndi" white />
             <p>NDI</p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={inputsTab === "omt"} on:click={() => setSubSubTab("omt")}>
+        <MaterialButton isActive={inputsTab === "omt"} on:click={() => setSubSubTab("omt")}>
             <Icon size={1.2} id="omt" white />
             <p>OMT</p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={inputsTab === "blackmagic"} on:click={() => setSubSubTab("blackmagic")}>
+        <MaterialButton isActive={inputsTab === "blackmagic"} on:click={() => setSubSubTab("blackmagic")}>
             <Icon size={1.2} id="blackmagic" white />
             <p>Blackmagic</p>
         </MaterialButton>
     </div>
 {:else if active === "online"}
-    <div class="tabs">
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "scriptural"} on:click={() => setSubSubTab("scriptural")}>
+    <div class="tabs" style="justify-content: center;">
+        <MaterialButton isActive={onlineTab === "scriptural"} on:click={() => setSubSubTab("scriptural")}>
             <img style="height: 18px;width: 18px;border-radius: 22.27%;" src="./scriptural-logo.svg" alt="" draggable={false} />
             <p>Scriptural</p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "youtube"} on:click={() => setSubSubTab("youtube")}>
+        <MaterialButton isActive={onlineTab === "youtube"} on:click={() => setSubSubTab("youtube")}>
             <Icon style={onlineTab === "youtube" ? "fill: #ff0000" : ""} size={1.2} id="youtube" white />
             <p>YouTube</p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "vimeo"} on:click={() => setSubSubTab("vimeo")}>
+        <MaterialButton isActive={onlineTab === "vimeo"} on:click={() => setSubSubTab("vimeo")}>
             <Icon style={onlineTab === "vimeo" ? "fill: #17d5ff" : ""} size={1.2} id="vimeo" white />
             <p>Vimeo</p>
         </MaterialButton>
         {#if providerAvailable("pixabay")}
-            <MaterialButton style="flex: 1;" isActive={onlineTab === "pixabay"} on:click={() => setSubSubTab("pixabay")}>
+            <MaterialButton isActive={onlineTab === "pixabay"} on:click={() => setSubSubTab("pixabay")}>
                 <Icon style={onlineTab === "pixabay" ? "fill: #00ab6b" : ""} size={1.2} id="pixabay" box={48} white />
                 <p>Pixabay</p>
             </MaterialButton>
         {/if}
         {#if providerAvailable("unsplash")}
-            <MaterialButton style="flex: 1;" isActive={onlineTab === "unsplash"} on:click={() => setSubSubTab("unsplash")}>
+            <MaterialButton isActive={onlineTab === "unsplash"} on:click={() => setSubSubTab("unsplash")}>
                 <!-- #111111 -->
                 <Icon style={onlineTab === "unsplash" ? "fill: #bbbbbb" : ""} size={1.2} id="unsplash" white />
                 <p>Unsplash</p>
             </MaterialButton>
         {/if}
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "canva"} on:click={() => setSubSubTab("canva")}>
+        <MaterialButton isActive={onlineTab === "canva"} on:click={() => setSubSubTab("canva")}>
             {#if onlineTab === "canva"}
                 <CLogo />
             {:else}

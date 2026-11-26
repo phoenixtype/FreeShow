@@ -4,7 +4,7 @@ export const sectionColors = {
     font: "#f59e0b",
     align: "#f079b2",
     text: "#5eead4",
-    lines: "#ffb6e7",
+    lines: "#b6d8ff",
     list: "#60a5fa",
     outline: "#d8d8d8",
     border: "#d8d8d8",

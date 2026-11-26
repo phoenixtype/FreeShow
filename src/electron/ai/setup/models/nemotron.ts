@@ -2,7 +2,7 @@ import fs from "fs"
 import path from "path"
 import { ToMain } from "../../../../types/IPC/ToMain"
 import { sendToMain } from "../../../IPC/main"
-import { DownloadManager } from "../DownloadManager"
+import { DownloadManager, missingSpace, partPathFor } from "../DownloadManager"
 
 // int8 export of NVIDIA's Nemotron 3.5 streaming transducer, multilingual. Chosen over the
 // English-only 0.6b on 19 sermon excerpts: same CPU cost, better accuracy, fewer repeated words,
@@ -50,6 +50,9 @@ export class NemotronSetupManager {
         const digests: Record<string, string> = {}
         let completedBytes = 0
 
+        const short = await this.spaceShortfall(outputFolder, jobs)
+        if (short > 0) return dlm.reportError(`Not enough free disk space for the speech model. Free about ${Math.ceil(short / 1_000_000)} MB, then try again.`)
+
         for (const job of jobs) {
             const target = path.join(outputFolder, job.file)
 
@@ -92,6 +95,19 @@ export class NemotronSetupManager {
 
         await this.checkIntegrity(outputFolder, digests)
         return dlm.reportComplete()
+    }
+
+    private static async spaceShortfall(folder: string, jobs: { url: string; file: string }[]) {
+        const size = (file: string) => (fs.existsSync(file) ? fs.statSync(file).size : 0)
+        const onDisk = jobs.reduce((total, job) => total + (size(path.join(folder, job.file)) || size(partPathFor(job.url, path.join(folder, job.file)))), 0)
+        try {
+            const disk = await fs.promises.statfs(folder)
+            return missingSpace(disk.bavail * disk.bsize, Math.max(0, NEMOTRON_MODEL_BYTES - onDisk))
+        } catch (err) {
+            // some drives cannot say how full they are: try the download anyway
+            console.warn("[nemotron] Could not check the free disk space:", err)
+            return 0
+        }
     }
 
     static cancelEngineDownload() {

@@ -148,7 +148,7 @@
         margin-top: 20px;
         display: flex;
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
         gap: 4px;
         width: min(460px, 90%);
         text-align: left;
@@ -180,15 +180,11 @@
         opacity: 0.55;
     }
     .mark {
-        width: 22px;
-        height: 22px;
+        width: 18px;
         flex-shrink: 0;
         display: flex;
-        align-items: center;
         justify-content: center;
-        border: 1px solid var(--primary-lighter);
-        border-radius: 50%;
-        font-size: 0.85em;
+        opacity: 0.7;
     }
     .words {
         display: flex;
@@ -207,6 +203,7 @@
     .buttons {
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 5px;
     }
 

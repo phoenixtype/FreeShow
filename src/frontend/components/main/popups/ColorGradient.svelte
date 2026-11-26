@@ -16,7 +16,7 @@
 
     registerPopupSubmit(change)
 
-    const DEFAULT = "linear-gradient(120deg, rgb(255 128 212) 0%, rgb(193 47 106) 62%, rgb(167 19 45) 100%)"
+    const DEFAULT = "linear-gradient(120deg, rgb(127 219 255) 0%, rgb(30 120 190) 62%, rgb(12 60 110) 100%)"
 
     let value = $popupData.value || ""
     if (!value.includes("gradient")) value = DEFAULT

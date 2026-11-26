@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { GUIDE_URL } from "../../../../types/links"
     import { onMount } from "svelte"
     import { obsData } from "../../../stores"
     import { connectToOBS } from "../../../utils/obsTalk"
@@ -373,7 +374,7 @@
     </FloatingInputs>
 {:else}
     <Center>
-        <Link url="https://freeshow.app/docs/livestreaming#setting-up-obs-control-from-freeshow">
+        <Link url={GUIDE_URL}>
             <T id="main.docs" />
             <Icon id="launch" white />
         </Link>

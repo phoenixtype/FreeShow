@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getVersionBgColor, getVersionColor } from "../../../common/util/versionColors"
     import type { Bible } from "../../../../types/Bible"
     import Loading from "../../../common/components/Loading.svelte"
     import { onDestroy } from "svelte"
@@ -14,23 +15,6 @@
     export let currentBook: string = ""
     export let currentChapter: string = ""
     export let currentVerse: string = ""
-
-    // Generate dynamic colors for Bible versions that match FreeShow's theme
-    function getVersionColor(index: number): string {
-        const goldenAngle = 137.508
-        const baseHue = 330 // FreeShow's pink
-        const hue = (baseHue + index * goldenAngle) % 360
-        const saturation = 75
-        const lightness = 65
-        return `hsl(${hue}, ${saturation}%, ${lightness}%)`
-    }
-
-    function getVersionBgColor(index: number): string {
-        const goldenAngle = 137.508
-        const baseHue = 330
-        const hue = (baseHue + index * goldenAngle) % 360
-        return `hsla(${hue}, 70%, 50%, 0.12)`
-    }
 
     let activeBook = -1
     let activeChapter = -1
@@ -132,7 +116,7 @@
 
     const colorCodesFull = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8]
     const colorCodesNT = [5, 5, 5, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8]
-    const colors = ["", "#f17d46", "#ffd17c", "#8cdfff", "#8888ff", "#ff97f2", "#ffdce7", "#88ffa9", "#ffd3b6"]
+    const colors = ["", "#f17d46", "#ffd17c", "#8cdfff", "#6ea8ff", "#5eead4", "#c9ced6", "#88ffa9", "#ffd3b6"]
 
     export function getColorCode(books: any[], bookId: number | string) {
         let bookIndex = typeof bookId === "number" ? bookId : books.findIndex((a) => a.id === bookId)

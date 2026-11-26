@@ -2,9 +2,9 @@
     import { keysToID, sortByName } from "../../../components/helpers/array"
     import { isOutCleared, toggleOutputs } from "../../../components/helpers/output"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
-    import { clearAll, clearSlide } from "../../../components/output/clear"
+    import { clearAll, clearSlide, restoreOutput } from "../../../components/output/clear"
     import PreviewOutput from "../../../components/output/preview/PreviewOutput.svelte"
-    import { outLocked, outputs, outputState, shows } from "../../../stores"
+    import { outLocked, outputCache, outputs, outputState, shows } from "../../../stores"
     import { stepScreen } from "../../agent/stepScreen"
     import { isScreenOff, onScreenTitle } from "./onScreen"
 
@@ -49,11 +49,15 @@
     {/if}
 
     <div class="controls">
-        <MaterialButton icon="previous" title="preview._previous_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("previous")} />
-        <MaterialButton icon="next" title="preview._next_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("next")} />
+        <MaterialButton icon="previous" title="preview._previous_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("previous")}>Previous</MaterialButton>
+        <MaterialButton icon="next" title="preview._next_slide" disabled={$outLocked || !screen || cleared} on:click={() => stepScreen("next")}>Next</MaterialButton>
         <div class="fill" />
-        <MaterialButton icon="slide" disabled={$outLocked || cleared} on:click={() => clearSlide()}>Clear words</MaterialButton>
-        <MaterialButton icon="clear" disabled={$outLocked || cleared} on:click={() => clearAll(true)}>Clear all</MaterialButton>
+        {#if cleared && $outputCache && $outputCache.slide?.type !== "ppt"}
+            <MaterialButton icon="reset" disabled={$outLocked} on:click={restoreOutput}>Bring it back</MaterialButton>
+        {:else}
+            <MaterialButton icon="slide" disabled={$outLocked || cleared} on:click={() => clearSlide()}>Clear words</MaterialButton>
+            <MaterialButton icon="clear" disabled={$outLocked || cleared} on:click={() => clearAll(true)}>Clear all</MaterialButton>
+        {/if}
     </div>
 </section>
 
@@ -114,6 +118,7 @@
 
     .controls {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 2px;
     }

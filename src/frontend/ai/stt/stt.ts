@@ -1,7 +1,8 @@
 import { get, writable } from "svelte/store"
 import { Main } from "../../../types/IPC/Main"
 import { requestMain, sendMain } from "../../IPC/main"
-import { ai, language } from "../../stores"
+import { ai, aiSttStatus, language } from "../../stores"
+import { classifyListenError, isSilent, type ListenProblem, RECOVERY_DELAYS, streamLost } from "./listenStatus"
 
 // The model follows many languages, but left to guess it writes English spoken with an
 // Indian accent in Hindi script, and then no reference in it is found. So it is told:
@@ -16,6 +17,10 @@ export function spokenLanguage(chosen: string | undefined): string | undefined {
 }
 
 export const audioLevelStore = writable<number>(0.0)
+// why listening is not working, for the panel to say in words (empty when it is fine)
+export const listenProblem = writable<ListenProblem | "">("")
+// the microphone is open but nothing audible has come in for a while
+export const micSilent = writable(false)
 
 export function resolveSttEngine(): string {
     return get(ai)?.stt?.engine || "nemotron"
@@ -32,6 +37,11 @@ export class SpeechToText {
 
     private static sessionToken = 0
 
+    private static lastAudioAt = 0
+    private static lastSoundAt = 0
+    private static watchdog: ReturnType<typeof setInterval> | null = null
+    private static recoveringToken = -1
+
     static async enable() {
         const operationId = ++this.sessionToken
 
@@ -40,7 +50,10 @@ export class SpeechToText {
             this.stopCapture()
             return { ok: false, aborted: true }
         }
-        if (!captured.ok) return captured
+        if (!captured.ok) {
+            listenProblem.set(classifyListenError(captured.error))
+            return captured
+        }
 
         const started = await this.restartEngine(operationId)
         if (operationId !== this.sessionToken) {
@@ -49,10 +62,12 @@ export class SpeechToText {
         }
 
         if (!started.ok) {
+            listenProblem.set(classifyListenError(started.error))
             this.stopCapture()
             return started
         }
 
+        listenProblem.set("")
         return { ok: true }
     }
 
@@ -70,12 +85,13 @@ export class SpeechToText {
         return { ok: true }
     }
 
-    static async restartCapture(operationId?: number) {
+    // useDefault: the chosen microphone is gone, so take whatever the computer's default input is
+    static async restartCapture(operationId?: number, useDefault = false) {
         const token = operationId ?? ++this.sessionToken
         this.stopCapture()
 
         const savedDeviceId = get(ai).stt?.micDeviceId || ""
-        const deviceId = await this.resolveMicDeviceId(savedDeviceId)
+        const deviceId = useDefault ? "" : await this.resolveMicDeviceId(savedDeviceId)
 
         if (token !== this.sessionToken) return { ok: false, aborted: true }
 
@@ -105,7 +121,50 @@ export class SpeechToText {
 
         if (!ac) return { ok: false, error: "Could not create audio context" }
 
+        this.watchStream(stream, token)
         return { ok: true }
+    }
+
+    // a microphone that is unplugged or taken by another program stops sending audio without any error
+    private static watchStream(stream: MediaStream, token: number) {
+        this.lastAudioAt = this.lastSoundAt = Date.now()
+        stream.getAudioTracks().forEach((track) => track.addEventListener("ended", () => void this.recoverMic(token)))
+        navigator.mediaDevices?.addEventListener?.("devicechange", this.onDeviceChange)
+
+        this.watchdog = setInterval(() => {
+            const now = Date.now()
+            if (streamLost(now, this.lastAudioAt)) void this.recoverMic(token)
+            micSilent.set(isSilent(now, this.lastSoundAt))
+        }, 1000)
+    }
+
+    private static onDeviceChange = () => {
+        if (this.stream?.getAudioTracks().some((track) => track.readyState === "ended")) void this.recoverMic(this.sessionToken)
+    }
+
+    // the same microphone at 2 and 5 seconds, then the computer's default input at 15; after that the panel offers a button
+    private static async recoverMic(token: number) {
+        if (token !== this.sessionToken || this.recoveringToken === token) return
+        this.recoveringToken = token
+        listenProblem.set("disconnected")
+        this.stopCapture()
+
+        try {
+            for (let attempt = 0; attempt < RECOVERY_DELAYS.length; attempt++) {
+                await new Promise((resolve) => setTimeout(resolve, RECOVERY_DELAYS[attempt]))
+                if (token !== this.sessionToken) return
+
+                const result = await this.restartCapture(token, attempt === RECOVERY_DELAYS.length - 1)
+                if (token !== this.sessionToken) return
+                if (result.ok) {
+                    listenProblem.set("")
+                    return
+                }
+            }
+            aiSttStatus.set({ state: "error", message: "Microphone disconnected." })
+        } finally {
+            if (this.recoveringToken === token) this.recoveringToken = -1
+        }
     }
 
     static disable() {
@@ -192,7 +251,9 @@ export class SpeechToText {
                 if (buffer) {
                     sendMain(Main.AI_AUDIO_DATA, { buffer })
                 }
+                this.lastAudioAt = Date.now()
                 if (typeof level === "number") {
+                    if (level >= 0.04) this.lastSoundAt = this.lastAudioAt
                     this.emitAudioLevel(level)
                 }
             }
@@ -220,6 +281,11 @@ export class SpeechToText {
     }
 
     static stopCapture() {
+        if (this.watchdog) clearInterval(this.watchdog)
+        this.watchdog = null
+        navigator.mediaDevices?.removeEventListener?.("devicechange", this.onDeviceChange)
+        micSilent.set(false)
+
         ;[this.sourceNode, this.captureNode].forEach((node) => {
             try {
                 node?.disconnect()

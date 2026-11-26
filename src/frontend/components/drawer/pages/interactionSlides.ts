@@ -151,7 +151,7 @@ function generateChartSlide(id: string) {
         }
     }
 
-    const defaultColors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#f43f5e", "#06b6d4", "#14b8a6"]
+    const defaultColors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#64748b", "#f43f5e", "#06b6d4", "#14b8a6"]
     const grid: string[][] = []
     for (let i = 0; i < optionsCount; i++) {
         const optionIdx = i + 1

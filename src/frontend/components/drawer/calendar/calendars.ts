@@ -45,19 +45,20 @@ export interface IcsCalendar extends CalendarData {
     unassigned?: boolean
 }
 
+// blue, teal, orange, green and grey only
 export const CALENDAR_COLORS = [
-    "#FF5733", // Coral/Orange
+    "#F97316", // Orange
     "#3B82F6", // Blue
     "#10B981", // Emerald
     "#F59E0B", // Amber
     "#14B8A6", // Teal
-    "#F97316", // Orange
+    "#9CA3AF", // Grey
     "#06B6D4", // Cyan
-    "#F43F5E", // Rose
+    "#EA580C", // Dark orange
     "#84CC16", // Lime
-    "#6366F1", // Indigo
-    "#14B8A6", // Teal
-    "#E11D48" // Crimson
+    "#1D4ED8", // Dark blue
+    "#0F766E", // Dark teal
+    "#64748B" // Slate
 ]
 export function getAvailableColor(calId: string, allEvents: Record<string, Event>, assignedInBatch: Map<string, string>): string {
     if (assignedInBatch.has(calId)) return assignedInBatch.get(calId)!

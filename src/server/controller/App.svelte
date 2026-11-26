@@ -8,7 +8,14 @@
 
     let outputId: string = ""
 
+    // assume connected until the first failure, so the banner does not flash on opening
+    let connected = true
+    socket.on("disconnect", () => (connected = false))
+    socket.on("connect_error", () => (connected = false))
+
     socket.on("connect", () => {
+        connected = true
+        frameReceived = true
         // id = socket.id
         socket.emit("CONTROLLER", { channel: "GET_OUTPUT_ID" })
     })
@@ -45,6 +52,7 @@
     }
 
     function sendAction(id: string) {
+        if (!connected) return
         socket.emit("CONTROLLER", { channel: "ACTION", data: { id } })
 
         if (justCleared) {
@@ -118,8 +126,12 @@
 
 <svelte:window bind:innerHeight={windowHeight} on:keydown={keydown} on:mouseup={mouseup} on:touchend={mouseup} on:mousemove={mousemove} on:touchmove={mousemove} />
 
+{#if !connected}
+    <p class="banner" role="alert">Not connected to the computer. Trying again…</p>
+{/if}
+
 {#if draw}
-    <div class="draw">
+    <div class="draw" class:offline={!connected}>
         <select name="tools" value={tool} on:change={changeTool}>
             {#each tools as toolKey}
                 <option value={toolKey}>{toolKey}</option>
@@ -136,23 +148,27 @@
         </div>
 
         {#if tool === "Paint"}
-            <button on:click={() => sendAction("clear_painting")} title="Clear painting">
+            <button class="clear-painting" on:click={() => sendAction("clear_painting")}>
                 <Icon id="clear" size={2} white right />
+                <span>Clear painting</span>
             </button>
         {/if}
     </div>
 {:else}
-    <div class="controller">
+    <div class="controller" class:offline={!connected}>
         <button class="quart" on:click={() => sendAction("previous")}>
             <Icon id="previous" size={4} />
+            <span>Previous</span>
         </button>
         <button class="quart" on:click={() => sendAction("next")}>
             <Icon id="next" size={4} />
+            <span>Next</span>
         </button>
         <!-- <button class="quart" />
   <button class="quart" /> -->
         <button class="center" class:red={justCleared} on:click={() => sendAction("clear")}>
             <Icon id="clear" size={4} white />
+            <span>Clear</span>
             <!-- <Icon id={justCleared ? "clear" : "slide"} size={4} white /> -->
         </button>
     </div>
@@ -160,17 +176,20 @@
 
 {#if windowHeight < 300}
     <div class="toggle-single">
-        <button on:click={() => (draw = !draw)} title="Toggle draw mode">
+        <button on:click={() => (draw = !draw)}>
             <Icon id={draw ? "pad" : "draw"} size={2} white />
+            <span>{draw ? "Buttons" : "Draw"}</span>
         </button>
     </div>
 {:else}
     <div class="toggles">
         <button on:click={() => (draw = false)} class="noright" style={draw ? "background-color: var(--primary-darker);" : ""}>
             <Icon id="pad" size={2.5} white={draw === true} />
+            <span>Buttons</span>
         </button>
         <button on:click={() => (draw = true)} class="noleft" style={draw ? "" : "background-color: var(--primary-darker);"}>
             <Icon id="draw" size={2.5} white={draw === false} />
+            <span>Draw</span>
         </button>
     </div>
 {/if}
@@ -235,9 +254,10 @@
         z-index: 10;
     }
     .toggle-single button {
-        width: 35px;
-        height: 35px;
-        padding: 5px;
+        min-height: 44px;
+        padding: 5px 10px;
+        gap: 6px;
+        font-size: 0.6em;
         border-radius: 5px;
         background-color: var(--primary-darkest);
         display: flex;
@@ -250,15 +270,15 @@
         bottom: 50px;
         left: 50%;
         transform: translateX(-50%);
-        width: 80vw;
         display: flex;
+        justify-content: center;
         /* gap: 10px; */
     }
     .toggles button,
     select {
-        padding: 10px;
+        padding: 10px 16px;
+        gap: 8px;
         color: var(--text);
-        width: 100%;
         font-size: 0.8em;
         border-radius: 5px;
         display: flex;
@@ -279,6 +299,22 @@
     .toggles .noright {
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
+    }
+
+    .banner {
+        position: fixed;
+        inset-block-start: 0;
+        inset-inline: 0;
+        z-index: 20;
+        padding: 10px 16px;
+        text-align: center;
+        font-size: 0.7em;
+        background-color: var(--primary-darkest);
+        border-bottom: 2px solid #ff9800;
+    }
+    .offline {
+        opacity: 0.4;
+        pointer-events: none;
     }
 
     /* pad */
@@ -327,6 +363,13 @@
         overflow: hidden;
     }
 
+    .quart,
+    .center {
+        flex-direction: column;
+        gap: 4px;
+        color: var(--text);
+        font-size: 0.8em;
+    }
     .quart {
         position: absolute;
         /* height: 50%; */
@@ -422,8 +465,7 @@
         }
         .toggles {
             bottom: 20px;
-            height: 35px;
-            width: 80vw;
+            height: 44px;
         }
         .toggles button,
         select {
@@ -450,9 +492,6 @@
         }
         .pad {
             height: 45vh;
-        }
-        .toggles {
-            width: 60vw;
         }
     }
 

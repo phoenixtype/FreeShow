@@ -118,7 +118,7 @@ export const effectSections: { [key: string]: EditBoxSection } = {
             { id: "baseWidth", type: "number", value: 1000, multiplier: 0.01, values: { label: "edit.width", max: 100, showSlider: true, sliderValues: { max: 50 } } },
             { id: "swayAmplitude", type: "number", value: 0, multiplier: 10, values: { label: "edit.rotation", max: 100, decimals: 1, showSlider: true, sliderValues: { max: 20 } } },
             { id: "swaySpeed", type: "number", value: 0, multiplier: 10, values: { label: "edit.speed", max: 50, decimals: 1, showSlider: true, sliderValues: { max: 20 } } },
-            { id: "color", type: "color", value: "rgba(234, 140, 255, 0.6)", values: { label: "edit.color" } }
+            { id: "color", type: "color", value: "rgba(140, 200, 255, 0.6)", values: { label: "edit.color" } }
         ])
     },
 

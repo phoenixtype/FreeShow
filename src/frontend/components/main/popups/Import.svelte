@@ -116,9 +116,9 @@
 {#if openedPage === "powerpoint"}
     <MaterialButton class="popup-back" icon="back" iconSize={1.3} title="actions.back" on:click={() => (openedPage = "")} />
 
-    <div style="display: flex;flex-direction: column;gap: 5px;">
+    <div style="display: flex;flex-direction: column;align-items: center;gap: 5px;">
         {#each powerpoint_options as option}
-            <MaterialButton variant="outlined" style="justify-content: start;flex: 1;min-height: 50px;font-weight: normal;" on:click={() => option.click()}>
+            <MaterialButton variant="outlined" style="justify-content: start;min-height: 50px;font-weight: normal;" on:click={() => option.click()}>
                 <img style="height: 60px;width: 70px;" src="./import-logos/{option.icon}.webp" alt="{option.name}-logo" draggable={false} />
 
                 <div style="display: flex;flex-direction: column;align-items: start;gap: 5px;">
@@ -133,12 +133,12 @@
 {:else if openedPage === "freeshow_more"}
     <MaterialButton class="popup-back" icon="back" iconSize={1.3} title="actions.back" on:click={() => (openedPage = "")} />
 
-    <div style="display: flex;gap: 5px;">
+    <div style="display: flex;flex-wrap: wrap;justify-content: center;gap: 5px;">
         {#each freeshow_more_formats as format}
             <MaterialButton
                 variant="outlined"
                 title={format.title}
-                style="flex: 1;min-height: 50px;min-width: 280px;padding: 10px;gap: 15px;"
+                style="min-height: 50px;min-width: 280px;padding: 10px;gap: 15px;"
                 on:click={() => {
                     importFreeshowFormat(format)
                 }}
@@ -154,23 +154,23 @@
     </div>
 
     <!-- <div style="display: flex;gap: 5px;margin-top: 10px;">
-        <MaterialButton variant="outlined" style="flex: 1;min-height: 50px;padding: 10px;gap: 15px;" on:click={openCalendar}>
+        <MaterialButton variant="outlined" style="min-height: 50px;padding: 10px;gap: 15px;" on:click={openCalendar}>
             <Icon style="height: 60px;" id="calendar" size={2.5} white />
             <p>{translateText("tabs.calendar")}</p>
         </MaterialButton>
 
-        <MaterialButton variant="outlined" style="flex: 1;min-height: 50px;padding: 10px;gap: 15px;" on:click={openScripture}>
+        <MaterialButton variant="outlined" style="min-height: 50px;padding: 10px;gap: 15px;" on:click={openScripture}>
             <Icon style="height: 60px;" id="scripture" size={2.5} white />
             <p>{translateText("tabs.scripture")}</p>
         </MaterialButton>
     </div> -->
 {:else if mode === "project"}
-    <div style="display: flex;gap: 5px;">
+    <div style="display: flex;flex-wrap: wrap;justify-content: center;gap: 5px;">
         {#each media_formats.filter((a) => ["pdf", "powerpoint"].includes(a.id)) as format}
-            <InputRow style="flex: 1;">
+            <InputRow>
                 <MaterialButton
                     variant="outlined"
-                    style="justify-content: start;flex: 1;min-height: 50px;font-weight: normal;"
+                    style="justify-content: start;min-height: 50px;font-weight: normal;"
                     on:click={() => {
                         if (format.id === "powerpoint") {
                             pptText()
@@ -190,11 +190,11 @@
 
     <HRule title="settings.text_import" />
 
-    <div style="display: flex;gap: 5px;">
+    <div style="display: flex;flex-wrap: wrap;justify-content: center;gap: 5px;">
         {#each text_formats.filter((a) => ["txt", "chordpro"].includes(a.id)) as format}
             <MaterialButton
                 variant="outlined"
-                style="justify-content: start;flex: 1;min-height: 50px;font-weight: normal;"
+                style="justify-content: start;min-height: 50px;font-weight: normal;"
                 on:click={() => {
                     let name = translateText(format.name)
                     sendMain(Main.IMPORT, { channel: format.id, format: { ...format, name } })
@@ -221,20 +221,22 @@
         {translateText("formats.clipboard")}
     </MaterialButton>
 {:else}
-    <MaterialButton variant="outlined" style="min-height: 50px;padding: 10px 16px;gap: 15px;margin-bottom: 10px;justify-content: start;" on:click={() => activePopup.set("church_library")}>
-        <img style="height: 40px;width: 40px;border-radius: 22.27%;" src="./scriptural-logo.svg" alt="" draggable={false} />
-        <div style="display: flex;flex-direction: column;align-items: start;gap: 3px;">
-            <p style="font-size: 1.1em;">Church library</p>
-            <span style="opacity: 0.6;">Your church's songs, kept in sync on every computer</span>
-        </div>
-    </MaterialButton>
+    <div style="display: flex;justify-content: center;margin-bottom: 10px;">
+        <MaterialButton variant="outlined" style="min-height: 50px;padding: 10px 16px;gap: 15px;justify-content: start;" on:click={() => activePopup.set("church_library")}>
+            <img style="height: 40px;width: 40px;border-radius: 22.27%;" src="./scriptural-logo.svg" alt="" draggable={false} />
+            <div style="display: flex;flex-direction: column;align-items: start;gap: 3px;">
+                <p style="font-size: 1.1em;">Church library</p>
+                <span style="opacity: 0.6;">Your church's songs, kept in sync on every computer</span>
+            </div>
+        </MaterialButton>
+    </div>
 
-    <div style="display: flex;gap: 5px;">
+    <div style="display: flex;flex-wrap: wrap;justify-content: center;gap: 5px;">
         {#each freeshow_primary_formats as format}
             <MaterialButton
                 variant="outlined"
                 title={format.title}
-                style="flex: 1;min-height: 50px;padding: 10px;gap: 15px;"
+                style="min-height: 50px;padding: 10px;gap: 15px;"
                 on:click={() => {
                     importFreeshowFormat(format)
                 }}
@@ -248,7 +250,7 @@
             </MaterialButton>
         {/each}
 
-        <MaterialButton variant="outlined" style="flex: 1;min-height: 50px;padding: 10px;gap: 5px;" on:click={() => (openedPage = "freeshow_more")}>
+        <MaterialButton variant="outlined" style="min-height: 50px;padding: 10px;gap: 5px;" on:click={() => (openedPage = "freeshow_more")}>
             <p style="opacity: 0.9;">{translateText("create_show.more_options")}</p>
             <Icon style="opacity: 0.8;height: 60px;margin-right: -15px;" id="next" size={2} white />
         </MaterialButton>
@@ -269,13 +271,13 @@
 
     <HRule title="settings.media_import" />
 
-    <div style="display: flex;gap: 5px;">
+    <div style="display: flex;flex-wrap: wrap;justify-content: center;gap: 5px;">
         {#each media_formats as format}
-            <InputRow style="flex: 1;">
+            <InputRow>
                 <MaterialButton
                     variant="outlined"
                     title={format.title}
-                    style="justify-content: start;flex: 1;min-height: 50px;font-weight: normal;"
+                    style="justify-content: start;min-height: 50px;font-weight: normal;"
                     on:click={() => {
                         if (format.id === "powerpoint") {
                             // openedPage = "powerpoint"
@@ -309,11 +311,11 @@
 
     <HRule title="settings.text_import" />
 
-    <div style="display: flex;gap: 5px;">
+    <div style="display: flex;flex-wrap: wrap;justify-content: center;gap: 5px;">
         {#each text_formats as format}
             <MaterialButton
                 variant="outlined"
-                style="justify-content: start;width: calc((100% / 3) - (5px * 2 / 3));min-height: 50px;font-weight: normal;border: 1px solid var(--primary-lighter);"
+                style="justify-content: start;min-height: 50px;font-weight: normal;border: 1px solid var(--primary-lighter);"
                 on:click={() => {
                     let name = translateText(format.name)
                     sendMain(Main.IMPORT, { channel: format.id, format: { ...format, name } })

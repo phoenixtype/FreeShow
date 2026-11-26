@@ -33,6 +33,6 @@
         opacity: 0.7;
     }
     .failed span {
-        color: #ff9d9d;
+        color: var(--error-text);
     }
 </style>

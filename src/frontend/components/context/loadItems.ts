@@ -181,8 +181,8 @@ const loadActions = {
         const slideActions = [
             { id: "action", label: "midi.start_action", icon: "actions", iconColor: "#7fb2ff" },
             "SEPARATOR",
-            { id: "slide_shortcut", label: "actions.play_with_shortcut", icon: "play", iconColor: "#7d81ff", enabled: currentActions?.slide_shortcut || false },
-            { id: "receiveMidi", label: "actions.play_on_midi", icon: "play", iconColor: "#7d81ff", enabled: currentActions?.receiveMidi || false },
+            { id: "slide_shortcut", label: "actions.play_with_shortcut", icon: "play", iconColor: "#5b9dff", enabled: currentActions?.slide_shortcut || false },
+            { id: "receiveMidi", label: "actions.play_on_midi", icon: "play", iconColor: "#5b9dff", enabled: currentActions?.receiveMidi || false },
             "SEPARATOR",
             { id: "nextTimer", label: "preview.nextTimer", icon: "clock", iconColor: "#93c5fd", enabled: Number(slideRef?.data?.nextTimer || 0) || false },
             { id: "loop", label: "preview.to_start", icon: "restart", iconColor: "#93c5fd", enabled: slideRef?.data?.end || false },

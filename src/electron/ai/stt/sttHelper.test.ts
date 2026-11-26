@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest"
 import { NemotronDriver } from "./models/nemotronWorker"
-import { findRepeatedTail, isMusicAnnotation, segmentConfidence } from "./sttHelper"
+import { canRestartAfterCrash, findRepeatedTail, isMusicAnnotation, segmentConfidence } from "./sttHelper"
+
+describe("restarting a crashed speech engine", () => {
+    const now = 1_000_000
+
+    it("allows three restarts in five minutes and no more", () => {
+        expect(canRestartAfterCrash([], now)).toBe(true)
+        expect(canRestartAfterCrash([now - 1000, now - 2000], now)).toBe(true)
+        expect(canRestartAfterCrash([now - 1000, now - 2000, now - 3000], now)).toBe(false)
+    })
+
+    it("forgets crashes older than five minutes", () => {
+        expect(canRestartAfterCrash([now - 301_000, now - 302_000, now - 303_000], now)).toBe(true)
+    })
+})
 
 const times = (phrase: string, count: number) => Array.from({ length: count }, () => phrase).join(" ")
 const loops = (text: string) => findRepeatedTail(text) >= 0

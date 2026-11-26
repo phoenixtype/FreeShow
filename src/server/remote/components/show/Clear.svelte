@@ -45,6 +45,7 @@
                     compact
                 >
                     <Icon id="image" size={1.2} />
+                    <span>Media</span>
                 </Button>
             {/if}
 
@@ -62,6 +63,7 @@
                 compact
             >
                 <Icon id={type === "pdf" ? "background" : "slide"} size={1.2} />
+                <span>Words</span>
             </Button>
 
             <Button
@@ -78,6 +80,7 @@
                 compact
             >
                 <Icon id="overlays" size={1.2} />
+                <span>Overlays</span>
             </Button>
         </div>
     {/if}
@@ -89,8 +92,9 @@
         </Button>
 
         {#if !tablet}
-            <Button disabled={locked || !(outSlide || !$isCleared.all)} on:click={() => (moreOptions = !moreOptions)} style="flex: 0;" dark center compact>
+            <Button disabled={locked || !(outSlide || !$isCleared.all)} on:click={() => (moreOptions = !moreOptions)} dark center compact>
                 <Icon id="expand" style="transition: transform .2s;{moreOptions ? 'transform: rotate(180deg);' : ''}" size={1.1} />
+                <span>{moreOptions ? "Less" : "More"}</span>
             </Button>
         {/if}
     </span>
@@ -104,23 +108,25 @@
         gap: 4px;
         padding-bottom: 0;
     }
+    /* each button is as wide as its words, and tall enough for a thumb */
     .clear :global(button) {
-        width: 100%;
-        flex: 1;
+        min-height: 44px;
     }
     .clear .more {
+        flex-wrap: wrap;
+        justify-content: center;
         gap: 8px;
         padding: 8px 8px 4px 8px;
+    }
+    .clear-all-container {
+        justify-content: center;
+        gap: 8px;
     }
     .clear.expanded .more {
         border-radius: 8px 8px 0 0;
     }
     .clear.tablet .more {
         padding-top: 0;
-    }
-    .clear .more :global(button) {
-        width: auto;
-        flex: 1;
     }
     .clear.tablet .clear-all-container {
         padding: 8px 8px 0 8px;
@@ -134,7 +140,7 @@
         font-family: sans-serif !important;
         background-color: #661a26 !important;
         color: white !important;
-        min-height: auto !important;
+        min-height: 44px !important;
         display: flex !important;
         align-items: center !important;
     }

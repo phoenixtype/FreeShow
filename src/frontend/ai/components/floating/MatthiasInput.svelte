@@ -63,7 +63,10 @@
         font-size: 0.95rem;
     }
     input:focus {
-        outline: none;
         border-color: var(--secondary);
+    }
+    input:focus-visible {
+        outline: 2px solid var(--secondary);
+        outline-offset: 1px;
     }
 </style>

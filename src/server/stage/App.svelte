@@ -127,7 +127,7 @@
     <div class="auth-page">
         <div class="panel">
             <div class="brand">
-                <h1>{$passwordRequiredLayout.name || "StageShow"}</h1>
+                <h1>{$passwordRequiredLayout.name || "Scriptural Stage"}</h1>
             </div>
 
             <form on:submit|preventDefault={submitPassword} class="auth-form">
@@ -166,7 +166,7 @@
         <div class="panel" style="align-items: center; text-align: center;">
             <div class="brand">
                 <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
-                <h1>StageShow</h1>
+                <h1>Scriptural Stage</h1>
             </div>
             <p style="opacity: 0.7; font-size: 0.95em;">{translate("remote.loading", $dictionary, "Loading...")}</p>
         </div>
@@ -177,7 +177,7 @@
             <div class="panel">
                 <div class="brand">
                     <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
-                    <h1>StageShow</h1>
+                    <h1>Scriptural Stage</h1>
                 </div>
 
                 <div class="stage-selection-list">
@@ -201,7 +201,7 @@
             <div class="panel" style="align-items: center; text-align: center;">
                 <div class="brand">
                     <img class="logo" src={freeshowLogo} alt="Scriptural" draggable="false" />
-                    <h1>StageShow</h1>
+                    <h1>Scriptural Stage</h1>
                 </div>
                 <p style="opacity: 0.6; padding: 12px 0;">{translate("empty.shows", $dictionary, "No stage layouts found")}</p>
             </div>

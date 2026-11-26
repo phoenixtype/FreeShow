@@ -15,7 +15,7 @@ export const effectItems = {
     lightning: { default: { frequency: 0.2, duration: 5, color: "#ffffff" } },
     rainbow: { default: { bandWidth: 30 } },
 
-    spotlight: { default: { x: 0.5, y: 0, length: 2000, baseWidth: 1000, swayAmplitude: 0, swaySpeed: 0, color: "rgba(234, 140, 255, 0.6)" } },
+    spotlight: { default: { x: 0.5, y: 0, length: 2000, baseWidth: 1000, swayAmplitude: 0, swaySpeed: 0, color: "rgba(140, 200, 255, 0.6)" } },
 
     aurora: { default: { bandCount: 7, amplitude: 60, wavelength: 500, speed: 0.6, colorStops: ["#00ffcc", "#00ffb7", "#00ff88"] } },
     bloom: { default: { blobCount: 25, blurAmount: 60, speed: 2 } },

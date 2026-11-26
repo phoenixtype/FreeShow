@@ -43,8 +43,8 @@ const HTML_success = `
     <head>
         <title>Success!</title>
     </head>
-    <body style="padding: 80px;background: #242832;color: #f0f0ff;font-family: system-ui;font-size: 1.2em;">
-        <h1 style="color: #f0008c;">Success!</h1>
+    <body style="padding: 80px;background: #121212;color: #f7f7f7;font-family: system-ui;font-size: 1.2em;">
+        <h1 style="color: #4fd1c5;">Success!</h1>
         <p>You can close this page</p>
     </body>
 `
@@ -52,7 +52,7 @@ const HTML_error = `
     <head>
         <title>Error!</title>
     </head>
-    <body style="padding: 80px;background: #242832;color: #f0f0ff;font-family: system-ui;font-size: 1.2em;">
+    <body style="padding: 80px;background: #121212;color: #f7f7f7;font-family: system-ui;font-size: 1.2em;">
         <h1>Could not complete authentication!</h1>
         <p>{error_msg}</p>
     </body>
