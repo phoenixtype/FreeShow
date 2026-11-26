@@ -1,5 +1,6 @@
 <script lang="ts">
     // export, hand over, delete. Anything that cannot be undone asks first and says what is lost.
+    import { escapeHtml } from "../../../../utils/escapeHtml"
     import { createEventDispatcher, onMount } from "svelte"
     import { churchPeople, deleteAccount, deleteChurch, exportSongs, transferOwnership, type Person } from "../../../../scriptural/churchAccount"
     import type { Church } from "../../../../scriptural/churchSync"
@@ -118,7 +119,7 @@
         <p><T id="account.delete_church_note" replace={[church.name]} /></p>
         {#if asking === "church"}
             <ConfirmRow question={translateText("account.delete_church_question", $dictionary, [church.name, people.length > 1 ? ` ${translateText("account.people_count", $dictionary, [String(people.length)])}` : ""])} action={translateText("account.delete_church", $dictionary)} red disabled={busy || !nameMatches} on:cancel={() => ask("")} on:confirm={removeChurch}>
-                <MaterialTextInput label={translateText("account.type_to_confirm", $dictionary, [church.name])} value={typedName} on:input={(e) => (typedName = e.detail)} autofocus />
+                <MaterialTextInput label={translateText("account.type_to_confirm", $dictionary, [escapeHtml(church.name)])} value={typedName} on:input={(e) => (typedName = e.detail)} autofocus />
             </ConfirmRow>
         {:else}
             <div class="actions">

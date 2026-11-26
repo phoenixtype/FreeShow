@@ -24,6 +24,7 @@ const ALLOWED: Record<string, RegExp> = {
     "src/frontend/components/main/popups/ImportScripture.svelte": /^FreeShow$/, // the .fsb format again
     "src/frontend/components/settings/tabs/Files.svelte": /^FreeShow$/, // the data folder already on people's computers
     "src/frontend/utils/checkForUpdates.ts": /^FreeShow$/, // our own release address
+    "src/electron/ai/setup/models/nemotron.ts": /^FreeShow$/, // our own release address, where the model's copy is
     "src/frontend/components/main/popups/Connect.svelte": /freeshow\.net/, // remote control service
     "src/frontend/components/drawer/pages/interactionSlides.ts": /freeshow\.net/, // interaction service
     "src/frontend/components/drawer/pages/InteractionsInfo.svelte": /freeshow\.net/, // interaction service
