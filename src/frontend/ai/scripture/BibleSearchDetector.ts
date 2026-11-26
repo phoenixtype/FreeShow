@@ -15,6 +15,9 @@ function rangeEnd(start: number, end: number | undefined, verseCount: number): s
     return last > start ? `-${last}` : ""
 }
 
+// group 1: what led up to it; then chapter, verse and range end
+const STANDALONE_CHAPTER = new RegExp(`(^|[.!?]\\s*|\\b(?:turn(?: with me)? to|go to|to|in|at|and|then|now|so|read|see|us|from)\\s+(?:the )?)(?:${CHAPTER_PATTERN})\\s*(\\d+)(?:[\\s,:]*(?:(?:and )?(?:${VERSE_PATTERN})\\s*)?(?<=[\\s,:])(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?)?`, "giu")
+
 export class BibleSearchDetector {
     constructor(private cacheData: BibleCacheData) {}
 
@@ -52,6 +55,13 @@ export class BibleSearchDetector {
                 const after = cleanInput.slice(matchIndex + matchLength)
                 // "Mark two things", "John 3 years ago": the number counts something else
                 if (COUNTED_WORDS.test(after)) continue
+                // "John chapter three, and look with me at verse sixteen"
+                const later = after.slice(0, 60).match(new RegExp(`\\b(?:${VERSE_PATTERN})\\s*(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "iu"))
+                const laterVerse = Number(later?.[1] || 0)
+                if (laterVerse >= 1 && laterVerse <= chapterData.verseCount) {
+                    const content = `${chapterData.bookName} ${chapterData.chapterNumber}:${laterVerse}${rangeEnd(laterVerse, Number(later![2] || 0), chapterData.verseCount)}`
+                    return { type: "scripture", content, confidence: 98 }
+                }
                 const meant = new RegExp(`\\b(?:${CHAPTER_PATTERN})\\b`, "iu").test(refMatch[0]) || LEAD_IN.test(cleanInput.slice(0, matchIndex)) || !/[\p{L}\p{N}]/u.test(after)
                 return {
                     type: "scripture",
@@ -75,7 +85,29 @@ export class BibleSearchDetector {
         return null
     }
 
+    /** "chapter three verse sixteen", in the book that is up; null when no chapter alone was said */
+    private findStandaloneChapterMatch(cleanInput: string, currentlyOutputted?: string | null): { match: MatchResult | null } | null {
+        const said = Array.from(cleanInput.matchAll(STANDALONE_CHAPTER)).pop()
+        if (!said) return null
+        const after = cleanInput.slice((said.index ?? 0) + said[0].length)
+        if (after.length > 80) return null
+
+        const current = this.parseReference(currentlyOutputted || "")
+        const chapterData = current && this.cacheData.referenceIndex.get(`${current.book.toLowerCase()} ${Number(said[2])}`)
+        const verse = Number(said[3] || 0)
+        if (!chapterData || verse > chapterData.verseCount) return { match: null }
+        // a chapter alone ("a new chapter one of our lives") has to be asked for
+        if (!verse && !(LEAD_IN.test(said[1]) && !/\p{L}/u.test(after))) return { match: null }
+
+        const content = `${chapterData.bookName} ${chapterData.chapterNumber}:${verse || 1}${verse ? rangeEnd(verse, Number(said[4] || 0), chapterData.verseCount) : ""}`
+        return { match: { type: "scripture", content, confidence: 80 } }
+    }
+
     public findStandaloneVerseMatch(cleanInput: string, currentlyOutputted?: string | null, withCue = false): MatchResult | null {
+        // a chapter said with it decides which verse is meant, so it comes first
+        const chapter = this.findStandaloneChapterMatch(cleanInput, currentlyOutputted)
+        if (chapter) return chapter.match
+
         const verseRegex = new RegExp(`\\b(?:${VERSE_PATTERN})\\s*(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "giu")
         const matches = Array.from(cleanInput.matchAll(verseRegex))
         if (matches.length === 0) return withCue ? this.findNextVerseCue(cleanInput, currentlyOutputted) : null

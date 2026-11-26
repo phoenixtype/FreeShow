@@ -116,3 +116,24 @@ describe("a range stays inside the chapter (B8)", () => {
         expect(await heard("John 3 36 to 99")).toBe("John 3:36")
     })
 })
+
+describe("a chapter without its book (B11)", () => {
+    it("is read in the book on screen", async () => {
+        expect(await search("chapter three verse sixteen", "John 1:1")).toMatchObject({ content: "John 3:16", confidence: 80 })
+        expect(await heard("and chapter three verse sixteen", "John 1:1")).toBe("John 3:16")
+        expect(await heard("turn to chapter three, verse sixteen", "John 1:1")).toBe("John 3:16")
+        expect(await heard("turn to chapter three", "John 1:1")).toBe("John 3:1")
+    })
+
+    it("does nothing without a book on screen, or when it is talk", async () => {
+        expect(await heard("chapter three verse sixteen")).toBeUndefined()
+        expect(await heard("it is a new chapter one in our lives", "John 1:1")).toBeUndefined()
+        expect(await heard("and chapter three is where we struggle", "John 1:1")).toBeUndefined()
+        // John has no chapter 40: not verse 2 of the chapter on screen either
+        expect(await heard("chapter forty verse two", "John 1:1")).toBeUndefined()
+    })
+
+    it("takes a verse said a little after the chapter", async () => {
+        expect(await heard("John chapter three and look with me at verse sixteen")).toBe("John 3:16")
+    })
+})

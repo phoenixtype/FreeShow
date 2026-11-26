@@ -35,6 +35,10 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
         normalized = normalized.replace(new RegExp(`\\b${from}\\b`, "giu"), to)
     }
 
+    // "and chapter three verse sixteen": "and" is not a book, and the chapter must stay said
+    const bookWords = cacheData.bookNames.flatMap((name) => [name.toLowerCase(), name.toLowerCase().split(" ").pop()!])
+    const isBook = (name: string) => bookWords.includes(name.toLowerCase().replace(/\s+/g, " ")) || bookWords.includes(name.toLowerCase().replace(/^[1-3]\s*/, ""))
+
     // 3. Inverted structure: "verse 16 of John chapter 3" or "16th verse of John chapter 3" -> "John 3:16"
     const invertedRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(?:${VERSE_PATTERN})?\\s*(\\d+)\\s+(?:(?:${VERSE_PATTERN})\\s+)?(?:${OF_PATTERN})\\s+((?:[1-3]\\s*)?[\\p{L}]+?)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d+)\\b`, "giu")
     normalized = normalized.replace(invertedRegex, (_, verse, book, chap) => {
@@ -44,8 +48,9 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     // 4. Trailing verse ordinal/word: "John chapter 3, the 16th verse" -> "John 3:16"
     const trailingVerseRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+?)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d+)[,\\s]+(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(?:${VERSE_PATTERN})\\b`, "giu")
-    normalized = normalized.replace(trailingVerseRegex, (_, book, chap, verse) => {
+    normalized = normalized.replace(trailingVerseRegex, (match, book, chap, verse) => {
         const cleanBook = book.trim().replace(new RegExp(`\\s+(?:${CHAPTER_PATTERN})$`, "iu"), "")
+        if (!isBook(cleanBook)) return match
         return `${cleanBook} ${chap}:${verse}`
     })
 
@@ -74,6 +79,7 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
     const standardRefRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+?)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+(\\d+)\\s+((?:${JOINER_PATTERN})|(?:${VERSE_PATTERN}))\\s+(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "giu")
     normalized = normalized.replace(standardRefRegex, (match, book, chap, joiner, vStart, vEnd) => {
         const cleanBook = book.trim().replace(new RegExp(`\\s+(?:${CHAPTER_PATTERN})$`, "iu"), "")
+        if (!isBook(cleanBook)) return match
         const joinerStr = (joiner || "").toLowerCase()
         const isJoinerWord = new RegExp(`^(?:${JOINER_PATTERN})$`, "i").test(joinerStr)
         // "Genesis 1 and 2" is two chapters, not chapter 1 verse 2
