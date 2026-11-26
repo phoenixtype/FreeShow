@@ -3,6 +3,7 @@
 
 import { get } from "svelte/store"
 import { loadJsonBible, resolveScriptureReference, sanitizeVerseText } from "../../components/drawer/bible/scripture"
+import { listeningBibleId } from "../../scriptural/ancientRules"
 import { drawerTabsData, scriptures } from "../../stores"
 
 export interface Passage {
@@ -24,7 +25,8 @@ const plain = (text: unknown) =>
 export async function readPassage(reference: string, scriptureId = ""): Promise<Passage | null> {
     const open = scriptureId || get(drawerTabsData).scripture?.activeSubTab || ""
     // the Scripture drawer opens the first Bible when the last one is gone
-    const requested = get(scriptures)[open] ? open : Object.keys(get(scriptures))[0] || ""
+    // never the other ancient writings: what is read here is offered by listening
+    const requested = listeningBibleId(get(scriptures)[open] ? open : Object.keys(get(scriptures))[0] || "")
     const bibleId = get(scriptures)[requested]?.collection?.versions?.[0] || requested
     if (!bibleId) return null
 

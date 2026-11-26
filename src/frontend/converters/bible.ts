@@ -87,7 +87,7 @@ export function importFSB(data: any[]) {
         name = formatToFileName(bible.name || name)
 
         scriptures.update((a) => {
-            a[id] = { name, id }
+            a[id] = { name, id, ...(bible.metadata?.ancientWritings ? { ancientWritings: true } : {}) }
             return a
         })
 

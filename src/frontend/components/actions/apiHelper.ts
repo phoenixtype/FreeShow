@@ -8,9 +8,10 @@ import { clearAudio } from "../../audio/audioFading"
 import { AudioPlayer } from "../../audio/audioPlayer"
 import { AudioPlaylist } from "../../audio/audioPlaylist"
 import { dbToGain } from "../../audio/dBUtils"
-import { activeDrawerTab, activeEdit, activePage, activeProject, activeShow, activeTimers, audioChannelsData, audioPlaylists, audioRouting, draw, drawSettings, drawTool, folders, groupNumbers, groups, media, openScripture, outLocked, outputs, overlays, pdfImports, playingAudio, playingMetronome, projects, refreshEditSlide, selected, shows, showsCache, sortedShowsList, special, styles, timers, variables } from "../../stores"
+import { activeDrawerTab, activeEdit, activePage, activeProject, activeShow, activeTimers, audioChannelsData, audioPlaylists, audioRouting, draw, drawerTabsData, drawSettings, drawTool, folders, groupNumbers, groups, media, openScripture, outLocked, outputs, overlays, pdfImports, playingAudio, playingMetronome, projects, refreshEditSlide, selected, shows, showsCache, sortedShowsList, special, styles, timers, variables } from "../../stores"
 import { newToast, triggerFunction } from "../../utils/common"
 import { send } from "../../utils/request"
+import { refusesReference } from "../../scriptural/ancientRules"
 import { parseEngScriptureRefToNumbers, resolveScriptureReference } from "../drawer/bible/scripture"
 import { isOutputRecording, startOutputRecording, stopOutputRecording } from "../drawer/live/recorder"
 import { getDynamicValue } from "../edit/scripts/itemHelpers"
@@ -705,6 +706,8 @@ export function getClearedState() {
 // "1.1.1,2,3" = "Gen 1:1-3"
 // or "John 3:16" / "1 John 1:4-6"
 export async function resolveScriptureRequest(data: Pick<API_scripture, "reference" | "id">): Promise<{ book: number; chapter: number; verses: (string | number)[][] } | null> {
+    if (refusesReference(data.id || get(drawerTabsData).scripture?.activeSubTab || "", data.reference)) return null
+
     const split = data.reference.split(".")
     const book = Number(split[0])
     const chapter = Number(split[1])

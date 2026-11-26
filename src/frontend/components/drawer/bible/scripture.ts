@@ -12,6 +12,7 @@ import { defaultBibleBookNames } from "../../../converters/bebliaBible"
 import { createCategory } from "../../../converters/importHelpers"
 import { requestMain, sendMain } from "../../../IPC/main"
 import { findBestBreak, splitTextContentInHalf } from "../../../show/slides"
+import { bookFitsBible } from "../../../scriptural/ancientRules"
 import { activeProject, activeScripture, activeShow, drawerTabsData, media, notFound, outLocked, overlays, scriptureHistory, scriptures, scripturesCache, scriptureSettings, styles, templates } from "../../../stores"
 import { trackScriptureUsage } from "../../../utils/analytics"
 import { TemplateHelper } from "../../../utils/templates"
@@ -158,7 +159,7 @@ export async function getActiveScripturesContent(selectedVerses: (number | strin
         currentScriptures
             .map(async (id) => {
                 const BibleData = await loadJsonBible(id)
-                if (!BibleData) return null
+                if (!BibleData || !bookFitsBible(id, active?.book || 0)) return null
 
                 const scriptureData = get(scriptures)[id]
                 const version = scriptureData?.customName || scriptureData?.name || ""
@@ -193,7 +194,7 @@ export async function getActiveScripturesContent(selectedVerses: (number | strin
                 selected[0].unshift(...Array.from({ length: includeCount }, (_, i) => Math.max(1, getVerseId(selected[0][0]) - (i + 1))).reverse())
                 selected[0].push(...Array.from({ length: includeCount }, (_, i) => getVerseId(selected[0][selected[0].length - 1]) + (i + 1)))
                 // remove selected not in range of min to max verse number
-                const minVerseNumber = 1
+                const minVerseNumber = Number(Chapters[0]?.data.verses[0]?.number ?? 1)
                 const maxVerseNumber = Chapters[0] ? (Chapters[0].data.verses[Chapters[0].data.verses.length - 1]?.number ?? Chapters[0].data.verses.length) : 1
                 selected[0] = selected[0].filter((v) => {
                     const id = getVerseId(v)
