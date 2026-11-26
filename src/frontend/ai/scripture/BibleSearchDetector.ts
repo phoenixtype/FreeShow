@@ -3,8 +3,11 @@ import type { BibleCacheData } from "./BibleCacheManager"
 import { normalizeMishearings } from "./mishearings"
 import { normalizeNumbers } from "./numbers"
 import { MIN_EVIDENCE, PRESENT_EVIDENCE, quoteEvidence } from "./quoteEvidence"
-import { normalizeBookName, RANGE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
+import { CHAPTER_PATTERN, normalizeBookName, RANGE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
 import { normalizeReferences } from "./references"
+
+const COUNTED_WORDS = /^\s*(?:things|people|days|years|times|of|out|is|was|men|women|friends|letters)\b/iu
+const LEAD_IN = /\b(?:turn(?: with me)? to|book of|chapter of|in|read|reading|open(?: (?:your|our|the) bibles?)?(?: (?:with me )?(?:to|at))?)\s+(?:the (?:book of )?)?$/iu
 
 export class BibleSearchDetector {
     constructor(private cacheData: BibleCacheData) {}
@@ -35,10 +38,14 @@ export class BibleSearchDetector {
 
             if (!startVerseNum) {
                 if (chapterData.verseCount < 1) continue
+                const after = cleanInput.slice(matchIndex + matchLength)
+                // "Mark two things", "John 3 years ago": the number counts something else
+                if (COUNTED_WORDS.test(after)) continue
+                const meant = new RegExp(`\\b(?:${CHAPTER_PATTERN})\\b`, "iu").test(refMatch[0]) || LEAD_IN.test(cleanInput.slice(0, matchIndex)) || !/[\p{L}\p{N}]/u.test(after)
                 return {
                     type: "scripture",
                     content: `${chapterData.bookName} ${chapterData.chapterNumber}:1`,
-                    confidence: 75
+                    confidence: meant ? 75 : 60
                 }
             }
 
@@ -520,20 +527,21 @@ export class BibleSearchDetector {
     }
 
     /** a reference said outright, whole or as a verse of the passage that is up */
-    public findReference(words: string, currentlyOutputted = ""): MatchResult | null {
-        const forms = [normalizeMishearings(words), words].map((form) => normalizeReferences(normalizeNumbers(form), this.cacheData))
+    public findReference(words: string, currentlyOutputted = "", language = "en"): MatchResult | null {
+        const forms = [normalizeMishearings(words), words].map((form) => normalizeReferences(normalizeNumbers(form, language), this.cacheData))
         // the verse cue only reads the words as they were heard
         return this.findReferenceMatch(forms[0]) || this.findReferenceMatch(forms[1]) || this.findStandaloneVerseMatch(forms[0], currentlyOutputted) || this.findStandaloneVerseMatch(forms[1], currentlyOutputted, true)
     }
 
     private readonly DEBUG_MODE = false
-    public async search(transcript: string, currentlyOutputted: string, isCancelled?: () => boolean): Promise<MatchResult | null> {
+    /** language: what is being spoken, for its number words ("any" when it could be several) */
+    public async search(transcript: string, currentlyOutputted: string, isCancelled?: () => boolean, language = "en"): Promise<MatchResult | null> {
         if (this.DEBUG_MODE) console.log("[DETECTION] Starting search with transcript:", transcript)
         if (isCancelled?.()) return null
 
         const mishearingsCorrected = normalizeMishearings(transcript)
-        const rawNormalizedNumbers = normalizeNumbers(transcript)
-        const mishearingsNormalizedNumbers = normalizeNumbers(mishearingsCorrected)
+        const rawNormalizedNumbers = normalizeNumbers(transcript, language)
+        const mishearingsNormalizedNumbers = normalizeNumbers(mishearingsCorrected, language)
 
         const rawNormalized = normalizeReferences(rawNormalizedNumbers, this.cacheData)
         const mishearingsNormalized = normalizeReferences(mishearingsNormalizedNumbers, this.cacheData)

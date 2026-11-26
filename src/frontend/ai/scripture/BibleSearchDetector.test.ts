@@ -44,3 +44,27 @@ describe("ordinary words stay ordinary (B3)", () => {
         expect(await heard("1 cor 13:4")).toBe("1 Corinthians 13:4")
     })
 })
+
+describe("a book name and a number is not always a chapter (B4)", () => {
+    it("does nothing when the number is part of the sentence", async () => {
+        expect(await heard("John once said that we should pray")).toBeUndefined()
+        expect(await heard("Mark two things today")).toBeUndefined()
+        expect(await heard("Mark two things")).toBeUndefined()
+        expect(await heard("we gave James 3 more chances after that")).toBeUndefined()
+        expect(await heard("in Acts 2 of the apostles' prayers were answered")).toBeUndefined()
+    })
+
+    it("still goes to a chapter that is plainly meant", async () => {
+        expect(await heard("turn to John 3")).toBe("John 3:1")
+        expect(await heard("John chapter 3 and let us pray")).toBe("John 3:1")
+        expect(await heard("we are reading Romans 8 this morning")).toBe("Romans 8:1")
+        expect(await heard("the eighth chapter of Romans tells us")).toBe("Romans 8:1")
+        expect(await heard("John 3")).toBe("John 3:1")
+    })
+
+    it("reads number words of another language only when it is spoken", async () => {
+        const detector = await testBible()
+        expect((await detector.search("turn to John once", "", undefined, "es"))?.content).toBe("John 11:1")
+        expect(await heard("turn to John once")).toBeUndefined()
+    })
+})

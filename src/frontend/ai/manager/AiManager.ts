@@ -21,6 +21,7 @@ import { isPartOf, isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
 import { resolveNavigation } from "../scripture/voiceNavigation"
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
+import { spokenLanguage, resolveSttEngine } from "../stt/stt"
 
 interface Shown {
     content: string
@@ -92,6 +93,10 @@ export class AiManager {
             this.newMatch(llmMatch)
             this.lastMatch = Date.now()
         }
+    }
+
+    private static numberLanguage(): string {
+        return spokenLanguage(get(ai).stt?.engineOptions?.[resolveSttEngine()]?.language) || "any"
     }
 
     private static async stringDetection(textChunk: string, isCancelled?: () => boolean) {
@@ -215,7 +220,7 @@ export class AiManager {
             if (!localIds.length) {
                 if (!this.scriptureAlerted) newToast("Listening for references. Download a Bible to also catch verses as they are quoted.")
                 this.scriptureAlerted = true
-                return await (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled)
+                return await (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
             }
             const match = await this.bibleDetection(localIds[0], textChunk, isCancelled)
             if (match) delete match.scriptureTranslation
@@ -252,7 +257,7 @@ export class AiManager {
         const bibleCache = await BibleCacheManager.getCache(id)
         if (!bibleCache || isCancelled?.()) return null
 
-        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled)
+        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
         if (!match) return null
 
         match.scriptureTranslation = id
@@ -391,7 +396,7 @@ export class AiManager {
 
     static async findReference(words: string): Promise<string | null> {
         const detector = await this.referenceDetector()
-        return detector.findReference(words, this.liveContent)?.content || null
+        return detector.findReference(words, this.liveContent, this.numberLanguage())?.content || null
     }
     private static async referenceDetector() {
         const open = get(drawerTabsData)?.scripture?.activeSubTab || ""
@@ -400,7 +405,7 @@ export class AiManager {
         return (id && (await BibleCacheManager.getCache(id))) || (await BibleCacheManager.getCanon())
     }
     static async findInLocalBible(words: string): Promise<string | null> {
-        return (await (await this.referenceDetector()).search(words, ""))?.content || null
+        return (await (await this.referenceDetector()).search(words, "", undefined, this.numberLanguage()))?.content || null
     }
     static async showReference(reference: string) {
         await this.present(reference, reference)

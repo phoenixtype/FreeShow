@@ -38,7 +38,7 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     // 5. Ordinal chapter structure: "the 8th chapter of Romans" -> "Romans 8"
     const ordinalChapterRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(?:${CHAPTER_PATTERN}|${PSALM_PATTERN})\\s+(?:${OF_PATTERN})\\s+((?:[1-3]\\s*)?[\\p{L}]+)\\b`, "giu")
-    normalized = normalized.replace(ordinalChapterRegex, "$2 $1")
+    normalized = normalized.replace(ordinalChapterRegex, (all, chapter: string, book: string) => (/\bchapter\b/iu.test(all) ? `${book} chapter ${chapter}` : `${book} ${chapter}`))
 
     // 6. Ordinal psalm phrasing: "the 23rd psalm" -> "Psalm 23"
     const ordinalPsalmRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(${PSALM_PATTERN})\\b`, "giu")
