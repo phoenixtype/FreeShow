@@ -1,5 +1,6 @@
 export interface AiSettings {
     enabled?: boolean
+    detectionLog?: boolean // keep a record of what was detected (off unless switched on)
     stt?: SttSettings
     llm?: LlmSettings
 
@@ -51,4 +52,8 @@ interface LlmSettings {
 export type ConfidenceLevels = "ask" | "highest" | "high" | "medium"
 interface AiScriptureSettings {
     confidence?: ConfidenceLevels
+    // scripture only, each on unless switched off
+    verseCue?: boolean // follow a reader who says the next verse number
+    events?: boolean // offer the passage when a Bible story is mentioned
+    commands?: boolean // obey "next verse" and the like without the name
 }

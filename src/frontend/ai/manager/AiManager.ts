@@ -2,27 +2,35 @@ import { get, type Unsubscriber } from "svelte/store"
 import { uid } from "uid"
 import type { AiSuggestion, MatchResult } from "../../../types/ai/Ai"
 import type { ConfidenceLevels } from "../../../types/ai/AiSettings"
+import type { Detection, DetectionTier } from "../../../types/ai/Records"
 import { clone, keysToID } from "../../components/helpers/array"
 import { getFirstActiveOutput, setOutput } from "../../components/helpers/output"
-import { loadJsonBible, screenScripture } from "../../components/drawer/bible/scripture"
+import { screenScripture } from "../../components/drawer/bible/scripture"
 import { startShow } from "../../components/helpers/showActions"
 import { clearAll, clearSlide, restoreOutput } from "../../components/output/clear"
 import { setActiveScripture } from "../../converters/bible"
 import { ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputCache, outputs, scriptures } from "../../stores"
 import { newToast } from "../../utils/common"
 import { handBack, isHeld, movedByHand, OwnChanges, type OwnChange } from "../agent/control"
-import { currentScripture, otherTab, presentPassage } from "../agent/presentPassage"
+import { presentPassage } from "../agent/presentPassage"
 import { usesAiDetection } from "../llm/aiDetection"
 import { getLLMManager } from "../llm/llmManager"
+import { logDetection } from "../records/detectionLog"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleVersion } from "../scripture/BibleVersionDetector"
 import { detectBibleEvents } from "../scripture/bibleEvents"
 import { searchByMeaning } from "../scripture/meaningSearch"
 import { isPartOf, isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
-import { resolveNavigation } from "../scripture/voiceNavigation"
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
 import { spokenLanguage, resolveSttEngine } from "../stt/stt"
+import { passageStep } from "./passageStep"
+
+/** the words something was found in, and how */
+interface Heard {
+    words: string
+    tier: DetectionTier
+}
 
 interface Shown {
     content: string
@@ -60,16 +68,17 @@ export class AiManager {
 
         // a spoken command ("next verse") moves the screen and is not searched for
         const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
-        const command = parseCopilotCommand(newWords, false)
+        const command = this.catches("commands") ? parseCopilotCommand(newWords, false) : null
         // a command that moved nothing (no passage on screen) is searched like any other words
-        if (command && (await this.navigate(command))) return
+        if (command && (await this.navigate(command, false, newWords))) return
 
         const stringMatch = await this.stringDetection(chunk.chunkWithOverlap, isCancelled)
         if (isCancelled()) return
 
         if (stringMatch) {
             this.cancelSearches(search.id)
-            this.newMatch(stringMatch)
+            const tier = stringMatch.type === "scripture_version" ? "version" : stringMatch.scriptureMatchType === "content" ? "quote" : "reference"
+            this.newMatch(stringMatch, false, { words: chunk.chunkWithOverlap, tier })
             this.lastMatch = Date.now()
             return
         }
@@ -82,7 +91,7 @@ export class AiManager {
 
         const eventMatch = this.eventDetection(chunk.chunkWithOverlap)
         if (eventMatch) {
-            this.newMatch(eventMatch, true)
+            this.newMatch(eventMatch, true, { words: chunk.chunkWithOverlap, tier: "event" })
             this.lastMatch = Date.now()
             return
         }
@@ -95,7 +104,7 @@ export class AiManager {
         const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, superseded)
         if (superseded()) return
         if (meaningMatch) {
-            this.newMatch(meaningMatch)
+            this.newMatch(meaningMatch, false, { words: chunk.chunkWithOverlap, tier: "meaning" })
             this.lastMatch = Date.now()
             return
         }
@@ -108,9 +117,14 @@ export class AiManager {
         // a newer chunk has spoken since: this answer is stale
         if (superseded()) return
         if (llmMatch) {
-            this.newMatch(llmMatch)
+            this.newMatch(llmMatch, false, { words: chunk.chunkWithOverlap, tier: "model" })
             this.lastMatch = Date.now()
         }
+    }
+
+    // each way of catching things is on unless switched off
+    private static catches(way: "verseCue" | "events" | "commands"): boolean {
+        return get(ai).scripture?.[way] !== false
     }
 
     private static numberLanguage(): string {
@@ -119,6 +133,7 @@ export class AiManager {
 
     /** everything said between two pauses: only here do the one-word commands count. True when it moved the screen */
     static async processUtterance(text: string): Promise<boolean> {
+        if (!this.catches("commands")) return false
         // phrases that count mid-sentence were acted on as they were heard
         if (parseCopilotCommand(text, false)) return false
         const command = parseCopilotCommand(text, true)
@@ -128,7 +143,7 @@ export class AiManager {
         // what is still being searched was said before this
         this.latestSearchId++
         this.cancelSearches()
-        return this.navigate(command)
+        return this.navigate(command, false, text)
     }
 
     private static async stringDetection(textChunk: string, isCancelled?: () => boolean) {
@@ -161,7 +176,7 @@ export class AiManager {
             return true
         }
 
-        this.newMatch({ type: "lyrics", content: hit.name, confidence: hit.confidence, showId: hit.id, lyricsText: recent })
+        this.newMatch({ type: "lyrics", content: hit.name, confidence: hit.confidence, showId: hit.id, lyricsText: recent }, false, { words: text, tier: "song" })
         return true
     }
 
@@ -182,6 +197,7 @@ export class AiManager {
     // famous events and parables said in passing: "when Jesus walked on water".
     // Only ever offered: nobody asked for the passage
     private static eventDetection(textChunk: string): MatchResult | null {
+        if (!this.catches("events")) return null
         const event = detectBibleEvents(textChunk)[0]
         if (!event) return null
         return { type: "scripture", content: event.reference, confidence: event.confidence >= 0.88 ? 74 : 65 }
@@ -197,35 +213,27 @@ export class AiManager {
     }
     private static navigatedTo = ""
 
-    private static async navigate(command: CopilotCommand, asked = false): Promise<boolean> {
+    // heard: the words of a command that was overheard, not asked for
+    private static async navigate(command: CopilotCommand, asked = false, heard = ""): Promise<boolean> {
         // a repeat within the cooldown still counts as handled
         if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return true
 
-        const { id, reference } = currentScripture()
-        if (!id || !reference?.book || !reference.chapters?.length) return false
-
-        const chapter = Number(reference.chapters[reference.chapters.length - 1])
-        const verses = (reference.verses?.[reference.verses.length - 1] || []).map((v) => parseInt(String(v), 10)).filter((v) => !isNaN(v))
-        const verse = verses.length ? Math.max(...verses) : 1
-
-        const bible = (await loadJsonBible(id))?.data
-        const book = bible?.books?.find((b) => Number(b.number) === Number(reference.book))
-        if (!book) return false
-
-        const chapterOf = (n: number) => book.chapters.find((c) => Number(c.number) === n)
-        const target = resolveNavigation(command, { chapter, verse }, { chapterCount: book.chapters.length, verseCount: (n) => chapterOf(n)?.verses.length || 0 })
-        if (!target) return false
+        const step = await passageStep(command)
+        if (!step) return false
 
         this.lastCommand = Date.now()
-        const content = `${book.name} ${target.chapter}:${target.verse}`
+        const { content } = step
         this.navigatedTo = content
+        const found: Omit<Detection, "action"> | null = heard ? { heard, tier: "command", confidence: 100, found: content } : null
         const trigger = async () => {
-            await this.present(content, `${reference.book}.${target.chapter}.${target.verse}`, otherTab(id))
+            await this.present(content, step.reference, step.id)
+            this.note(found, "shown")
         }
 
         // commands follow the scripture setting: presented directly, or offered when set to "ask"
         const draft = { id: uid(5), timestamp: Date.now(), content, confidence: 100 }
         if (!asked && (isHeld() || this.autoLevel("scripture") === "ask")) {
+            this.note(found, "offered")
             this.addSuggestion({ ...draft, action: "present", trigger })
             return true
         }
@@ -268,7 +276,7 @@ export class AiManager {
                 if (!this.scriptureAlerted) newToast("Listening for references. Download a Bible to also catch verses as they are quoted.")
                 this.scriptureAlerted = true
             }
-            return (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
+            return (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage(), this.catches("verseCue"))
         }
 
         const match = await this.bibleDetection(readId, textChunk, isCancelled)
@@ -294,7 +302,7 @@ export class AiManager {
                 const otherMatch = await this.bibleDetection(id, textChunk, isCancelled)
                 if (otherMatch?.confidence && otherMatch.confidence > highestConfidence) {
                     highestConfidence = otherMatch.confidence
-                    this.newMatch({ ...otherMatch, scriptureIsNewTranslation: true })
+                    this.newMatch({ ...otherMatch, scriptureIsNewTranslation: true }, false, { words: textChunk, tier: "quote" })
                 }
             })
         ).catch((err) => console.warn("Live Copilot could not search the other Bibles", err))
@@ -306,7 +314,7 @@ export class AiManager {
         const bibleCache = await BibleCacheManager.getCache(id)
         if (!bibleCache || isCancelled?.()) return null
 
-        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
+        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage(), this.catches("verseCue"))
         if (!match) return null
 
         match.scriptureTranslation = id
@@ -318,7 +326,7 @@ export class AiManager {
     // being put up: not yet live, and not to be put up a second time
     private static pendingContent = ""
 
-    static newMatch(match: MatchResult, offerOnly = false) {
+    static newMatch(match: MatchResult, offerOnly = false, heard?: Heard) {
         if (match.type === "empty" || !match.content) return
         // a verse of the range on screen being read keeps the whole range up
         if (match.type === "scripture" && (AiManager.liveContent === match.content || isReferenceWithin(AiManager.liveContent, match.content))) {
@@ -338,7 +346,12 @@ export class AiManager {
         }
         if (match.scriptureIsNewTranslation) suggestionDraft.scriptureTranslation = match.scriptureTranslation
 
-        const trigger = () => this.triggerMatchAction(match)
+        const found: Omit<Detection, "action"> | null = heard ? { heard: heard.words, tier: heard.tier, confidence: match.confidence, found: match.content } : null
+        const trigger = async () => {
+            const up = await this.triggerMatchAction(match)
+            if (up) this.note(found, "shown")
+            return up
+        }
 
         if (!offerOnly && this.shouldAutoPlay(match)) {
             const suggestion = { ...suggestionDraft, action: "presented", trigger }
@@ -349,10 +362,15 @@ export class AiManager {
             trigger().then((up) => {
                 if (this.pendingContent === match.content) this.pendingContent = ""
                 // it did not go up: still on offer, not part of what was shown
-                if (!up) aiSuggestions.update((list) => list.map((a) => (a.id === suggestion.id ? { ...a, action: match.type === "lyrics" ? "present_song" : "present" } : a)))
+                if (up) return
+                this.note(found, "offered")
+                aiSuggestions.update((list) => list.map((a) => (a.id === suggestion.id ? { ...a, action: match.type === "lyrics" ? "present_song" : "present" } : a)))
             })
             return
         }
+
+        // the same words heard again within moments are one offer
+        if (!this.alreadySuggested(match)) this.note(found, "offered")
 
         if (match.type === "scripture_version") {
             const suggestion = { ...suggestionDraft, action: "open_scripture", trigger }
@@ -362,6 +380,14 @@ export class AiManager {
 
         const suggestion = { ...suggestionDraft, action: match.type === "lyrics" ? "present_song" : "present", trigger }
         this.addSuggestion(suggestion)
+    }
+
+    // the last detection that went on screen, so taking it back is written down too
+    private static lastDetected: Omit<Detection, "action"> | null = null
+    private static note(found: Omit<Detection, "action"> | null, action: Detection["action"]) {
+        if (!found) return
+        if (action === "shown") this.lastDetected = found
+        logDetection({ ...found, action })
     }
 
     // long enough for the words that found it to have gone by; "back to verse sixteen" later is shown
@@ -531,6 +557,8 @@ export class AiManager {
         const before = this.undone
         if (!before && !get(outputCache)) return false
         this.takenBack = { content: this.liveContent, at: Date.now() }
+        if (this.lastDetected && this.lastDetected.found === this.liveContent) this.note(this.lastDetected, "undone")
+        this.lastDetected = null
         this.listenToOutput()
         this.ownChanges.expect("any")
         this.undone = null
