@@ -2,10 +2,13 @@
 <script lang="ts">
     import Title from "../../components/input/Title.svelte"
     import MaterialButton from "../../components/inputs/MaterialButton.svelte"
+    import MaterialDatePicker from "../../components/inputs/MaterialDatePicker.svelte"
     import MaterialToggleSwitch from "../../components/inputs/MaterialToggleSwitch.svelte"
-    import { ai } from "../../stores"
+    import { ai, special, usageLog } from "../../stores"
     import { newToast } from "../../utils/common"
+    import { saveCcliReport } from "./ccliReport"
     import { openDetectionLogs } from "./detectionLog"
+    import { localDay } from "./localDate"
     import { saveRecap } from "./serviceRecap"
 
     let saving = false
@@ -17,6 +20,20 @@
         else if (result === "saved") newToast("Recap saved.")
         else if (result === "failed") newToast("The recap could not be saved. Try another folder.")
     }
+
+    // the last six months, which is how long a CCLI reporting period is
+    const today = new Date()
+    let from = localDay(new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()))
+    let to = localDay(today)
+
+    async function report() {
+        saving = true
+        const result = await saveCcliReport(from, to).catch(() => "failed")
+        saving = false
+        if (result === "empty") newToast("No songs were counted between those dates.")
+        else if (result === "saved") newToast("Report saved.")
+        else if (result === "failed") newToast("The report could not be saved. Try another folder.")
+    }
 </script>
 
 <Title label="Service records" icon="folder" />
@@ -25,6 +42,16 @@
 <div class="actions">
     <MaterialButton variant="outlined" icon="export" disabled={saving} on:click={recap}>Save today's recap</MaterialButton>
 </div>
+
+<MaterialToggleSwitch label="Count the songs used, for a CCLI report" checked={!!$special.logSongUsage} defaultValue={false} on:change={(e) => special.update((a) => ({ ...a, logSongUsage: e.detail }))} />
+<p class="note">Songs are counted on this computer from when this is switched on.</p>
+{#if $special.logSongUsage || $usageLog.all?.length}
+    <MaterialDatePicker label="From" value={from} on:change={(e) => (from = e.detail || from)} />
+    <MaterialDatePicker label="To" value={to} on:change={(e) => (to = e.detail || to)} />
+    <div class="actions">
+        <MaterialButton variant="outlined" icon="export" disabled={saving || from > to} on:click={report}>Save CCLI report</MaterialButton>
+    </div>
+{/if}
 
 {#if $ai.enabled}
     <MaterialToggleSwitch label="Keep a record of what was detected" checked={!!$ai.detectionLog} defaultValue={false} on:change={(e) => ai.update((a) => ({ ...a, detectionLog: e.detail }))} />
