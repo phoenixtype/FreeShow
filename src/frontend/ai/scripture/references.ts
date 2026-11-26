@@ -57,6 +57,10 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
     const ordinalPsalmRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(${PSALM_PATTERN})\\b`, "giu")
     normalized = normalized.replace(ordinalPsalmRegex, "$2 $1")
 
+    // "Jude one three": the 1 is the only chapter, and the verse follows
+    const oneChapterRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+1\\s+(?:(?:${VERSE_PATTERN})\\s+)?(\\d+(?:-\\d+)?)\\b(?![:\\d])`, "giu")
+    normalized = normalized.replace(oneChapterRegex, (match, book, verse) => (isSingleChapterBook(book, cacheData) ? `${book} 1:${verse}` : match))
+
     // 7. Single-chapter book handler: convert "Philemon verse 6" -> "Philemon 1:6"
     const singleChapterRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)\\s+(?:${VERSE_PATTERN})?\\s*(\\d+)\\b(?![:\\d])(?!\\s+(?:${VERSE_PATTERN})\\s*\\d)`, "giu")
     normalized = normalized.replace(singleChapterRegex, (match, book, num) => {
@@ -88,6 +92,9 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     // 10. Split concatenated 3- and 4-digit reference numbers (e.g., "John 316" -> "John 3:16", "Psalms 4610" -> "Psalms 46:10")
     normalized = normalized.replace(/\b((?:[1-3]\s*)?[\p{L}]+)\s+(\d{3,4})\b/giu, (match, book, digits) => {
+        // "Psalm 103" is a chapter as it stands
+        if (cacheData.referenceIndex.has(`${book.toLowerCase()} ${digits}`)) return match
+
         let chap = 0
         let verse = 0
         if (digits.length === 3) {

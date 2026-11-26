@@ -87,3 +87,32 @@ describe("a number before a book (B5)", () => {
         expect(await heard("the first John 21 verse 15")).toBe("John 21:15")
     })
 })
+
+describe("books with one chapter (B6)", () => {
+    it("reads the number after one as the verse", async () => {
+        expect(await heard("Jude one three")).toBe("Jude 1:3")
+        expect(await heard("Philemon one six")).toBe("Philemon 1:6")
+        expect(await heard("Obadiah chapter one verse fifteen")).toBe("Obadiah 1:15")
+        expect(await heard("second John one six")).toBe("2 John 1:6")
+        expect(await heard("third John 1 4")).toBe("3 John 1:4")
+        expect(await heard("Jude 3")).toBe("Jude 1:3")
+        expect(await heard("Jude one three to five")).toBe("Jude 1:3-5")
+    })
+})
+
+describe("Psalms past one hundred, as they are said (B7)", () => {
+    it("joins the digits", async () => {
+        expect(await heard("Psalm one nineteen verse one oh five")).toBe("Psalms 119:105")
+        expect(await heard("Psalm one oh three")).toBe("Psalms 103:1")
+        expect(await heard("turn to Psalm one fifty")).toBe("Psalms 150:1")
+        expect(await heard("Psalm one verse two")).toBe("Psalms 1:2")
+    })
+})
+
+describe("a range stays inside the chapter (B8)", () => {
+    it("stops at the last verse", async () => {
+        expect(await heard("John 3 16 to 99")).toBe("John 3:16-36")
+        expect(await heard("verses 30 to 99", "John 3:16")).toBe("John 3:30-36")
+        expect(await heard("John 3 36 to 99")).toBe("John 3:36")
+    })
+})

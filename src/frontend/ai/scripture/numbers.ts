@@ -95,6 +95,10 @@ export function normalizeNumbers(text: string, language?: string): string {
         return val !== undefined ? val.toString() : match
     })
 
+    // "one oh five" is 105, and "Psalm one nineteen" is Psalm 119
+    normalized = normalized.replace(/\b(\d) (?:oh|o) (\d)\b/gu, "$10$2")
+    normalized = normalized.replace(/\b(psalms?) 1 (\d{2})\b/gu, (match, psalm: string, rest: string) => (Number(rest) <= 50 ? `${psalm} 1${rest}` : match))
+
     // 6. Normalize range keyword patterns (e.g., "1 through 6" -> "1-6", "1 à 6" -> "1-6", "1 bis 6" -> "1-6")
     normalized = normalized.replace(RANGE_REGEX, "$1-$2")
 

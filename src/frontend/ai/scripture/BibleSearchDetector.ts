@@ -9,6 +9,12 @@ import { normalizeReferences, withoutOrdinalAside } from "./references"
 const COUNTED_WORDS = /^\s*(?:things|people|days|years|times|of|out|is|was|men|women|friends|letters)\b/iu
 const LEAD_IN = /\b(?:turn(?: with me)? to|book of|chapter of|in|read|reading|open(?: (?:your|our|the) bibles?)?(?: (?:with me )?(?:to|at))?)\s+(?:the (?:book of )?)?$/iu
 
+// a range stops at the end of the chapter
+function rangeEnd(start: number, end: number | undefined, verseCount: number): string {
+    const last = Math.min(end || 0, verseCount)
+    return last > start ? `-${last}` : ""
+}
+
 export class BibleSearchDetector {
     constructor(private cacheData: BibleCacheData) {}
 
@@ -57,9 +63,7 @@ export class BibleSearchDetector {
             if (startVerseNum < 1 || startVerseNum > chapterData.verseCount) continue
 
             let referenceContent = `${chapterData.bookName} ${chapterData.chapterNumber}:${startVerseNum}`
-            if (endVerseNum && endVerseNum > startVerseNum) {
-                referenceContent += `-${endVerseNum}`
-            }
+            referenceContent += rangeEnd(startVerseNum, endVerseNum, chapterData.verseCount)
 
             return {
                 type: "scripture",
@@ -101,9 +105,7 @@ export class BibleSearchDetector {
             if (!chapterData || startVerseNum < 1 || startVerseNum > chapterData.verseCount) continue
 
             let referenceContent = `${chapterData.bookName} ${chapterData.chapterNumber}:${startVerseNum}`
-            if (endVerseNum && endVerseNum > startVerseNum) {
-                referenceContent += `-${endVerseNum}`
-            }
+            referenceContent += rangeEnd(startVerseNum, endVerseNum, chapterData.verseCount)
 
             const isSequential = startVerseNum === parsedCurrent.verse + 1
 
