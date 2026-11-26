@@ -28,7 +28,7 @@ vi.mock("../scripture/passage", () => ({ readPassage: vi.fn(async () => "For God
 vi.mock("../songs/librarySongs", () => ({}))
 vi.mock("../voice/matthias", () => ({ PAGES: [], matchTitle: (name: string, list: any[]) => (name === "welcome" ? list[0] : null) }))
 vi.mock("../voice/versions", () => ({}))
-vi.mock("./control", () => ({ isHeld: () => false, setAgentMode: vi.fn() }))
+vi.mock("./control", () => ({ isHeld: () => false, setAgentMode: vi.fn(() => false) }))
 vi.mock("./listFromPoints", () => ({}))
 vi.mock("./mediaLibrary", () => ({ mediaList: () => [{ id: "/v/welcome.mp4", name: "welcome", kind: "video" }] }))
 vi.mock("./openPage", () => ({}))
@@ -152,4 +152,9 @@ describe("showing by tool goes through the copilot's own memory", () => {
         expect(manager.showSong).toHaveBeenCalledWith({ id: "s1", name: "Amazing Grace" }, 1)
         expect(answer.ok).toBe(true)
     })
+})
+
+it("cannot turn agent mode on for the operator", async () => {
+    const answer = await runAgentTool("set_agent_mode", { on: true })
+    expect(answer).toEqual({ ok: false, error: expect.stringMatching(/Turn on/) })
 })

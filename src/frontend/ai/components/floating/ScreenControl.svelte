@@ -2,8 +2,9 @@
     import { onDestroy } from "svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { ai, outLocked } from "../../../stores"
-    import { handBack, heldUntil, screenHolder, setAgentMode } from "../../agent/control"
+    import { askingToLead, handBack, heldUntil, screenHolder, setAgentMode } from "../../agent/control"
     import { NAME } from "../../voice/matthias"
+    import AgentConfirm from "./AgentConfirm.svelte"
 
     export let listening = true
 
@@ -16,6 +17,9 @@
     $: text = $outLocked ? "The screen is locked" : holder === "held" ? `You have the screen for ${seconds} s` : holder === "operator" ? "You have the screen" : listening ? `${NAME} is leading the screen` : `${NAME} leads, but is not listening`
 </script>
 
+{#if $askingToLead}
+    <AgentConfirm />
+{:else}
 <div class="control" class:leading={holder === "matthias" && !$outLocked && listening} role="group" aria-label="Who has the screen">
     <span class="dot" aria-hidden="true"></span>
     <p>{text}</p>
@@ -30,6 +34,7 @@
         <MaterialButton variant="outlined" small title="Leave agent mode" on:click={() => setAgentMode(false)}>{holder === "held" ? "Keep it" : "Take the screen"}</MaterialButton>
     {/if}
 </div>
+{/if}
 
 <style>
     .control {

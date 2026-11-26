@@ -15,10 +15,15 @@ vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
 const chat = vi.hoisted(() => ({ run: vi.fn() }))
 vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))
 vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+const lead = vi.hoisted(() => ({ confirmed: true }))
 vi.mock("../agent/control", async () => {
     const { writable } = await import("svelte/store")
     const { ai } = await import("../../stores")
-    return { handMoves: writable(0), setAgentMode: (on: boolean) => ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } })) }
+    return { handMoves: writable(0), setAgentMode: (on: boolean) => {
+        if (on && !lead.confirmed) return false
+        ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } }))
+        return true
+    } }
 })
 vi.mock("../agent/openPage", () => ({ openPage: vi.fn() }))
 vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), removeFromOpenPlan: vi.fn(() => ({ plan: "Sunday", removed: "Amazing Grace" })), showPlanItem: vi.fn() }))
@@ -102,6 +107,14 @@ it("takes and gives back the lead", async () => {
     expect(get(ai).matthias?.agentMode).toBe(true)
     await Matthias.ask("stand down")
     expect(get(ai).matthias?.agentMode).toBe(false)
+})
+
+it("does not turn agent mode on by itself before the operator has said yes once", async () => {
+    lead.confirmed = false
+    await Matthias.ask("take over")
+    expect(get(ai).matthias?.agentMode).toBeFalsy()
+    expect(get(matthiasStatus)?.text).toMatch(/Turn on/)
+    lead.confirmed = true
 })
 
 it("says nothing when the name was only said in passing, or is switched off", async () => {

@@ -243,7 +243,7 @@ export const agentTools: AgentTool[] = [
         description: "Let the app lead the screen by itself from what it hears (scripture, songs, clearing up), or hand it back to the operator.",
         inputSchema: { type: "object", properties: { on: { type: "boolean" } }, required: ["on"] },
         run: ({ on }) => {
-            setAgentMode(!!on)
+            if (!setAgentMode(!!on)) throw new ToolError('Agent mode is not on yet. The operator has been asked: they press "Turn on" in the Matthias panel.')
             return { agentMode: !!on }
         }
     },

@@ -28,6 +28,7 @@ export const matthiasStatus = writable<MatthiasStatus | null>(null)
 export const matthiasSteps = writable<{ tool: string; ok: boolean }[]>([])
 /** the one conversation with Matthias, spoken and typed */
 export const MATTHIAS_CHAT = "default"
+const ASKED_TO_LEAD = 'Press "Turn on" in the Matthias panel to let me lead the screen'
 const HELP = 'You can ask for a passage ("John 3:16"), a song, "next verse", "back to the chorus", "read that in the NLT", "start the service", "next item", "add Amazing Grace to the plan", "clear the screen", "draw a cross", "bring it back", or "take over".'
 
 const SHOWN_MS = 6000
@@ -186,7 +187,7 @@ export class Matthias {
                 toggleSttListening({ value: false })
                 return "Not listening"
             case "agent":
-                setAgentMode(request.on)
+                if (!setAgentMode(request.on)) return ASKED_TO_LEAD
                 return request.on ? "Leading the screen" : "You have the screen"
             case "page":
                 await this.tool("open_page", { page: request.page })

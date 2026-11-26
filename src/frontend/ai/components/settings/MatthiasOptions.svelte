@@ -4,7 +4,8 @@
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import { ai, os } from "../../../stores"
     import { NAME } from "../../voice/matthias"
-    import { setAgentMode } from "../../agent/control"
+    import { askingToLead, setAgentMode } from "../../agent/control"
+    import AgentConfirm from "../floating/AgentConfirm.svelte"
     import MatthiasExamples from "../MatthiasExamples.svelte"
 
     const update = (key: string, value: any) => ai.update((a) => ({ ...a, matthias: { ...(a.matthias || {}), [key]: value } }))
@@ -21,7 +22,10 @@
 <Title label={NAME} icon="ai" />
 
 <MaterialToggleSwitch label="Answer to the name {NAME}" checked={$ai.matthias?.name !== false} on:change={(e) => update("name", e.detail)} />
-<MaterialToggleSwitch label="Agent mode: lead the screen by itself" checked={!!$ai.matthias?.agentMode} on:change={(e) => setAgentMode(e.detail)} />
+<MaterialToggleSwitch label="Agent mode: lead the screen by itself" checked={!!$ai.matthias?.agentMode || $askingToLead} on:change={(e) => setAgentMode(e.detail)} />
+{#if $askingToLead}
+    <AgentConfirm />
+{/if}
 <p class="note">It puts up the scripture and songs it is sure of, follows the reading, and clears what is finished. You can work alongside it: move the screen by hand and it waits half a minute. Lock the screen and it changes nothing.</p>
 
 {#if $ai.matthias?.agentMode}
