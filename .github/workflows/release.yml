@@ -244,6 +244,16 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v5
 
+      # GPL-3.0: the source of what we ship sits beside the installers. The site's /licences/ links it.
+      - name: Attach the source code
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          git fetch --depth 1 origin "+refs/tags/v$version:refs/tags/v$version"
+          git archive --format=tar.gz --prefix="scriptural-project-$version/" -o "scriptural-project-$version-source.tar.gz" "v$version"
+          gh release upload "v$version" "scriptural-project-$version-source.tar.gz" --clobber
+
       # electron-builder uploads every installer to a draft; it goes public only when all four uploaded
       - name: Publish release
         env:

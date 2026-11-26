@@ -75,3 +75,17 @@ describe("leftover upstream identifiers (R8)", () => {
         expect(scan).toContain("workflow_dispatch:")
     })
 })
+
+describe("source offer (W1)", () => {
+    it("attaches the tag's source archive before the release goes public", () => {
+        const publish = job("publish_release")
+        expect(publish).toContain("git archive --format=tar.gz")
+        expect(publish).toContain('"scriptural-project-$version-source.tar.gz"')
+        expect(publish.indexOf("gh release upload")).toBeGreaterThan(0)
+        expect(publish.indexOf("gh release upload")).toBeLessThan(publish.indexOf("--draft=false"))
+    })
+
+    it("leaves internal notes out of the archive", () => {
+        expect(read(".gitattributes")).toMatch(/^\/docs export-ignore$/m)
+    })
+})

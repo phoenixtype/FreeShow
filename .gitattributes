@@ -1,2 +1,5 @@
 # Collapse the generated lockfile in diffs.
 package-lock.json linguist-generated=true
+
+# Internal notes are not part of the source archive attached to releases.
+/docs export-ignore
