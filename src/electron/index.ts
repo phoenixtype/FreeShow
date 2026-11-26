@@ -35,8 +35,9 @@ import { loadingOptions, mainOptions } from "./utils/windowOptions"
 // run as async work on this pool, and the default of 4 threads serializes concurrent 4K outputs
 if (!process.env.UV_THREADPOOL_SIZE) process.env.UV_THREADPOOL_SIZE = "32"
 
-// check if app's in production or not
-export const isProd: boolean = process.env.NODE_ENV === "production" || !/[\\/]electron/.exec(process.execPath)
+// production is a packaged app; a guess from the install folder turned web security off
+// for anyone who installed under a folder whose name starts with "electron"
+export const isProd: boolean = app.isPackaged || process.env.NODE_ENV === "production"
 
 // remove "Disabled webSecurity" console warning as it is only disabled in development
 if (!isProd) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true"

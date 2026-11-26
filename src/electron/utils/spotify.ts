@@ -29,7 +29,8 @@ if (process.env.SPOTIFY_BRIDGE === "true") {
         try {
             if (msg.type === "init") {
                 try {
-                    const isProd = process.env.NODE_ENV === "production" || !/[\\/]electron/.exec(process.execPath)
+                    // told by the main process, which knows whether the app is packaged
+                    const isProd = msg.isProd === true
                     const mPath = isProd ? require("path").join(process.resourcesPath, "app.asar.unpacked/node_modules/libspotifyctl") : "libspotifyctl"
                     if (!client) {
                         client = new (require(mPath).SpotifyClient)()
@@ -179,7 +180,7 @@ export function initSpotify() {
                     }
                 }
             })
-            .send({ type: "init" })
+            .send({ type: "init", isProd: require("electron").app.isPackaged || process.env.NODE_ENV === "production" })
     } catch (e) {
         initialized = false
         console.error("[Spotify] Failed to start bridge:", e)
