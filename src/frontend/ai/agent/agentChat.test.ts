@@ -98,11 +98,7 @@ describe("runAgentChat", () => {
 
     const makeAndShow = async (spoken: boolean, name: string) => {
         run.mockImplementation(async (tool) => ({ ok: true, result: tool === "add_song" ? { added: "My New Song", id: "new1" } : "Done." }))
-        const turns = [
-            { tool: "add_song", arguments: '{"title":"My New Song","lyrics":"words"}' },
-            { tool: "present_song", arguments: JSON.stringify({ name }) },
-            { content: "ok" }
-        ]
+        const turns = [{ tool: "add_song", arguments: '{"title":"My New Song","lyrics":"words"}' }, { tool: "present_song", arguments: JSON.stringify({ name }) }, { content: "ok" }]
         await runAgentChat(history, { run, spoken, ask: async () => turns.shift() || { content: "ok" } })
         return run.mock.calls.map((call) => call[0])
     }

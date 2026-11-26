@@ -19,11 +19,14 @@ const lead = vi.hoisted(() => ({ confirmed: true }))
 vi.mock("../agent/control", async () => {
     const { writable } = await import("svelte/store")
     const { ai } = await import("../../stores")
-    return { handMoves: writable(0), setAgentMode: (on: boolean) => {
-        if (on && !lead.confirmed) return false
-        ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } }))
-        return true
-    } }
+    return {
+        handMoves: writable(0),
+        setAgentMode: (on: boolean) => {
+            if (on && !lead.confirmed) return false
+            ai.update((a) => ({ ...a, matthias: { ...a.matthias, agentMode: on } }))
+            return true
+        }
+    }
 })
 vi.mock("../agent/openPage", () => ({ openPage: vi.fn() }))
 vi.mock("../agent/planItems", () => ({ nextPlanItem: vi.fn(() => ({ id: "a", label: "Amazing Grace" })), removeFromOpenPlan: vi.fn(() => ({ plan: "Sunday", removed: "Amazing Grace" })), showPlanItem: vi.fn() }))
@@ -127,14 +130,7 @@ it("says nothing when the name was only said in passing, or is switched off", as
 })
 
 it("does nothing for the name in a sermon, with the ask setting off", async () => {
-    const sermon = [
-        "They prayed. Matthias. Next verse",
-        "They prayed, Matthias, next verse",
-        "Peter stood up and Matthias next verse",
-        "Matthias, Acts 1 verse 26, was numbered with the eleven apostles.",
-        "Matthias was numbered with the eleven. Next verse",
-        "So Matthias clear the screen"
-    ]
+    const sermon = ["They prayed. Matthias. Next verse", "They prayed, Matthias, next verse", "Peter stood up and Matthias next verse", "Matthias, Acts 1 verse 26, was numbered with the eleven apostles.", "Matthias was numbered with the eleven. Next verse", "So Matthias clear the screen"]
     for (const words of sermon) {
         position += 2000
         hear(words, true)

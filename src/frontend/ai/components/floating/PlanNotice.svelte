@@ -1,3 +1,9 @@
+<script lang="ts">
+    import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
+    import { planNotice } from "../../../scriptural/planNotice"
+    import { activePopup } from "../../../stores"
+</script>
+
 {#if $planNotice}
     <div class="notice" role="status">
         <p>{$planNotice}</p>
@@ -7,12 +13,6 @@
         </div>
     </div>
 {/if}
-
-<script lang="ts">
-    import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
-    import { planNotice } from "../../../scriptural/planNotice"
-    import { activePopup } from "../../../stores"
-</script>
 
 <style>
     .notice {

@@ -27,14 +27,7 @@ describe("findCalls", () => {
 
 describe("the name in a sermon", () => {
     // without "hey", the name has to start the utterance and the request has to be all of it
-    const sermon = [
-        "They prayed. Matthias. Next verse",
-        "They prayed, Matthias, next verse",
-        "and the lot fell upon Matthias next verse",
-        "Peter stood up and Matthias next verse",
-        "So Matthias clear the screen",
-        "Then they cast lots, and Matthias was chosen."
-    ]
+    const sermon = ["They prayed. Matthias. Next verse", "They prayed, Matthias, next verse", "and the lot fell upon Matthias next verse", "Peter stood up and Matthias next verse", "So Matthias clear the screen", "Then they cast lots, and Matthias was chosen."]
     it.each(sermon)("does nothing for: %s", (words) => expect(calls(words)).toEqual([]))
     it("still answers a plain call that starts a sentence, or any call with hey", () => {
         expect(calls("Amen. Matthias, next verse.")).toEqual(["next verse."])

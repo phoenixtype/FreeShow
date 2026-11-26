@@ -2,7 +2,16 @@ import { readFileSync } from "node:fs"
 import { expect, it, vi } from "vitest"
 const { complete } = vi.hoisted(() => ({ complete: vi.fn() }))
 vi.mock("../setup/aiKeys", () => ({ getAiKey: () => "key" }))
-vi.mock("./providers/anthropic", () => ({ anthropicProvider: { complete, fallbackModel: "claude-haiku-5-5", fetchModels: async () => [{ id: "claude-opus-5-5", name: "Opus" }, { id: "claude-haiku-5-5", name: "Haiku" }] } }))
+vi.mock("./providers/anthropic", () => ({
+    anthropicProvider: {
+        complete,
+        fallbackModel: "claude-haiku-5-5",
+        fetchModels: async () => [
+            { id: "claude-opus-5-5", name: "Opus" },
+            { id: "claude-haiku-5-5", name: "Haiku" }
+        ]
+    }
+}))
 vi.mock("./providers/google", () => ({ googleProvider: {} }))
 vi.mock("./providers/ollama", () => ({ ollamaProvider: {} }))
 vi.mock("./providers/openai", () => ({ openaiProvider: {} }))

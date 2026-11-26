@@ -20,20 +20,20 @@
 {#if $askingToLead}
     <AgentConfirm />
 {:else}
-<div class="control" class:leading={holder === "matthias" && !$outLocked && listening} role="group" aria-label="Who has the screen">
-    <span class="dot" aria-hidden="true"></span>
-    <p>{text}</p>
-    {#if $outLocked}
-        <MaterialButton variant="outlined" small on:click={() => outLocked.set(false)}>Unlock</MaterialButton>
-    {:else if holder === "operator"}
-        <MaterialButton variant="outlined" small title="Agent mode" on:click={() => setAgentMode(true)}>Let {NAME} lead</MaterialButton>
-    {:else}
-        {#if holder === "held"}
-            <MaterialButton variant="outlined" small on:click={handBack}>Hand back</MaterialButton>
+    <div class="control" class:leading={holder === "matthias" && !$outLocked && listening} role="group" aria-label="Who has the screen">
+        <span class="dot" aria-hidden="true"></span>
+        <p>{text}</p>
+        {#if $outLocked}
+            <MaterialButton variant="outlined" small on:click={() => outLocked.set(false)}>Unlock</MaterialButton>
+        {:else if holder === "operator"}
+            <MaterialButton variant="outlined" small title="Agent mode" on:click={() => setAgentMode(true)}>Let {NAME} lead</MaterialButton>
+        {:else}
+            {#if holder === "held"}
+                <MaterialButton variant="outlined" small on:click={handBack}>Hand back</MaterialButton>
+            {/if}
+            <MaterialButton variant="outlined" small title="Leave agent mode" on:click={() => setAgentMode(false)}>{holder === "held" ? "Keep it" : "Take the screen"}</MaterialButton>
         {/if}
-        <MaterialButton variant="outlined" small title="Leave agent mode" on:click={() => setAgentMode(false)}>{holder === "held" ? "Keep it" : "Take the screen"}</MaterialButton>
-    {/if}
-</div>
+    </div>
 {/if}
 
 <style>

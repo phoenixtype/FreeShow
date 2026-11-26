@@ -80,7 +80,11 @@ export async function runAgentChat(history: { role: string; content: string }[],
             .toLowerCase()
         return !!asked && made.some(({ id, name }) => asked === id || name.includes(asked) || asked.includes(name))
     }
-    const readOnly = new Set(listAgentTools().filter((tool) => tool.readOnly).map((tool) => tool.name))
+    const readOnly = new Set(
+        listAgentTools()
+            .filter((tool) => tool.readOnly)
+            .map((tool) => tool.name)
+    )
     /** the model stopped answering part way: what had been done by then is not to be lost */
     const partly = () => (did.length ? { content: `I did part of it (${did.join(", ")}), then could not reach the AI model. Check the internet connection and ask for the rest.` } : null)
     const asked = deps.context ? `${deps.context}\n\n${conversation}` : conversation
