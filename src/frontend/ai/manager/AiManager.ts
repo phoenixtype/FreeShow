@@ -281,7 +281,8 @@ export class AiManager {
 
     static newMatch(match: MatchResult) {
         if (match.type === "empty" || !match.content) return
-        if (match.type === "scripture" && AiManager.liveContent === match.content) {
+        // a verse of the range on screen being read keeps the whole range up
+        if (match.type === "scripture" && (AiManager.liveContent === match.content || isReferenceWithin(AiManager.liveContent, match.content))) {
             this.heardAgain()
             return
         }

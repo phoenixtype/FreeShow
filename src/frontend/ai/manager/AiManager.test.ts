@@ -84,3 +84,17 @@ describe("a whole utterance (B1)", () => {
         expect(screen.present).not.toHaveBeenCalled()
     })
 })
+
+describe("reading inside the range on screen (B9)", () => {
+    it("keeps the range up", async () => {
+        manager.liveContent = "John 3:16-18"
+        AiManager.newMatch({ type: "scripture", content: "John 3:17", confidence: 98 })
+        await settle()
+        expect(screen.present).not.toHaveBeenCalled()
+        expect(get(aiSuggestions)).toEqual([])
+
+        AiManager.newMatch({ type: "scripture", content: "John 3:19", confidence: 98 })
+        await settle()
+        expect(screen.present.mock.calls.map((call) => call[0])).toEqual(["John 3:19"])
+    })
+})
