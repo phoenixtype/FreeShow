@@ -22,7 +22,8 @@ export function isNewerVersion(latest: string, current: string) {
 
 export async function getUpdateData(currentVersion: string, includeBeta: boolean): Promise<UpdateData> {
     const response = await fetch("https://api.github.com/repos/phoenixtype/FreeShow/releases")
-    const data = await response.json()
+    // only version tags are app releases: the repository also holds the speech model's files
+    const data = (await response.json()).filter((a: any) => /^v\d/.test(a.tag_name || ""))
 
     const latestAll = data.filter((a: any) => a.draft === false)[0]
     const latestRelease = data.filter((a: any) => a.draft === false && a.prerelease === false)[0]
