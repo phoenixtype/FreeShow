@@ -345,8 +345,10 @@ export class AiManager {
 
             console.info(`Auto-playing ${match.type}:`, match.content)
             this.pendingContent = match.content
-            trigger().finally(() => {
+            trigger().then((up) => {
                 if (this.pendingContent === match.content) this.pendingContent = ""
+                // it did not go up: still on offer, not part of what was shown
+                if (!up) aiSuggestions.update((list) => list.map((a) => (a.id === suggestion.id ? { ...a, action: match.type === "lyrics" ? "present_song" : "present" } : a)))
             })
             return
         }
@@ -375,6 +377,9 @@ export class AiManager {
 
         if (match.type === "scripture" && match.scriptureIsNewTranslation) return false
 
+        // just taken back with Undo: the same words are still being heard
+        if (this.takenBack.content === match.content && Date.now() - this.takenBack.at < this.RESHOW_BLOCK_MS) return false
+
         // never auto-play low confidence matches
         if (match.confidence <= 50) return false
 
@@ -397,7 +402,7 @@ export class AiManager {
     }
 
     static liveContent: string = ""
-    private static async triggerMatchAction(match: MatchResult) {
+    private static async triggerMatchAction(match: MatchResult): Promise<boolean> {
         try {
             if (match.type === "scripture_version") {
                 if (match.scriptureTranslation) setActiveScripture(match.scriptureTranslation)
@@ -406,10 +411,18 @@ export class AiManager {
             } else if (match.type === "lyrics" && match.showId) {
                 const { showId, lyricsText } = match
                 await this.asOwnChange(match.content, () => presentSong(showId, lyricsText || ""), { show: showId })
+                this.markShown(match.content)
             }
+            return true
         } catch (err) {
             console.warn("Live Copilot could not present", match.content, err)
+            return false
         }
+    }
+
+    // something on offer that was put up joins what was shown, with the time
+    private static markShown(content: string) {
+        aiSuggestions.update((list) => list.map((a) => (a.content === content && a.action !== "open_scripture" ? { ...a, action: "presented", timestamp: Date.now() } : a)))
     }
 
     // Output changes the copilot makes itself are not "moved by hand".
@@ -431,6 +444,7 @@ export class AiManager {
     private static shown: Shown[] = []
     private static remember(content: string, kind: Shown["kind"], show: () => Promise<unknown>) {
         if (!content) return
+        this.markShown(content)
         this.shown = [...this.shown.filter((entry) => entry.content !== content), { content, kind, show }].slice(-20)
     }
 
@@ -505,10 +519,16 @@ export class AiManager {
         this.outputUpdate("")
         if (this.clearTimer) clearTimeout(this.clearTimer)
     }
+    private static takenBack = { content: "", at: 0 }
+    /** true while this is what the copilot last put up, and Undo would take it back */
+    static canUndo(content: string): boolean {
+        return !!content && this.liveContent === content && !!this.undone && !get(outLocked)
+    }
     /** what was up before the copilot's last change */
     static undoChange(): boolean {
         const before = this.undone
         if (!before && !get(outputCache)) return false
+        this.takenBack = { content: this.liveContent, at: Date.now() }
         this.listenToOutput()
         this.ownChanges.expect("any")
         this.undone = null
@@ -545,7 +565,8 @@ export class AiManager {
     private static setSmartAction(content: AiSuggestion) {
         aiSmartAction.set(content)
 
-        const TIMEOUT = content.action === "presented" ? 4000 : this.SMART_ACTION_DURATION
+        // long enough to read it and press Undo
+        const TIMEOUT = content.action === "presented" ? 8000 : this.SMART_ACTION_DURATION
 
         if (this.smartActionTimer) {
             clearTimeout(this.smartActionTimer)
@@ -559,6 +580,7 @@ export class AiManager {
 
     private static SUGGESTION_MAX_AGE = 5 * 60 * 1000 // 5 minutes
     private static SUGGESTION_LIMIT = 15
+    private static SHOWN_LIMIT = 50
     private static STILL_SPEAKING_MS = 6000
     private static addSuggestion(content: AiSuggestion) {
         this.setSmartAction(content)
@@ -566,16 +588,18 @@ export class AiManager {
         aiSuggestions.update((list) => {
             const now = Date.now()
 
-            // remove timed out suggestions
-            let active = list.filter((a) => now - a.timestamp < this.SUGGESTION_MAX_AGE)
+            // offers time out; what was put up stays for the session
+            let active = list.filter((a) => a.action === "presented" || now - a.timestamp < this.SUGGESTION_MAX_AGE)
 
-            // remove duplicate suggestions
-            active = active.filter((a) => a.id !== content.id && a.content !== content.content)
+            // remove duplicate suggestions, but an offer does not wipe the record of a showing
+            active = active.filter((a) => a.id !== content.id && (a.content !== content.content || (a.action === "presented" && content.action !== "presented")))
 
             // the first half of a reference is replaced by the whole of it
             if (content.kind !== "song") active = active.filter((a) => a.action === "presented" || now - a.timestamp > this.STILL_SPEAKING_MS || !isPartOf(a.content, content.content, a.confidence <= 75))
 
-            return [content, ...active].slice(0, this.SUGGESTION_LIMIT)
+            let shown = 0
+            let offered = 0
+            return [content, ...active].filter((a) => (a.action === "presented" ? ++shown <= this.SHOWN_LIMIT : ++offered <= this.SUGGESTION_LIMIT))
         })
     }
 

@@ -4,17 +4,25 @@
     import { getShortBibleName } from "../../../components/drawer/bible/scripture"
     import Icon from "../../../components/helpers/Icon.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
-    import { ai, aiSmartAction, scriptures } from "../../../stores"
+    import { ai, aiSmartAction, aiSuggestions, outputs, scriptures } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import ScreenControl from "./ScreenControl.svelte"
     import MatthiasStatus from "./MatthiasStatus.svelte"
     import { matthiasStatus } from "../../voice/matthiasAgent"
+    import { AiManager } from "../../manager/AiManager"
     import AiRing from "./AiRing.svelte"
     import ConfidenceMeter from "./ConfidenceMeter.svelte"
 
     export let listening = true
 
     $: smartAction = $aiSmartAction
+
+    // asked again whenever the screen or the list changes
+    const canUndo = (content: string, ..._changes: unknown[]) => AiManager.canUndo(content)
+    function undo() {
+        if (smartAction && AiManager.canUndo(smartAction.content)) AiManager.undoChange()
+        aiSmartAction.set(null)
+    }
 </script>
 
 <!-- this will show the latest transcript segment (& interim) -->
@@ -32,13 +40,30 @@
     <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;" transition:fly={{ x: 40, duration: 200 }}>
         <div class="pill"><AiRing opacity={0.95} borderRadius="30px"><div><MatthiasStatus /></div></AiRing></div>
     </div>
+{:else if smartAction?.action === "presented"}
+    <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;" transition:fly={{ x: 40, duration: 200 }}>
+        <div class="pill">
+            <AiRing opacity={0.85} borderRadius="30px">
+                <div class="suggestion">
+                    <MaterialButton style="padding: 8px 4px;gap: 8px;" title="actions.close" on:click={() => aiSmartAction.set(null)}>
+                        <Icon id="check" white />
+                        <p>Presented:</p>
+                        <span style="font-weight: bold;">{smartAction.content}</span>
+                    </MaterialButton>
+                    {#if canUndo(smartAction.content, $outputs, $aiSuggestions)}
+                        <MaterialButton variant="outlined" small on:click={undo}>Undo</MaterialButton>
+                    {/if}
+                </div>
+            </AiRing>
+        </div>
+    </div>
 {:else if smartAction}
     <div class="ticker-wrap" style="bottom: {$bubbleBottom}px;" transition:fly={{ x: 40, duration: 200 }}>
         <!-- border-radius: 50px 10px 10px 50px; -->
         <MaterialButton
             style="padding: 0;border-radius: 50px;"
             on:click={() => {
-                if (smartAction?.trigger && smartAction.action !== "presented") {
+                if (smartAction?.trigger) {
                     smartAction.trigger()
                     setTimeout(() => aiSmartAction.set(null), 500)
                 } else {
@@ -49,11 +74,7 @@
             <!-- borderRadius="20px 10px 10px 20px" -->
             <AiRing opacity={0.85}>
                 <div class="suggestion">
-                    {#if smartAction?.action === "presented"}
-                        <Icon id="check" white />
-                        <p>Presented:</p>
-                        <span style="font-weight: bold;">{smartAction.content}</span>
-                    {:else if smartAction?.action === "present"}
+                    {#if smartAction?.action === "present"}
                         <Icon id="play" white />
 
                         <p>Click to present:</p>

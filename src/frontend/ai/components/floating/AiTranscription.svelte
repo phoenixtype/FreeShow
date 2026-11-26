@@ -10,6 +10,7 @@
     import { getFirstActiveOutput } from "../../../components/helpers/output"
     import { readPassage } from "../../scripture/passage"
     import { Transcript } from "../../stt/transcript"
+    import { AiManager } from "../../manager/AiManager"
 
     import { createEventDispatcher } from "svelte"
     import { onScreenTitle } from "./onScreen"
@@ -97,6 +98,9 @@
     $: liveTitle = onScreenTitle($outputs && getFirstActiveOutput()?.out?.slide, $shows)
     const sameReference = (a: string, b: string) => !!a && a.replace(/[–—]/g, "-").toLowerCase() === b.toLowerCase()
 
+    // asked again whenever the screen or the list changes
+    const canUndo = (content: string, ..._changes: unknown[]) => AiManager.canUndo(content)
+
     const matchLabel = (confidence: number) => (confidence >= 95 ? "Certain" : confidence >= 75 ? "Likely" : "Possible")
 </script>
 
@@ -163,10 +167,14 @@
                                 {#if suggestion.scriptureTranslation}
                                     <span class="note">{getShortBibleName($scriptures[suggestion.scriptureTranslation]?.name)}</span>
                                 {/if}
-                                <span class="note">{live ? "On screen" : suggestion.action === "presented" ? "Shown" : suggestion.confidence ? matchLabel(suggestion.confidence) : ""}</span>
+                                <span class="note">{live ? "On screen" : suggestion.action === "presented" ? `Shown ${time(suggestion.timestamp)}` : suggestion.confidence ? matchLabel(suggestion.confidence) : ""}</span>
                             </p>
                             {#if words}<p class="words">{words}</p>{/if}
                         </div>
+
+                        {#if live && suggestion.action === "presented" && canUndo(suggestion.content, $outputs, suggestions)}
+                            <MaterialButton variant="outlined" small on:click={() => AiManager.undoChange()}>Undo</MaterialButton>
+                        {/if}
 
                         {#if suggestion.action === "open_scripture"}
                             <MaterialButton variant="outlined" small on:click={() => suggestion.trigger?.()}><T id="main.open" /></MaterialButton>

@@ -72,6 +72,7 @@ beforeEach(() => {
     manager.undone = null
     manager.pendingContent = ""
     manager.lastScripture = 0
+    manager.takenBack = { content: "", at: 0 }
     vi.mocked(presentSong).mockClear()
 })
 
@@ -196,5 +197,66 @@ describe("words arriving while a search runs (R10)", () => {
     it("lets a search that has hardly started finish, and stops an old one", async () => {
         expect(await run(100)).toBe(false)
         expect(await run(700)).toBe(true)
+    })
+})
+
+describe("Undo after showing by itself (F4)", () => {
+    it("can be taken back, and the same words do not put it straight up again", async () => {
+        const match = { type: "scripture" as const, content: "John 3:16", confidence: 98 }
+        AiManager.newMatch(match)
+        await settle()
+        expect(AiManager.canUndo("John 3:16")).toBe(true)
+
+        expect(AiManager.undoChange()).toBe(true)
+        expect(AiManager.canUndo("John 3:16")).toBe(false)
+        AiManager.newMatch(match)
+        await settle()
+        expect(screen.present).toHaveBeenCalledTimes(1)
+    })
+
+    it("leaves the Presented bubble up for eight seconds", () => {
+        vi.useFakeTimers()
+        manager.addSuggestion({ id: "x", content: "John 3:16", confidence: 98, timestamp: Date.now(), action: "presented" })
+        vi.advanceTimersByTime(7_900)
+        expect(get(aiSmartAction)?.id).toBe("x")
+        vi.advanceTimersByTime(200)
+        expect(get(aiSmartAction)).toBeNull()
+        vi.useRealTimers()
+    })
+})
+
+describe("what was shown (F9)", () => {
+    const add = (content: string, action: string, ago = 0) => manager.addSuggestion({ id: content + action, content, confidence: 80, timestamp: Date.now() - ago, action })
+
+    it("is kept for the session, up to fifty, while offers time out", () => {
+        const old = 60 * 60_000
+        aiSuggestions.set([
+            { id: "s", content: "John 1:1", confidence: 98, timestamp: Date.now() - old, action: "presented" },
+            { id: "o", content: "John 1:2", confidence: 60, timestamp: Date.now() - old, action: "present" }
+        ])
+        for (let i = 0; i < 20; i++) add(`Psalms ${i}:1`, "present")
+        expect(get(aiSuggestions).filter((a) => a.action === "present")).toHaveLength(15)
+        expect(get(aiSuggestions).some((a) => a.id === "s")).toBe(true)
+        // offered again: the record of the showing stays
+        add("John 1:1", "present")
+        expect(get(aiSuggestions).some((a) => a.id === "s")).toBe(true)
+
+        for (let i = 0; i < 60; i++) add(`John 3:${i}`, "presented")
+        expect(get(aiSuggestions).filter((a) => a.action === "presented")).toHaveLength(50)
+    })
+
+    it("includes an offer that was then put up, but not one that failed", async () => {
+        ai.set({ enabled: true, scripture: { confidence: "ask" } } as any)
+        AiManager.newMatch({ type: "scripture", content: "John 3:16", confidence: 90 })
+        expect(get(aiSuggestions)[0].action).toBe("present")
+        await get(aiSuggestions)[0].trigger?.()
+        expect(get(aiSuggestions)[0].action).toBe("presented")
+
+        ai.set({ enabled: true, scripture: { confidence: "high" }, lyrics: { confidence: "high" } } as any)
+        vi.spyOn(console, "warn").mockImplementationOnce(() => {})
+        screen.present.mockResolvedValueOnce(false)
+        AiManager.newMatch({ type: "scripture", content: "John 3:17", confidence: 98 })
+        await settle()
+        expect(get(aiSuggestions)[0]).toMatchObject({ content: "John 3:17", action: "present" })
     })
 })
