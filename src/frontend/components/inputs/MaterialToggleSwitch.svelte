@@ -34,7 +34,7 @@
     }
 </script>
 
-<div style={$$props.style || null} class="togglefield {center ? 'centered' : ''} {disabled ? 'disabled' : ''}" class:small data-title={translateText(title || label)} role="switch" aria-checked={checkedValue} tabindex={disabled ? undefined : 0} on:click={toggle} on:keydown={onKeyDown}>
+<div style={$$props.style || null} class="togglefield {center ? 'centered' : ''} {disabled ? 'disabled' : ''}" class:small data-title={translateText(title || label)} role="switch" aria-label={translateText(title || label) || undefined} aria-checked={checkedValue} tabindex={disabled ? undefined : 0} on:click={toggle} on:keydown={onKeyDown}>
     <div class="background" />
     <div class="hover" />
 

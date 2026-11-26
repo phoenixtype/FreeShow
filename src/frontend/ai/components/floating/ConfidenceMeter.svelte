@@ -8,11 +8,22 @@
     $: currentColor = colors[colorIndex]
 </script>
 
-<div class="confidence-meter-pie" data-title="{confidence}%" style={`background: conic-gradient(${currentColor} ${safeConfidence * 3.6}deg, transparent 0deg);`}></div>
+<span class="confidence" role="img" aria-label="Confidence {safeConfidence}%">
+    <span class="confidence-meter-pie" style={`background: conic-gradient(${currentColor} ${safeConfidence * 3.6}deg, transparent 0deg);`}></span>
+    <span>{safeConfidence}%</span>
+</span>
 
 <style>
+    .confidence {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85em;
+    }
     .confidence-meter-pie {
         --diameter: 14px;
+
+        display: inline-block;
 
         width: var(--diameter);
         height: var(--diameter);

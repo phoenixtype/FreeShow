@@ -137,7 +137,7 @@
         <TopButton id="stage" />
     </span>
     <span class="side" style="justify-content: flex-end;">
-        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title="{translateText('settings.ai', $dictionary)} [Ctrl+J]" isActive={$ai.enabled && $copilotOpen} on:click={openLiveCopilot}>
+        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title="{translateText('settings.ai', $dictionary)} [{$os.platform === "darwin" ? "Cmd" : "Ctrl"}+J]" isActive={$ai.enabled && $copilotOpen} on:click={openLiveCopilot}>
             <Icon id="ai" size={1.5} white />
             {#if $ai.enabled && $copilotState !== "inactive"}<span class="state {$copilotState}" role="img" aria-label={$copilotState === "error" ? "Microphone problem" : $copilotState === "listening" ? "Listening" : "Getting ready"}></span>{/if}
             <span class="copilot-label"
