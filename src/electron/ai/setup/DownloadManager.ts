@@ -14,6 +14,18 @@ export interface AiDownloadOptions {
 
 const PROGRESS_INTERVAL = 200
 const MAX_ATTEMPTS = 3
+// a full disk stops more than the download, so some room is left over
+const SPARE_BYTES = 200_000_000
+
+// how many more bytes of free space a download needs before it can start (0: enough)
+export function missingSpace(freeBytes: number, remainingBytes: number) {
+    return Math.max(0, remainingBytes + SPARE_BYTES - freeBytes)
+}
+
+// where the unfinished bytes of this address are kept: a new address never adds to an old one's pieces
+export function partPathFor(url: string, destPath: string) {
+    return `${destPath}.${crypto.createHash("sha1").update(url).digest("hex").slice(0, 8)}.part`
+}
 
 export class DownloadManager {
     key: string
@@ -51,7 +63,7 @@ export class DownloadManager {
     }
 
     async downloadFile(url: string, destPath: string, options: AiDownloadOptions = {}): Promise<void> {
-        const partPath = `${destPath}.part`
+        const partPath = partPathFor(url, destPath)
         const controller = new AbortController()
         this.activeDownload = { controller, partPath }
 
@@ -62,7 +74,8 @@ export class DownloadManager {
 
         try {
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-                const resumeAt = attempt > 1 && fs.existsSync(partPath) ? (await fs.promises.stat(partPath)).size : 0
+                // what an earlier run left behind counts too
+                const resumeAt = fs.existsSync(partPath) ? (await fs.promises.stat(partPath)).size : 0
 
                 const response = await net.fetch(url, {
                     signal: controller.signal,
@@ -109,7 +122,8 @@ export class DownloadManager {
                 return
             }
         } finally {
-            this.safeUnlink(partPath)
+            // kept after a failure so the next try carries on; cancel() is the one that deletes it
+            if (controller.signal.aborted) this.safeUnlink(partPath)
             if (this.activeDownload?.controller === controller) this.activeDownload = null
         }
     }
