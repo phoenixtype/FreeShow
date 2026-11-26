@@ -241,24 +241,28 @@
         max-width: none;
     }
     .failed {
-        color: #ff9d9d;
+        color: var(--error-text);
     }
 
     .chat-messages {
         display: flex;
         flex-direction: column;
-        gap: 10px;
         flex: 1;
         padding: 12px;
         overflow-y: auto;
     }
 
+    /* no bubbles: what was asked sits to the right, and a hairline parts one message from the next */
     .chat-message {
         max-width: 85%;
-        padding: 10px 14px;
-        border-radius: var(--radius);
+        padding: 10px 2px;
         font-size: 0.92rem;
         line-height: 1.45;
+        color: var(--text);
+    }
+
+    .chat-message + .chat-message {
+        border-top: 1px solid var(--border);
     }
 
     .chat-message p {
@@ -271,19 +275,14 @@
 
     .chat-message.user {
         align-self: flex-end;
-        background-color: var(--secondary-opacity);
-        border: 1px solid var(--secondary);
-        color: #f1f5f9;
-        border-bottom-right-radius: 4px;
+        text-align: right;
+        color: var(--muted-text);
     }
 
     .chat-message.assistant,
     .chat-message.ai {
-        align-self: flex-start;
-        background-color: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #e2e8f0;
-        border-bottom-left-radius: 4px;
+        align-self: stretch;
+        max-width: none;
     }
 
     .chat-input-row {
@@ -291,22 +290,24 @@
         align-items: center;
         gap: 8px;
         padding: 10px 12px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        background-color: rgba(0, 0, 0, 0.15);
+        border-top: 1px solid var(--border);
     }
 
     .chat-input {
         flex: 1;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: transparent;
+        border: 1px solid var(--border);
         border-radius: var(--radius-sm);
         padding: 8px 12px;
-        color: #fff;
+        color: var(--text);
         font-size: 0.92rem;
-        outline: none;
     }
 
     .chat-input:focus {
         border-color: var(--secondary);
+    }
+    .chat-input:focus-visible {
+        outline: 2px solid var(--secondary);
+        outline-offset: 1px;
     }
 </style>
