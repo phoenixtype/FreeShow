@@ -35,6 +35,8 @@
     // the panel's width, as MainLayout sets it
     $: room = innerWidth - ($ai.enabled && $copilotOpen ? Math.min(480, Math.max(320, innerWidth * 0.32)) : 0)
     $: wide = room >= 1520
+    // too narrow for every word: icons only, so Account, Settings and Present stay on screen
+    $: compact = room < 900
 
     $: show = $shows[$activeShow?.id || ""]
     $: showProfile = profile?.access.shows || {}
@@ -127,22 +129,24 @@
         {/if}
         <!-- logo -->
         <h1 class="brand">
-            <img class="brand-mark" src="./scriptural-logo.svg" alt="" draggable={false} />
-            Scriptural
+            <img class="brand-mark" src="./scriptural-logo.svg" alt={compact ? "Scriptural" : ""} draggable={false} />
+            {#if !compact}Scriptural{/if}
         </h1>
     </span>
     <span>
-        <TopButton id="show" />
-        <TopButton id="edit" disabled={editDisabled} />
-        <TopButton id="stage" />
+        <TopButton id="show" hideLabel={compact ? true : null} />
+        <TopButton id="edit" disabled={editDisabled} hideLabel={compact ? true : null} />
+        <TopButton id="stage" hideLabel={compact ? true : null} />
     </span>
     <span class="side" style="justify-content: flex-end;">
-        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1.2em;" title="{translateText('settings.ai', $dictionary)} [{$os.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+J]" isActive={$ai.enabled && $copilotOpen} on:click={openLiveCopilot}>
+        <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em {compact ? '0.7em' : '1.2em'};" title="{translateText('settings.ai', $dictionary)} [{$os.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+J]" isActive={$ai.enabled && $copilotOpen} on:click={openLiveCopilot}>
             <Icon id="ai" size={1.5} white />
             {#if $ai.enabled && $copilotState !== "inactive"}<span class="state {$copilotState}" role="img" aria-label={$copilotState === "error" ? "Microphone problem" : $copilotState === "listening" ? "Listening" : "Getting ready"}></span>{/if}
-            <span class="copilot-label"
-                >{#if $ai.enabled && $ai.matthias?.agentMode}Agent mode on{:else}<T id="settings.ai" />{/if}</span
-            >
+            {#if !compact}
+                <span class="copilot-label"
+                    >{#if $ai.enabled && $ai.matthias?.agentMode}Agent mode on{:else}<T id="settings.ai" />{/if}</span
+                >
+            {/if}
         </MaterialButton>
         <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel={!wide} />
         {#if $librarySyncPending}
@@ -247,7 +251,7 @@
         min-width: max-content;
     }
     .top .side:first-child .brand {
-        width: var(--navigation-width);
+        max-width: var(--navigation-width);
         justify-content: center;
     }
 
