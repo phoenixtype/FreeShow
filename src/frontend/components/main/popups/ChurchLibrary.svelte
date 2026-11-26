@@ -1,12 +1,17 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
-    import { createChurch, createInvite, joinChurch, myChurches, syncChurch, syncStatus, type Church } from "../../../scriptural/churchSync"
+    import { createChurch, forgetRefusals, joinChurch, myChurches, syncChurch, syncStatus, type Church } from "../../../scriptural/churchSync"
+    import { isLive, loadPlanState, PLAN_NAMES, type PlanState } from "../../../scriptural/churchAccount"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import { Main } from "../../../../types/IPC/Main"
     import { sendMain } from "../../../IPC/main"
+    import { outputs } from "../../../stores"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
+    import ChurchAccount from "./church/ChurchAccount.svelte"
+    import ChurchPeople from "./church/ChurchPeople.svelte"
+    import ChurchPlan from "./church/ChurchPlan.svelte"
 
     const ACTIVE_KEY = ACTIVE_CHURCH_KEY
 
@@ -80,11 +85,15 @@
         busy = false
     }
 
-    async function leave() {
+    function signedOut() {
         syncStatus.set({ running: false, at: null, error: "" })
-        await churchLibrary.signOut()
         session = null
         churches = []
+        view = "songs"
+    }
+    async function signOut() {
+        await churchLibrary.signOut()
+        signedOut()
     }
 
     async function startChurch() {
@@ -112,12 +121,15 @@
     }
 
     let received = 0
+    let planFull = false
     $: syncing = $syncStatus.running
     async function sync() {
         message = ""
         received = 0
+        planFull = false
         try {
             const done = await syncChurch(activeId, (n) => (received = n))
+            planFull = done.planRefused
             const lines = [
                 done.sent ? `${done.sent} songs sent to the library.` : "",
                 done.removed ? `${done.removed} songs you deleted were removed from the library.` : "",
@@ -133,53 +145,81 @@
     }
     const syncedAt = (at: number) => new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 
+    // one part of the church at a time, so each fits the window
+    type View = "songs" | "people" | "plan" | "account"
+    const VIEWS: [View, string][] = [
+        ["songs", "Songs"],
+        ["people", "People"],
+        ["plan", "Plan"],
+        ["account", "Account"]
+    ]
+    let view: View = "songs"
+    function show(next: View) {
+        view = next
+        message = ""
+    }
+
     $: if (activeId) localStorage.setItem(ACTIVE_KEY, activeId)
     $: active = churches.find((c) => c.id === activeId)
-    $: canInvite = active?.role === "owner" || active?.role === "admin"
-
-    // INVITE //
-    let invite: { code: string; expiresAt: string } | null = null
-    $: if (activeId) invite = null
-    async function makeInvite() {
-        message = ""
-        try {
-            invite = await createInvite(activeId)
-        } catch (err) {
-            message = errorText(err, "The invite could not be made. Try again.")
-        }
-    }
-    function copyInvite() {
-        if (invite) navigator.clipboard.writeText(invite.code)
-        message = "Copied."
-    }
+    $: canPay = active?.role === "owner" || active?.role === "admin"
+    // no upgrade prompts while something is on a screen
+    $: canPrompt = !isLive($outputs)
+    $: if (activeId) planFull = false
 
     // starting or joining another church is tucked away once you are in one
     let showOther = false
 
     // PLAN //
-    const PLAN_NAMES = { free: "Free", church: "Church", multi_campus: "Multi-campus" }
-    let plan = ""
+    let planState: PlanState | null = null
     $: if (activeId && session) loadPlan(activeId)
     async function loadPlan(id: string) {
+        if (id !== activeId) return
         try {
-            const { data } = await churchLibrary.rest<{ plan: string }[]>("rpc/church_limits", { method: "POST", body: { target: id } })
-            plan = data?.[0]?.plan || "free"
+            const state = await loadPlanState(id)
+            if (id !== activeId) return
+            // a new plan: songs refused under the old one are tried again
+            const seenKey = `church-library-plan:${id}`
+            const seen = localStorage.getItem(seenKey)
+            if (seen && seen !== state.plan) forgetRefusals(id)
+            localStorage.setItem(seenKey, state.plan)
+            planState = state
         } catch {
-            plan = ""
+            planState = null
         }
+    }
+
+    // paying happens in the browser: read the plan again on coming back
+    let billingOpened = false
+    function backInTheApp() {
+        if (billingOpened && activeId && session) loadPlan(activeId)
     }
 
     async function openBilling(fn: "billing-checkout" | "billing-portal", price?: string) {
         message = ""
-        const { ok, data } = await churchLibrary.invoke<{ url?: string; message?: string }>(fn, { churchId: activeId, price })
-        if (ok && data.url) sendMain(Main.URL, data.url)
-        else message = data.message || "Billing is not available right now."
+        try {
+            const { ok, data } = await churchLibrary.invoke<{ url?: string; message?: string }>(fn, { churchId: activeId, price })
+            if (ok && data.url) {
+                billingOpened = true
+                sendMain(Main.URL, data.url)
+            } else message = data.message || "Billing is not available right now."
+        } catch (err) {
+            message = errorText(err, "Billing could not be reached. Check the connection and try again.")
+        }
+    }
+
+    async function churchChanged() {
+        view = "songs"
+        planState = null
+        await loadChurches()
+        if (activeId) loadPlan(activeId)
     }
 </script>
 
+<svelte:window on:focus={backInTheApp} />
+
 {#if !session}
     <p class="muted">Your church's songs, plan and Scriptural AI, on every computer. No password.</p>
-    <div class="google">
+    <div class="actions google">
         {#if withGoogle}
             <p class="muted">Finish in your browser, then come back here.</p>
             <MaterialButton variant="text" small on:click={() => sendMain(Main.BROWSER_SIGN_IN_CANCEL)}>Cancel</MaterialButton>
@@ -196,7 +236,7 @@
         {/if}
     </div>
     <p class="muted">Or we email you a code.</p>
-    <div class="row">
+    <div class="actions">
         <MaterialTextInput label="Email" type="email" value={email} on:input={(e) => (email = e.detail)} />
         {#if codeSent}
             <MaterialTextInput label="Code from the email" value={code} on:input={(e) => (code = e.detail)} autofocus />
@@ -222,40 +262,58 @@
             <h3>{active?.name}</h3>
         {/if}
 
-        <div class="row spaced">
-            <p class="muted">
-                {#if syncing}Syncing. {received ? `${received} songs received` : ""}
-                {:else if $syncStatus.error}{$syncStatus.error}
-                {:else if $syncStatus.at}Last synced at {syncedAt($syncStatus.at)}. Press Sync now after you change songs.
-                {:else}Press Sync now to send your songs and get the library's.{/if}
-            </p>
-            <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync now</MaterialButton>
+        <div class="actions views">
+            {#each VIEWS as [id, name]}
+                <MaterialButton variant="text" small isActive={view === id} on:click={() => show(id)}>{name}</MaterialButton>
+            {/each}
         </div>
 
-        {#if canInvite}
-            <div class="row spaced">
-                {#if invite}
-                    <p>Invite code <b class="code">{invite.code}</b>. They enter it under Join. It works for 14 days.</p>
-                    <MaterialButton variant="outlined" small icon="copy" on:click={copyInvite}>Copy</MaterialButton>
-                {:else}
-                    <p class="muted">Bring in your worship team and media volunteers.</p>
-                    <MaterialButton variant="outlined" small icon="add" on:click={makeInvite}>Invite someone</MaterialButton>
-                {/if}
+        {#if planState?.paymentFailed}
+            <div class="spaced row">
+                <p>Payment failed. Update your card.</p>
+                {#if canPay}<MaterialButton variant="outlined" small on:click={() => openBilling("billing-portal")}>Update card</MaterialButton>{/if}
             </div>
         {/if}
 
-        {#if plan}
+        {#if view === "songs"}
             <div class="row spaced">
-                <p class="muted">{PLAN_NAMES[plan] || plan} plan</p>
-                <div class="row">
-                    <!-- only owners and admins can pay; billing-checkout refuses anyone else -->
-                    {#if plan === "free" && canInvite}
-                        <MaterialButton variant="outlined" small on:click={() => openBilling("billing-checkout", "church_monthly")}>Church, $19 a month</MaterialButton>
-                        <MaterialButton variant="outlined" small on:click={() => openBilling("billing-checkout", "church_yearly")}>$190 a year</MaterialButton>
-                    {:else if canInvite}
-                        <MaterialButton variant="text" small on:click={() => openBilling("billing-portal")}>Manage billing</MaterialButton>
-                    {/if}
+                <p class="muted">
+                    {#if syncing}Syncing. {received ? `${received} songs received` : ""}
+                    {:else if $syncStatus.error}{$syncStatus.error}
+                    {:else if $syncStatus.at}Last synced at {syncedAt($syncStatus.at)}. Press Sync now after you change songs.
+                    {:else}Press Sync now to send your songs and get the library's.{/if}
+                </p>
+                <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync now</MaterialButton>
+            </div>
+
+            {#if planFull && canPrompt}
+                <div class="row spaced">
+                    <p class="muted">{canPay ? "Your plan is full." : "Your plan is full. Ask your church's owner or an admin to upgrade."}</p>
+                    {#if canPay}<MaterialButton variant="outlined" small on:click={() => show("plan")}>See plans</MaterialButton>{/if}
                 </div>
+            {/if}
+        {:else if active}
+            {#key active.id}
+                {#if view === "people"}
+                    <ChurchPeople church={active} maxMembers={planState?.maxMembers} canPrompt={canPrompt && canPay} on:plans={() => show("plan")} on:left={churchChanged} />
+                {:else if view === "plan"}
+                    {#if planState}
+                        <ChurchPlan state={planState} {canPay} on:checkout={(e) => openBilling("billing-checkout", e.detail)} on:portal={() => openBilling("billing-portal")} />
+                    {:else}
+                        <p class="muted">The plan could not be loaded. Close this window and open it again.</p>
+                    {/if}
+                {:else}
+                    <ChurchAccount church={active} {churches} email={session.email} on:changed={churchChanged} on:signedout={signedOut} />
+                {/if}
+            {/key}
+        {/if}
+
+        {#if view === "songs" && planState}
+            <div class="row spaced">
+                <p class="muted">{PLAN_NAMES[planState.plan] || planState.plan} plan</p>
+                {#if planState.plan === "free" && canPay && canPrompt}
+                    <MaterialButton variant="text" small on:click={() => show("plan")}>See plans</MaterialButton>
+                {/if}
             </div>
         {/if}
     {:else}
@@ -264,11 +322,11 @@
 
     {#if !churches.length || showOther}
         <hr />
-        <div class="row">
+        <div class="actions">
             <MaterialTextInput label="Church name" value={newChurchName} on:input={(e) => (newChurchName = e.detail)} />
             <MaterialButton variant="outlined" disabled={busy || newChurchName.trim().length < 2} on:click={startChurch}>Start</MaterialButton>
         </div>
-        <div class="row">
+        <div class="actions">
             <MaterialTextInput label="Invite code" value={inviteCode} on:input={(e) => (inviteCode = e.detail)} />
             <MaterialButton variant="outlined" disabled={busy || inviteCode.trim().length < 6} on:click={join}>Join</MaterialButton>
         </div>
@@ -276,11 +334,11 @@
 
     <div class="row spaced footer">
         <p class="muted">Signed in as {session.email}</p>
-        <div class="row">
+        <div class="actions">
             {#if churches.length && !showOther}
                 <MaterialButton variant="text" small on:click={() => (showOther = true)}>Start or join another</MaterialButton>
             {/if}
-            <MaterialButton variant="text" small on:click={leave}>Sign out</MaterialButton>
+            <MaterialButton variant="text" small on:click={signOut}>Sign out</MaterialButton>
         </div>
     </div>
 {/if}
@@ -300,17 +358,22 @@
         align-items: center;
         margin-bottom: 8px;
     }
-    .google {
+    .actions {
         display: flex;
+        justify-content: flex-end;
         align-items: center;
         gap: 8px;
+        margin-bottom: 8px;
+    }
+    .google {
         margin: 12px 0;
+    }
+    .views {
+        border-bottom: 1px solid var(--primary-lighter);
+        padding-bottom: 8px;
     }
     .spaced {
         justify-content: space-between;
-    }
-    .end {
-        justify-content: flex-end;
     }
     ul {
         list-style: none;
@@ -329,10 +392,6 @@
     }
     h3 {
         margin: 0 0 12px;
-    }
-    .code {
-        font-family: monospace;
-        letter-spacing: 0.05em;
     }
     .footer {
         margin-top: 12px;

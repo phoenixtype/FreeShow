@@ -55,11 +55,11 @@ export async function myChurches(): Promise<Church[]> {
         .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** A code someone types under Join to become an editor of this church. Owners and admins only. */
-export async function createInvite(churchId: string): Promise<{ code: string; expiresAt: string }> {
+/** A code someone types under Join to join this church with the role. Owners and admins only. */
+export async function createInvite(churchId: string, role: Church["role"] = "editor"): Promise<{ code: string; expiresAt: string }> {
     const { data } = await churchLibrary.rest<{ code: string; expires_at: string }[]>("church_invites?select=code,expires_at", {
         method: "POST",
-        body: { church_id: churchId, created_by: myUserId(), role: "editor" },
+        body: { church_id: churchId, created_by: myUserId(), role },
         headers: { Prefer: "return=representation" },
         signedIn: true
     })
