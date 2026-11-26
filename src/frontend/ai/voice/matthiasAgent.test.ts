@@ -14,7 +14,7 @@ vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeake
 vi.mock("../../components/show/project", () => ({ openProject: vi.fn() }))
 const chat = vi.hoisted(() => ({ run: vi.fn() }))
 vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat: chat.run }))
-vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
+vi.mock("../agent/agentTools", () => ({ changesScreen: (t: string) => t === "show_scripture", changeVersion: vi.fn(async () => "NLT"), liveState: () => ({ nothingOnScreen: true }), runAgentTool: vi.fn(async (name: string) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} })), searchBible: vi.fn(async () => [{ reference: "Philippians 4:6" }, { reference: "Matthew 6:25" }]), ToolError: class extends Error {} }))
 vi.mock("../agent/control", async () => {
     const { writable } = await import("svelte/store")
     const { ai } = await import("../../stores")
@@ -31,14 +31,11 @@ const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn(), f
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 
 import { get } from "svelte/store"
-import { addToProject } from "../../components/actions/apiHelper"
 import { ai, outLocked } from "../../stores"
 import { handMoves } from "../agent/control"
-import { showPlanItem } from "../agent/planItems"
 import { runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, clearChatHistory } from "../llm/llmManager"
-import { showSection } from "../songs/librarySongs"
 import { Matthias, matthiasStatus } from "./matthiasAgent"
 
 let position = 0
@@ -47,6 +44,7 @@ beforeEach(() => {
     vi.clearAllMocks()
     ai.set({})
     outLocked.set(false)
+    vi.mocked(runAgentTool).mockImplementation(async (name) => ({ ok: true, result: name === "remove_from_plan" ? { plan: "Sunday", removed: "Amazing Grace" } : {} }))
     model.llm = null
     screen.slide = { id: "temp" }
     Matthias.stop()
@@ -144,9 +142,9 @@ it("does everything asked for in one breath, in order", async () => {
 it("goes to a part of the song, and takes verse two for the song's when one is up", async () => {
     screen.slide = { id: "a" }
     await Matthias.ask("back to the chorus")
-    expect(showSection).toHaveBeenLastCalledWith("chorus", undefined)
+    expect(runAgentTool).toHaveBeenLastCalledWith("show_section", { section: "chorus" })
     await Matthias.ask("go to verse two")
-    expect(showSection).toHaveBeenLastCalledWith("verse", 2)
+    expect(runAgentTool).toHaveBeenLastCalledWith("show_section", { section: "verse", number: 2 })
 })
 
 it("steps several at once", async () => {
@@ -158,9 +156,9 @@ it("steps several at once", async () => {
 
 it("runs the plan and adds to it, and never shows what is only added", async () => {
     await Matthias.ask("next item")
-    expect(showPlanItem).toHaveBeenCalledTimes(1)
+    expect(runAgentTool).toHaveBeenLastCalledWith("show_plan_item", { item: "next" })
     await Matthias.ask("add Amazing Grace to the plan")
-    expect(addToProject).toHaveBeenCalledWith({ projectId: "p", id: "a" })
+    expect(runAgentTool).toHaveBeenLastCalledWith("add_to_plan", { plan: "p", song: "a" })
     expect(manager.showSong).not.toHaveBeenCalled()
 })
 
@@ -278,4 +276,30 @@ it("does not draw on a locked screen, and reports a drawing that failed", async 
 it("forgets the conversation and stops what is being done when the chat is cleared", () => {
     Matthias.clearChat()
     expect(clearChatHistory).toHaveBeenCalledWith("default")
+})
+
+// one implementation of each action, the tools: so what they check is checked when spoken too
+it.each([
+    ["start the timer", "speaker_timer", { command: "start" }],
+    ["next segment", "speaker_timer", { command: "next" }],
+    ["set a timer for ten minutes", "speaker_timer", { command: "set", minutes: 10 }],
+    ["start a 30 second timer", "speaker_timer", { command: "set", minutes: 0.5 }],
+    ["add two minutes", "speaker_timer", { command: "add", minutes: 2 }],
+    ["stop the music", "control_sound", { command: "stop" }],
+    ["turn the screen off", "control_screen", { command: "screen_off" }],
+    ["clear the background", "control_screen", { command: "clear_background" }],
+    ["remove the overlay", "control_screen", { command: "clear_overlays" }],
+    ["show the logo", "show_overlay", { name: "l", on: true }],
+    ["play the welcome video", "show_picture_or_video", { name: "/v/welcome.mp4" }],
+    ["open settings", "open_page", { page: "settings" }],
+    ["open the plan Sunday", "open_plan", { plan: "p" }]
+])('does "%s" with the %s tool', async (words, tool, args) => {
+    await Matthias.ask(words)
+    expect(runAgentTool).toHaveBeenCalledWith(tool, args)
+})
+
+it("says what the tool said when it could not", async () => {
+    vi.mocked(runAgentTool).mockResolvedValue({ ok: false, error: "The sound is still playing." })
+    await Matthias.ask("stop the music")
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: "The sound is still playing." })
 })

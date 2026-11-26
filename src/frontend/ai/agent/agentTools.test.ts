@@ -26,7 +26,7 @@ vi.mock("../components/floating/onScreen", () => ({ onScreenTitle: () => "" }))
 vi.mock("../../components/show/project", () => ({}))
 vi.mock("../scripture/passage", () => ({ readPassage: vi.fn(async () => "For God so loved the world") }))
 vi.mock("../songs/librarySongs", () => ({}))
-vi.mock("../voice/matthias", () => ({ PAGES: [], matchTitle: (_n: string, list: any[]) => list[0] || null }))
+vi.mock("../voice/matthias", () => ({ PAGES: [], matchTitle: (name: string, list: any[]) => (name === "welcome" ? list[0] : null) }))
 vi.mock("../voice/versions", () => ({}))
 vi.mock("./control", () => ({ isHeld: () => false, setAgentMode: vi.fn() }))
 vi.mock("./listFromPoints", () => ({}))
@@ -106,6 +106,11 @@ describe("a tool says done only when it happened", () => {
         expect((await run("show_picture_or_video", { name: "welcome" })).ok).toBe(false)
         screen.out = { background: { path: "/v/welcome.mp4" } }
         expect((await run("show_picture_or_video", { name: "welcome" })).ok).toBe(true)
+    })
+    it("takes part of a minute, and a picture or video by its path", async () => {
+        expect((await run("speaker_timer", { command: "set", minutes: 0.5 })).error).toMatch(/did not start/)
+        screen.out = { background: { path: "/v/welcome.mp4" } }
+        expect((await run("show_picture_or_video", { name: "/v/welcome.mp4" })).ok).toBe(true)
     })
     it("for sound that is still playing", async () => {
         playingAudio.set({ "/a.mp3": {} } as any)

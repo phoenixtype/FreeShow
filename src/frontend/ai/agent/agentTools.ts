@@ -560,7 +560,7 @@ export const agentTools: AgentTool[] = [
             const list = mediaList()
             if (!name) return { media: list.slice(0, 100).map(({ name, kind }) => ({ name, kind })) }
             requireUnlocked()
-            const item = matchTitle(String(name), list)
+            const item = list.find((media) => media.id === name) || matchTitle(String(name), list)
             if (!item) throw new ToolError(`Nothing named "${name}" was found.`)
             playMedia({ path: item.id })
             await confirm(() => liveOut()?.background?.path === item.id || liveOut()?.slide?.id === item.id, NOT_ON_SCREEN)
@@ -592,7 +592,7 @@ export const agentTools: AgentTool[] = [
     {
         name: "speaker_timer",
         description: "The speaker's countdown: start the program, go to its next segment, play and pause it, set it to a number of minutes and start it, or add minutes.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["start", "next", "play_pause", "set", "add"] }, minutes: { type: "integer", description: "For set and add" } }, required: ["command"] },
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["start", "next", "play_pause", "set", "add"] }, minutes: { type: "number", description: "For set and add; 0.5 is thirty seconds" } }, required: ["command"] },
         run: ({ command, minutes }) => {
             if ((command === "set" || command === "add") && !(Number(minutes) > 0)) throw new ToolError("Say how many minutes.")
             const running = () => get(activeTimers).some((timer) => timer.id === SPEAKER_TIMER_ID)
@@ -647,7 +647,7 @@ export async function runAgentTool(name: string, args: any, allowInternal = fals
     for (const [key, value] of Object.entries(given)) {
         const expected = tool.inputSchema.properties[key]
         if (!expected || value === null) continue
-        const right = expected.type === "array" ? Array.isArray(value) : expected.type === "integer" ? Number.isInteger(Number(value)) : typeof value === expected.type
+        const right = expected.type === "array" ? Array.isArray(value) : expected.type === "integer" ? Number.isInteger(Number(value)) : expected.type === "number" ? Number.isFinite(Number(value)) : typeof value === expected.type
         if (!right) return { ok: false, error: `"${key}" should be a ${expected.type}.` }
         if (expected.enum && !expected.enum.includes(value)) return { ok: false, error: `"${key}" should be one of: ${expected.enum.join(", ")}.` }
     }
