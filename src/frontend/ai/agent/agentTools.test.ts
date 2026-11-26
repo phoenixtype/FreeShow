@@ -64,6 +64,7 @@ vi.mock("./presentPassage", () => ({ presentPassage: vi.fn() }))
 const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn() }))
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 import { get } from "svelte/store"
+import { clearAll, clearOverlays } from "../../components/output/clear"
 import { addToProject, playMedia } from "../../components/actions/apiHelper"
 import { copilotListening } from "../liveCopilot"
 import { activeRecording, activeTimers, ai, audioChannelsData, obsData, outLocked, outputs, overlays, projects, scriptures, playingAudio, shows, timers } from "../../stores"
@@ -374,6 +375,9 @@ describe("true black and the logo", () => {
         expect((await runAgentTool("control_screen", { command: "black" })).ok).toBe(true)
         expect(screen.out.slide.tempItems[0].style).toContain("background-color: #000000")
         expect(screen.out.slide.tempItems[0].style).toContain("width:1920px")
+        // the picture behind stays, for when the black comes off
+        expect(clearAll).not.toHaveBeenCalled()
+        expect(clearOverlays).toHaveBeenCalled()
     })
     it("puts up the logo overlay, or says there is none", async () => {
         expect((await runAgentTool("control_screen", { command: "logo" })).error).toMatch(/no logo/i)

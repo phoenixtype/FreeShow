@@ -255,9 +255,8 @@ export class Matthias {
                 AiManager.clearScreen(request.all)
                 return "Cleared"
             case "black":
-                // cleared the copilot's way first, so "bring it back" brings back all of it
-                AiManager.clearScreen(true)
-                await this.tool("control_screen", { command: "black" })
+                // as the copilot's own change, so "bring it back" takes the black off again
+                await AiManager.asOwnChange("", () => this.tool("control_screen", { command: "black" }))
                 return "Black screen"
             case "draw":
             case "drawing": {

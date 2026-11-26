@@ -399,6 +399,6 @@ it("adds a passage, a video or the logo to the open plan", async () => {
 
 it("goes to true black, and can bring it back", async () => {
     await Matthias.ask("true black")
-    expect(manager.clearScreen).toHaveBeenCalledWith(true)
+    expect(manager.asOwnChange).toHaveBeenCalled()
     expect(runAgentTool).toHaveBeenCalledWith("control_screen", { command: "black" })
 })

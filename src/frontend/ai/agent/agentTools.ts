@@ -85,7 +85,7 @@ export function liveState() {
                   .trim()
             : ""
     const words =
-        slide?.id === "temp"
+        slide?.id === "temp" || slide?.id === "tempText"
             ? (slide.tempItems || [])
                   .flatMap((item) => item?.lines || [])
                   .map((line) => (line?.text || []).map((part) => part?.value || "").join(""))
@@ -424,7 +424,7 @@ export const agentTools: AgentTool[] = [
     {
         name: "control_screen",
         destructive: true,
-        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. black covers the screen in true black, whatever the style shows; logo puts up the church's logo (an overlay or picture named Logo). screen_on and screen_off switch the projector window. lock stops anything changing the screen; only the operator can unlock it.",
+        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. black covers the screen in true black, whatever the style shows, until clear_words takes it off; logo puts up the church's logo (an overlay or picture named Logo). screen_on and screen_off switch the projector window. lock stops anything changing the screen; only the operator can unlock it.",
         inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "black", "logo", "restore", "screen_on", "screen_off", "lock"] } }, required: ["command"] },
         screen: true,
         run: async ({ command }) => {
@@ -444,8 +444,9 @@ export const agentTools: AgentTool[] = [
             else if (command === "clear_overlays") clearOverlays()
             else if (command === "clear_all") clearAll(true)
             else if (command === "black") {
-                // clearing first keeps what was up, for restore
-                clearAll(true)
+                // the black covers the background, which stays under it for when the black comes off;
+                // overlays sit above, so they go
+                clearOverlays()
                 const { width, height } = getOutputResolution(getFirstActiveOutput()?.id || "", get(outputs), true, "", get(styles))
                 // a box of its own, so no style background or colour shows through
                 setOutput("slide", { id: "tempText", name: "Black screen", tempItems: [{ type: "text", style: `left:0px;top:0px;width:${width}px;height:${height}px;background-color: #000000;`, lines: [{ align: "", text: [{ value: "", style: "" }] }] }] })
