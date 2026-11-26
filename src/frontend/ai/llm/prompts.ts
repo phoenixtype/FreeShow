@@ -207,8 +207,6 @@ Prepend the new full-canvas gradient at index 0. Keep the existing items EXACTLY
 `
 }
 
-export const SLIDE_CHAT_SYSTEM_PROMPT = getSlideChatSystemPrompt("slide")
-
 export const SLIDE_CHAT_RESPONSE_SCHEMA = {
     type: "object",
     properties: {

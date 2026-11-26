@@ -4,14 +4,14 @@ import type { AiSuggestion, MatchResult } from "../../../types/ai/Ai"
 import type { ConfidenceLevels } from "../../../types/ai/AiSettings"
 import { clone, keysToID } from "../../components/helpers/array"
 import { getFirstActiveOutput, setOutput } from "../../components/helpers/output"
-import { loadJsonBible, screenScripture } from "../../components/drawer/bible/scripture"
+import { screenScripture } from "../../components/drawer/bible/scripture"
 import { startShow } from "../../components/helpers/showActions"
 import { clearAll, clearSlide, restoreOutput } from "../../components/output/clear"
 import { setActiveScripture } from "../../converters/bible"
 import { ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputCache, outputs, scriptures } from "../../stores"
 import { newToast } from "../../utils/common"
 import { handBack, isHeld, movedByHand, OwnChanges, type OwnChange } from "../agent/control"
-import { currentScripture, otherTab, presentPassage } from "../agent/presentPassage"
+import { presentPassage } from "../agent/presentPassage"
 import { usesAiDetection } from "../llm/aiDetection"
 import { getLLMManager } from "../llm/llmManager"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
@@ -20,9 +20,9 @@ import { detectBibleEvents } from "../scripture/bibleEvents"
 import { searchByMeaning } from "../scripture/meaningSearch"
 import { isPartOf, isReferenceWithin } from "../scripture/references"
 import { parseCopilotCommand, type CopilotCommand } from "../scripture/voiceCommands"
-import { resolveNavigation } from "../scripture/voiceNavigation"
 import { followSong, liveShowId, presentSong, songDetector } from "../songs/librarySongs"
 import { spokenLanguage, resolveSttEngine } from "../stt/stt"
+import { passageStep } from "./passageStep"
 
 interface Shown {
     content: string
@@ -201,26 +201,14 @@ export class AiManager {
         // a repeat within the cooldown still counts as handled
         if (Date.now() - this.lastCommand < this.COMMAND_COOLDOWN) return true
 
-        const { id, reference } = currentScripture()
-        if (!id || !reference?.book || !reference.chapters?.length) return false
-
-        const chapter = Number(reference.chapters[reference.chapters.length - 1])
-        const verses = (reference.verses?.[reference.verses.length - 1] || []).map((v) => parseInt(String(v), 10)).filter((v) => !isNaN(v))
-        const verse = verses.length ? Math.max(...verses) : 1
-
-        const bible = (await loadJsonBible(id))?.data
-        const book = bible?.books?.find((b) => Number(b.number) === Number(reference.book))
-        if (!book) return false
-
-        const chapterOf = (n: number) => book.chapters.find((c) => Number(c.number) === n)
-        const target = resolveNavigation(command, { chapter, verse }, { chapterCount: book.chapters.length, verseCount: (n) => chapterOf(n)?.verses.length || 0 })
-        if (!target) return false
+        const step = await passageStep(command)
+        if (!step) return false
 
         this.lastCommand = Date.now()
-        const content = `${book.name} ${target.chapter}:${target.verse}`
+        const { content } = step
         this.navigatedTo = content
         const trigger = async () => {
-            await this.present(content, `${reference.book}.${target.chapter}.${target.verse}`, otherTab(id))
+            await this.present(content, step.reference, step.id)
         }
 
         // commands follow the scripture setting: presented directly, or offered when set to "ask"
