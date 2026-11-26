@@ -1,8 +1,9 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { setActiveScripture } from "../../../converters/bible"
-    import { scriptures } from "../../../stores"
+    import { activePopup, scriptures } from "../../../stores"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
+    import { bibleAction } from "../../../scriptural/bibleAccess"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
     import { downloadedId, downloadVersion } from "../../../scriptural/download"
     import { SCRIPTURAL_VERSIONS, type ScripturalVersion } from "../../../scriptural/versions"
@@ -12,11 +13,13 @@
     // Public-domain versions are free for everyone. Licensed ones come with a
     // Church plan, once Samuel grants the church's request.
     const churchId = localStorage.getItem(ACTIVE_CHURCH_KEY) || ""
-    const signedIn = !!churchLibrary.getSession() && !!churchId
+    let signedIn = false
     let plan = "free"
     let requests: { [code: string]: string } = {}
 
-    onMount(async () => {
+    // read again when the app is back in front: signing in and paying happen in the browser
+    async function readAccess() {
+        signedIn = !!churchLibrary.getSession() && !!churchId
         if (!signedIn) return
         try {
             const [{ data: limits }, { data: rows }] = await Promise.all([churchLibrary.rest<{ plan: string }[]>("rpc/church_limits", { method: "POST", body: { target: churchId } }), churchLibrary.rest<{ version: string; status: string }[]>(`bible_access_requests?select=version,status&church_id=eq.${churchId}`)])
@@ -25,7 +28,10 @@
         } catch {
             // shown as the free plan; downloads of public-domain versions still work
         }
-    })
+    }
+    onMount(readAccess)
+
+    const openChurchLibrary = () => activePopup.set("church_library")
 
     let progress: { [code: string]: number } = {}
     let messages: { [code: string]: string } = {}
@@ -62,12 +68,15 @@
     $: downloaded = Object.fromEntries(SCRIPTURAL_VERSIONS.map((v) => [v.code, !!Object.values($scriptures).find((s: any) => s?.scripturalVersion === v.code)]))
 </script>
 
-<p class="muted">Download a version once and it works offline. Free versions download now; the NIV, NKJV and other licensed versions come with a Church plan, once approved.</p>
+<svelte:window on:focus={readAccess} />
+
+<p class="muted">Download a version once and it works offline. Each one is about 5 MB. Free versions download now; the NIV, NKJV and other licensed versions come with a Church plan, once approved.</p>
 
 <MaterialTextInput label="Search versions" value={search} on:input={(e) => (search = e.detail)} />
 
 <ul>
     {#each shown as version (version.code)}
+        {@const action = bibleAction(version, { signedIn, plan, request: requests[version.code] })}
         <li>
             <div class="name">
                 <span>{version.name}</span>
@@ -77,11 +86,13 @@
 
             {#if progress[version.code] !== undefined}
                 <span class="muted">{Math.round(progress[version.code] * 100)}%</span>
-            {:else if !version.licensed || requests[version.code] === "granted"}
+            {:else if action === "download"}
                 <MaterialButton variant="outlined" small on:click={() => download(version)}>{downloaded[version.code] ? "Update" : "Download"}</MaterialButton>
-            {:else if !signedIn || plan === "free"}
-                <span class="muted">Needs a Church plan</span>
-            {:else if requests[version.code] === "pending"}
+            {:else if action === "sign_in"}
+                <MaterialButton variant="text" small on:click={openChurchLibrary}>Sign in to get it</MaterialButton>
+            {:else if action === "see_plans"}
+                <MaterialButton variant="text" small on:click={openChurchLibrary}>Needs a Church plan</MaterialButton>
+            {:else if action === "waiting"}
                 <span class="muted">Asked, waiting for approval</span>
             {:else}
                 <MaterialButton variant="outlined" small on:click={() => ask(version)}>Ask for it</MaterialButton>
