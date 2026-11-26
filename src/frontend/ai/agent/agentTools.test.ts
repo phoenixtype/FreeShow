@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from "node:fs"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
@@ -67,6 +68,7 @@ import { addToProject, playMedia } from "../../components/actions/apiHelper"
 import { copilotListening } from "../liveCopilot"
 import { activeRecording, activeTimers, ai, audioChannelsData, obsData, outLocked, outputs, overlays, projects, scriptures, playingAudio, shows, timers } from "../../stores"
 import { listAgentTools, runAgentTool } from "./agentTools"
+import { ownTools } from "../../../electron/agent/ownTools"
 
 describe("agent tools", () => {
     it("cannot unlock a screen the operator locked", async () => {
@@ -378,4 +380,19 @@ describe("true black and the logo", () => {
         outLocked.set(true)
         expect((await runAgentTool("control_screen", { command: "black" })).ok).toBe(false)
     })
+})
+
+// written by this test, so it cannot fall behind: UPDATE_README=1 npm run test:unit
+it("mcp/README.md lists every tool an outside agent is given", () => {
+    const rows = [...listAgentTools(), ...ownTools].map((tool) => `| \`${tool.name}\` | ${tool.description.split(/(?<=[.?])\s/)[0].replace(/\|/g, "/")} | ${tool.readOnly ? "Only reads" : tool.destructive ? "Asks first" : ""} |`)
+    const table = `<!-- tools -->\n\n| Tool | Does | Note |\n| --- | --- | --- |\n${rows.join("\n")}\n\n<!-- /tools -->`
+    const file = new URL("../../../../mcp/README.md", import.meta.url)
+    const readme = readFileSync(file, "utf8")
+    const written = /<!-- tools -->[\s\S]*<!-- \/tools -->/
+    if (process.env.UPDATE_README)
+        writeFileSync(
+            file,
+            readme.replace(written, () => table)
+        )
+    else expect(readme.match(written)?.[0]).toBe(table)
 })

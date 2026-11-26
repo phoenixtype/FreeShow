@@ -14,7 +14,8 @@ import { requestToMain } from "../IPC/main"
 import { OutputHelper } from "../output/OutputHelper"
 import { getDataFolderPath } from "../utils/files"
 import { wait } from "../utils/helpers"
-import { handleMcpMessage, refuseRequest, type McpApp, type McpContent, type McpTool } from "./mcpProtocol"
+import { handleMcpMessage, refuseRequest, type McpApp, type McpContent } from "./mcpProtocol"
+import { ownTools } from "./ownTools"
 
 export const AGENT_PORT = 5507
 const MAX_BODY = 2 * 1024 * 1024
@@ -30,26 +31,6 @@ let token = ""
 
 const words = (value: unknown): McpContent => ({ type: "text", text: typeof value === "string" ? value : JSON.stringify(value, null, 2) })
 const failed = (message: string) => ({ content: [words(message)], isError: true })
-
-const ownTools: McpTool[] = [
-    {
-        name: "get_screen_image",
-        description: "A picture of what a screen shows right now.",
-        inputSchema: { type: "object", properties: {} },
-        readOnly: true
-    },
-    {
-        name: "add_media",
-        // a file of the same name in the media folder is replaced
-        destructive: true,
-        description: "Add a picture, video, sound, PDF or slide deck to the media folder, from a web address or a file on this computer. A file on this computer can be shown now if asked; one from the web is only saved.",
-        inputSchema: {
-            type: "object",
-            properties: { source: { type: "string", description: "https address or full file path" }, name: { type: "string", description: "File name to save it as" }, show: { type: "boolean" } },
-            required: ["source"]
-        }
-    }
-]
 
 async function runInApp(name: string, args: any): Promise<{ ok: boolean; result?: any; error?: string }> {
     const answer = (await requestToMain(ToMain.AGENT, { method: "call", name, args }, undefined, CALL_TIMEOUT)) as any
