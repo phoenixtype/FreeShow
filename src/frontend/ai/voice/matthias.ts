@@ -31,17 +31,42 @@ export interface Call {
     loose: boolean
 }
 
-/** every call in the words, oldest first */
+/** the name starts its sentence: the start of the words, or straight after the end of another sentence */
+const STARTS_SENTENCE = /(?:^|[.!?]["')\]]*\s+)$/
+/** where a sentence ends: a stop followed by a space or the end ("John 3.16" does not end one) */
+const SENTENCE_END = /[.!?]+(?=\s|$)/
+
+/**
+ * every call in the words, oldest first. Said with "hey" it is a call wherever it falls. Without it the sermon
+ * may just be saying the name, so the name has to start its sentence, be followed by the request (not a stop),
+ * and the request is the rest of that sentence and nothing more.
+ */
 export function findCalls(words: string): Call[] {
-    const found: { start: number; end: number; hey: boolean; loose: boolean }[] = []
+    const found: { start: number; end: number; hey: boolean; loose: boolean; ends: number }[] = []
     for (const match of words.matchAll(CALL)) {
         const start = match.index ?? 0
         const hey = !!match[1]
         const loose = !!match[3]
-        if (!hey && SPOKEN_ABOUT.test(words.slice(0, start + 1))) continue
-        found.push({ start, end: start + match[0].length, hey, loose })
+        const end = start + match[0].length
+        let ends = -1
+        if (!hey) {
+            if (SPOKEN_ABOUT.test(words.slice(0, start + 1))) continue
+            // the name on its own is a name in the sermon: "They prayed. Matthias. Next verse"
+            if (/[.!?]/.test(match[0])) continue
+            // the match may begin on the space before the name
+            if (!STARTS_SENTENCE.test(words.slice(0, start).trimEnd() + (start ? " " : ""))) continue
+            const stop = SENTENCE_END.exec(words.slice(end))
+            if (stop) ends = end + stop.index + stop[0].length
+        }
+        found.push({ start, end, hey, loose, ends })
     }
-    return found.map((call, i) => ({ at: call.start, closed: !!found[i + 1], request: words.slice(call.end, found[i + 1]?.start ?? words.length).trim(), hey: call.hey, loose: call.loose })).filter((call) => !call.loose || call.hey || ["unknown", "search"].indexOf(parseRequest(call.request).type) < 0)
+    return found
+        .map((call, i) => {
+            const next = found[i + 1]?.start ?? words.length
+            const stop = call.ends >= 0 && call.ends < next ? call.ends : next
+            return { at: call.start, closed: !!found[i + 1], request: words.slice(call.end, stop).trim(), hey: call.hey, loose: call.loose }
+        })
+        .filter((call) => !call.loose || call.hey || ["unknown", "search"].indexOf(parseRequest(call.request).type) < 0)
 }
 
 export type Request =

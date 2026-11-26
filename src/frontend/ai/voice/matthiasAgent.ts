@@ -417,15 +417,14 @@ export class Matthias {
 
     /** not a plain command: the model, when there is one, with the app's own tools */
     private static async think({ certain, typed, words, stopped }: Asked): Promise<string | null> {
+        // said without "hey": the name may have been said in passing, and a passage in the sentence is not an order
+        if (!certain && !get(ai).matthias?.agentMode) return null
         if (namesWhatToShow(words) && !get(outLocked)) {
             const reference = await AiManager.findReference(words)
             if (reference) return this.passage(reference)
             const song = matchTitle(words, songList()) || matchTitle(words.replace(/^\S+\s+/, ""), songList())
             if (song && words.trim().includes(" ")) return this.present(song)
         }
-        // the name may have been said in passing
-        if (!certain && !get(ai).matthias?.agentMode) return null
-
         const llm = getLLMManager()
         if (!llm) {
             if (/^(?:d?raw|daw|drew|sketch|illustrate)\b/i.test(words.trim())) throw new ToolError(`Drawing what is described needs an AI model: choose one in Settings, Live Copilot. Without one I can draw a cross, circle, arrow, box or line, clean up the drawing, and clear it.`)

@@ -57,16 +57,16 @@ const hear = (words: string, ended = false) => Matthias.hear(words, position, en
 const settle = () => vi.advanceTimersByTimeAsync(10_000)
 
 it("waits for the request to be finished, then does it once", async () => {
-    expect(hear("so the love of God is real matthias show")).toBe(true)
+    expect(hear("so the love of God is real. matthias show")).toBe(true)
     await vi.advanceTimersByTimeAsync(1000)
-    expect(hear("so the love of God is real matthias show john three")).toBe(true)
+    expect(hear("so the love of God is real. matthias show john three")).toBe(true)
     await vi.advanceTimersByTimeAsync(1000)
     expect(manager.showReference).not.toHaveBeenCalled()
-    hear("so the love of God is real, Matthias, show John three sixteen.", true)
+    hear("so the love of God is real. Matthias, show John three sixteen.", true)
     await settle()
     expect(manager.showReference).toHaveBeenCalledTimes(1)
     // the same words, heard again as the transcript grows
-    expect(hear("so the love of God is real, Matthias, show John three sixteen. And we know")).toBe(false)
+    expect(hear("so the love of God is real. Matthias, show John three sixteen. And we know")).toBe(false)
     await settle()
     expect(manager.showReference).toHaveBeenCalledTimes(1)
 })
@@ -74,7 +74,7 @@ it("waits for the request to be finished, then does it once", async () => {
 it("does one request after another", async () => {
     hear("matthias next verse", true)
     await settle()
-    hear("matthias next verse and the light matthias clear the screen", true)
+    hear("matthias next verse and the light. matthias clear the screen", true)
     await settle()
     expect(manager.navigateNow).toHaveBeenCalledTimes(1)
     expect(manager.clearScreen).toHaveBeenCalledTimes(1)
@@ -112,6 +112,27 @@ it("says nothing when the name was only said in passing, or is switched off", as
     expect(get(matthiasStatus)).toBeNull()
     ai.set({ matthias: { name: false } })
     expect(hear("and then matthias next verse", true)).toBe(false)
+})
+
+it("does nothing for the name in a sermon, with the ask setting off", async () => {
+    const sermon = [
+        "They prayed. Matthias. Next verse",
+        "They prayed, Matthias, next verse",
+        "Peter stood up and Matthias next verse",
+        "Matthias, Acts 1 verse 26, was numbered with the eleven apostles.",
+        "Matthias was numbered with the eleven. Next verse",
+        "So Matthias clear the screen"
+    ]
+    for (const words of sermon) {
+        position += 2000
+        hear(words, true)
+        await settle()
+    }
+    expect(manager.showReference).not.toHaveBeenCalled()
+    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(manager.clearScreen).not.toHaveBeenCalled()
+    expect(manager.findReference).not.toHaveBeenCalled()
+    expect(get(matthiasStatus)).toBeNull()
 })
 
 it("does everything asked for in one breath, in order", async () => {
