@@ -15,7 +15,7 @@ it("says how sure a match is in figures, not only colour", () => {
 })
 
 it("shows the shortcut as Cmd on a Mac", () => {
-    expect(read("components/main/Top.svelte")).toContain('$os.platform === "darwin" ? "Cmd" : "Ctrl"}+J]')
+    expect(read("components/main/Top.svelte")).toContain("$os.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+J]")
 })
 
 it("keeps a focus outline on the request box", () => {

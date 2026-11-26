@@ -22,7 +22,16 @@ function mixed(variable: string, colors: Record<string, string | null>) {
     const first = hex(found![2] ? colors[found![2]]! : found![1])
     const second = hex(colors[found![4]]!)
     const share = Number(found![3]) / 100
-    return "#" + first.map((c, i) => Math.round(c * share + second[i] * (1 - share)).toString(16).padStart(2, "0")).join("")
+    return (
+        "#" +
+        first
+            .map((c, i) =>
+                Math.round(c * share + second[i] * (1 - share))
+                    .toString(16)
+                    .padStart(2, "0")
+            )
+            .join("")
+    )
 }
 
 describe("light and dark themes", () => {

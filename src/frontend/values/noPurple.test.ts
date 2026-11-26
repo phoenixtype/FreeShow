@@ -67,8 +67,6 @@ it("finds purple in hex, rgb, hsl and named colours", () => {
 })
 
 it("has no purple in the app's own colours", () => {
-    const found = [...files(src), ...files(join(root, "public"))]
-        .filter((file) => !/public[/\\](assets|lang|fonts)/.test(file) && !NOT_OURS.some((skip) => relative(src, file).split("\\").join("/").startsWith(skip)))
-        .flatMap((file) => purples(readFileSync(file, "utf8")).map((colour) => `${relative(root, file)}: ${colour}`))
+    const found = [...files(src), ...files(join(root, "public"))].filter((file) => !/public[/\\](assets|lang|fonts)/.test(file) && !NOT_OURS.some((skip) => relative(src, file).split("\\").join("/").startsWith(skip))).flatMap((file) => purples(readFileSync(file, "utf8")).map((colour) => `${relative(root, file)}: ${colour}`))
     expect(found).toEqual([])
 })
