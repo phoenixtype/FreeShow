@@ -14,7 +14,7 @@ import { startExport } from "./data/export"
 import { cleanupProtectedCache, registerProtectedProtocol } from "./data/protected"
 import { config, setupStores } from "./data/store"
 import { receiveMain, sendMain, sendToMain } from "./IPC/main"
-import { autoErrorReport, createLog, logError } from "./IPC/responsesMain"
+import { autoErrorReport, createLog, logError, openURL } from "./IPC/responsesMain"
 import { receiveNDI } from "./ndi/talk"
 import { receiveOMT } from "./omt/talk"
 import { OutputHelper } from "./output/OutputHelper"
@@ -24,12 +24,17 @@ import { callClose, exitApp, saveAndClose } from "./utils/close"
 import { applyCommandLineSwitches } from "./utils/commandLineSwitches"
 import { applyGraphicsDeviceSelection, scheduleGpuHealthCheck } from "./utils/gpu"
 import { recoverWindow } from "./utils/recovery"
+import { guardContents } from "./utils/safeNavigation"
+import { holdSingleInstance } from "./utils/singleInstance"
 import { isDraggableAreaVisible, isWithinDisplayBounds, mainWindowInitialize, openDevTools, parseCommandLineArgs } from "./utils/init"
 import { template } from "./utils/menuTemplate"
 import { spellcheck } from "./utils/spellcheck"
 import { loadingOptions, mainOptions } from "./utils/windowOptions"
 
 // ----- STARTUP -----
+
+// before anything reads or writes the app's files
+holdSingleInstance(app, () => mainWindow)
 
 // enlarge the libuv thread pool before any worker inherits the env: capture readbacks and NDI sends
 // run as async work on this pool, and the default of 4 threads serializes concurrent 4K outputs
@@ -381,6 +386,8 @@ app.on("web-contents-created", (_e, contents) => {
         console.error(message)
         logError(createLog(new Error(message)), "main")
     })
+
+    guardContents(contents, { appPath: app.getAppPath(), isProd, open: openURL })
 
     contents.on("will-attach-webview", (_event, webPreferences) => {
         // remove unused preload scripts

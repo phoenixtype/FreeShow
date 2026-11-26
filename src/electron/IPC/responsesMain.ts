@@ -15,6 +15,7 @@ import { setAiKey } from "../ai/setup/aiKeys"
 import { browserSignIn, cancelBrowserSignIn } from "../scriptural/browserSignIn"
 import { aiHandleLocalSetup, LocalModelManager } from "../ai/setup/LocalModelManager"
 import { aiGetModelStatus } from "../ai/setup/status"
+import { isAllowedExternalUrl } from "../utils/safeNavigation"
 import { SpeechToText } from "../ai/stt/SpeechToTextManager"
 import { getAudioMetadata } from "../audio/audio"
 import { openNowPlaying, setPlayingState, unsetPlayingAudio } from "../audio/nowPlaying"
@@ -415,8 +416,8 @@ function checkRamUsage() {
 
 // URL: open url in default web browser
 export const openURL = (url: string) => {
+    if (!isAllowedExternalUrl(url)) return console.warn("Not opening a link of this kind:", String(url).slice(0, 100))
     shell.openExternal(url)
-    return
 }
 
 async function searchLyrics({ artist, title }: { artist: string; title: string }) {
