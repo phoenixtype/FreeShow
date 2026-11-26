@@ -137,3 +137,12 @@ describe("a chapter without its book (B11)", () => {
         expect(await heard("John chapter three and look with me at verse sixteen")).toBe("John 3:16")
     })
 })
+
+describe("a psalm named by its place (B12)", () => {
+    it("is found under the Bible's own name for the book", async () => {
+        expect(await heard("the twenty-third psalm")).toBe("Psalms 23:1")
+        expect(await heard("turn to the 23rd psalm")).toBe("Psalms 23:1")
+        expect(await heard("the hundred and nineteenth psalm")).not.toBe("Psalms 19:1")
+        expect(await heard("we have read all of the one hundred and fifty psalms")).toBeUndefined()
+    })
+})

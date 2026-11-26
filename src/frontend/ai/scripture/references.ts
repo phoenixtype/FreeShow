@@ -27,6 +27,11 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
 
     normalized = correctBookNames(normalized, cacheData.bookNames, CHAPTER_PATTERN, VERSE_PATTERN)
 
+    // 6. Ordinal psalm phrasing: "the 23rd psalm" -> "Psalm 23". Before the plural step, while
+    // one psalm still reads differently from "the 150 psalms"
+    const ordinalPsalmRegex = new RegExp(`\\b(?:${THE_PATTERN})\\s+(\\d+)(?:st|nd|rd|th)?\\s+(${PSALM_PATTERN})\\b`, "giu")
+    normalized = normalized.replace(ordinalPsalmRegex, "$2 $1")
+
     // 2. Normalize plural or localized book names (e.g., "Psalms" -> "Psalm")
     for (const [plural, singular] of Object.entries(PSALM_NORMALIZATION_MAP)) {
         // towards the name this Bible uses: some have "Psalm", some "Psalms"
@@ -57,10 +62,6 @@ export function normalizeReferences(text: string, cacheData: BibleCacheData): st
     // 5. Ordinal chapter structure: "the 8th chapter of Romans" -> "Romans 8"
     const ordinalChapterRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(?:${CHAPTER_PATTERN}|${PSALM_PATTERN})\\s+(?:${OF_PATTERN})\\s+((?:[1-3]\\s*)?[\\p{L}]+)\\b`, "giu")
     normalized = normalized.replace(ordinalChapterRegex, (all, chapter: string, book: string) => (/\bchapter\b/iu.test(all) ? `${book} chapter ${chapter}` : `${book} ${chapter}`))
-
-    // 6. Ordinal psalm phrasing: "the 23rd psalm" -> "Psalm 23"
-    const ordinalPsalmRegex = new RegExp(`\\b(?:(?:${THE_PATTERN})\\s+)?(\\d+)\\s+(${PSALM_PATTERN})\\b`, "giu")
-    normalized = normalized.replace(ordinalPsalmRegex, "$2 $1")
 
     // "Jude one three": the 1 is the only chapter, and the verse follows
     const oneChapterRegex = new RegExp(`\\b((?:[1-3]\\s*)?[\\p{L}]+)(?:\\s+(?:${CHAPTER_PATTERN}))?\\s+1\\s+(?:(?:${VERSE_PATTERN})\\s+)?(\\d+(?:-\\d+)?)\\b(?![:\\d])`, "giu")
