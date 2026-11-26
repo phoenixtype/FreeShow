@@ -4,6 +4,9 @@
     import { churchPeople, deleteAccount, deleteChurch, exportSongs, transferOwnership, type Person } from "../../../../scriptural/churchAccount"
     import type { Church } from "../../../../scriptural/churchSync"
     import { churchLibrary, ScripturalError } from "../../../../scriptural/connection"
+    import { dictionary } from "../../../../stores"
+    import { translateText } from "../../../../utils/language"
+    import T from "../../../helpers/T.svelte"
     import MaterialButton from "../../../inputs/MaterialButton.svelte"
     import MaterialDropdown from "../../../inputs/MaterialDropdown.svelte"
     import MaterialTextInput from "../../../inputs/MaterialTextInput.svelte"
@@ -32,7 +35,7 @@
         try {
             people = await churchPeople(church.id)
         } catch (err) {
-            fail(err, "The list of people could not be loaded.")
+            fail(err, translateText("account.people_failed"))
         }
     })
 
@@ -66,72 +69,72 @@
             link.download = `${church.name.replace(/[^\p{L}\p{N} _-]/gu, "")} songs.json`
             link.click()
             URL.revokeObjectURL(url)
-        }, "The songs could not be exported. Try again.")
+        }, translateText("account.export_failed"))
 
     const transfer = () =>
         run(async () => {
             await transferOwnership(church.id, newOwner)
             dispatch("changed")
-        }, "Ownership was not transferred.")
+        }, translateText("account.transfer_failed"))
 
     const removeChurch = () =>
         run(async () => {
             await deleteChurch(church.id, typedName)
             dispatch("changed")
-        }, "The church was not deleted.")
+        }, translateText("account.church_not_deleted"))
 
     const removeAccount = () =>
         run(async () => {
             await deleteAccount()
             await churchLibrary.signOut()
             dispatch("signedout")
-        }, "Your account was not deleted.")
+        }, translateText("account.account_not_deleted"))
 </script>
 
 <div class="item">
-    <p>Save a copy of {church.name}'s songs as a file.</p>
+    <p><T id="account.export_note" replace={[church.name]} /></p>
     <div class="actions">
-        <MaterialButton variant="outlined" small icon="download" disabled={busy} on:click={download}>Export songs</MaterialButton>
+        <MaterialButton variant="outlined" small icon="download" disabled={busy} on:click={download}><T id="account.export_songs" /></MaterialButton>
     </div>
 </div>
 
 {#if owner}
     <div class="item">
-        <p>Make someone else the owner. You become an admin.</p>
+        <p><T id="account.transfer_note" /></p>
         {#if others.length}
             <div class="actions">
-                <MaterialDropdown label="New owner" value={newOwner} options={others.map((p) => ({ value: p.member_id, label: p.member_email || p.member_id }))} on:change={(e) => (newOwner = e.detail)} />
-                <MaterialButton variant="outlined" small disabled={busy || !chosen} on:click={() => ask("transfer")}>Transfer ownership</MaterialButton>
+                <MaterialDropdown label="account.new_owner" value={newOwner} options={others.map((p) => ({ value: p.member_id, label: p.member_email || p.member_id }))} on:change={(e) => (newOwner = e.detail)} />
+                <MaterialButton variant="outlined" small disabled={busy || !chosen} on:click={() => ask("transfer")}><T id="account.transfer_ownership" /></MaterialButton>
             </div>
         {:else}
-            <p class="muted">Invite someone first.</p>
+            <p class="muted"><T id="account.invite_first" /></p>
         {/if}
         {#if asking === "transfer" && chosen}
-            <ConfirmRow question={`Make ${chosen.member_email} the owner of ${church.name}? Only they can undo this.`} action="Transfer" disabled={busy} on:cancel={() => ask("")} on:confirm={transfer} />
+            <ConfirmRow question={translateText("account.transfer_question", $dictionary, [String(chosen.member_email), church.name])} action={translateText("account.transfer", $dictionary)} disabled={busy} on:cancel={() => ask("")} on:confirm={transfer} />
         {/if}
     </div>
 
     <div class="item">
-        <p>Delete {church.name} and its library.</p>
+        <p><T id="account.delete_church_note" replace={[church.name]} /></p>
         {#if asking === "church"}
-            <ConfirmRow question={`This deletes ${church.name} for good: its songs, media files and service plans, and everyone in it${people.length > 1 ? ` (${people.length} people)` : ""} loses access. A paid plan is cancelled. Songs already on a computer stay there. This cannot be undone.`} action="Delete church" red disabled={busy || !nameMatches} on:cancel={() => ask("")} on:confirm={removeChurch}>
-                <MaterialTextInput label={`Type ${church.name} to confirm`} value={typedName} on:input={(e) => (typedName = e.detail)} autofocus />
+            <ConfirmRow question={translateText("account.delete_church_question", $dictionary, [church.name, people.length > 1 ? ` ${translateText("account.people_count", $dictionary, [String(people.length)])}` : ""])} action={translateText("account.delete_church", $dictionary)} red disabled={busy || !nameMatches} on:cancel={() => ask("")} on:confirm={removeChurch}>
+                <MaterialTextInput label={translateText("account.type_to_confirm", $dictionary, [church.name])} value={typedName} on:input={(e) => (typedName = e.detail)} autofocus />
             </ConfirmRow>
         {:else}
             <div class="actions">
-                <MaterialButton variant="text" small red on:click={() => ask("church")}>Delete church</MaterialButton>
+                <MaterialButton variant="text" small red on:click={() => ask("church")}><T id="account.delete_church" /></MaterialButton>
             </div>
         {/if}
     </div>
 {/if}
 
 <div class="item">
-    <p>Delete your account, {email}.</p>
+    <p><T id="account.delete_account_note" replace={[email]} /></p>
     {#if asking === "account"}
-        <ConfirmRow question={`This deletes the account ${email} for good.${ownedNames.length ? ` A church only you are in is deleted with all its songs. You own: ${ownedNames.join(", ")}. A church with other people needs a new owner first.` : " You leave every church you are in."} Songs already on this computer stay. This cannot be undone.`} action="Delete my account" red disabled={busy} on:cancel={() => ask("")} on:confirm={removeAccount} />
+        <ConfirmRow question={translateText("account.delete_account_question", $dictionary, [email, ownedNames.length ? translateText("account.delete_account_owned", $dictionary, [ownedNames.join(", ")]) : translateText("account.delete_account_leave", $dictionary)])} action={translateText("account.delete_my_account", $dictionary)} red disabled={busy} on:cancel={() => ask("")} on:confirm={removeAccount} />
     {:else}
         <div class="actions">
-            <MaterialButton variant="text" small red on:click={() => ask("account")}>Delete account</MaterialButton>
+            <MaterialButton variant="text" small red on:click={() => ask("account")}><T id="account.delete_account" /></MaterialButton>
         </div>
     {/if}
 </div>

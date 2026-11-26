@@ -3,7 +3,9 @@
     import { Main } from "../../../../types/IPC/Main"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { sendMain } from "../../../IPC/main"
-    import { ai } from "../../../stores"
+    import T from "../../../components/helpers/T.svelte"
+    import { ai, dictionary } from "../../../stores"
+    import { translateText } from "../../../utils/language"
     import { newToast } from "../../../utils/common"
     import { downloadLocalModel, getOllamaStatus, isModelDownloaded, localModelDownloads, OLLAMA_DOWNLOAD_URL, RECOMMENDED_LOCAL_MODELS } from "../../llm/localModels"
 
@@ -40,7 +42,7 @@
         const result = await downloadLocalModel(model)
         await refresh()
         if (!result.ok) {
-            newToast(result.error || "The model could not be downloaded")
+            newToast(result.error || translateText("matthias.model_download_failed"))
             return
         }
         choose(model)
@@ -49,19 +51,19 @@
 
 {#if running === false}
     <div class="note">
-        <p>Free models run on this computer through Ollama: no key, no plan, and nothing leaves the building. Install Ollama, open it, then check again.</p>
+        <p><T id="matthias.ollama_about" /></p>
         <div class="actions">
-            <MaterialButton variant="outlined" icon="launch" on:click={() => sendMain(Main.URL, OLLAMA_DOWNLOAD_URL)} small>Get Ollama</MaterialButton>
-            <MaterialButton icon="refresh" on:click={refresh} small>Check again</MaterialButton>
+            <MaterialButton variant="outlined" icon="launch" on:click={() => sendMain(Main.URL, OLLAMA_DOWNLOAD_URL)} small><T id="matthias.get_ollama" /></MaterialButton>
+            <MaterialButton icon="refresh" on:click={refresh} small><T id="matthias.check_again" /></MaterialButton>
         </div>
     </div>
 {:else if running}
     {#if mode === "fallback"}
         <p class="lead">
             {#if goesFirst}
-                A free model on this computer answers first. Claude is asked only when it can't, so your plan's monthly allowance lasts.
+                <T id="matthias.goes_first" />
             {:else}
-                A free model on this computer answers when this one can't: offline, no key, or the plan's allowance used up.
+                <T id="matthias.backup_note" />
             {/if}
         </p>
     {/if}
@@ -78,11 +80,11 @@
             {#if progress !== undefined}
                 <span class="detail">{progress}%</span>
             {:else if !have}
-                <MaterialButton variant="outlined" icon="download" on:click={() => download(model.id)} small>Download</MaterialButton>
+                <MaterialButton variant="outlined" icon="download" on:click={() => download(model.id)} small><T id="matthias.download" /></MaterialButton>
             {:else if chosen === model.id}
-                <MaterialButton icon="check" on:click={() => mode === "fallback" && choose("")} small>{mode === "main" || goesFirst ? "In use" : "Backup"}</MaterialButton>
+                <MaterialButton icon="check" on:click={() => mode === "fallback" && choose("")} small>{mode === "main" || goesFirst ? translateText("matthias.in_use", $dictionary) : translateText("matthias.backup", $dictionary)}</MaterialButton>
             {:else}
-                <MaterialButton variant="outlined" on:click={() => choose(model.id)} small>{mode === "main" || goesFirst ? "Use" : "Use as backup"}</MaterialButton>
+                <MaterialButton variant="outlined" on:click={() => choose(model.id)} small>{mode === "main" || goesFirst ? translateText("matthias.use", $dictionary) : translateText("matthias.use_as_backup", $dictionary)}</MaterialButton>
             {/if}
         </div>
     {/each}

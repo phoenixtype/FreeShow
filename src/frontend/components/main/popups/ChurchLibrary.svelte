@@ -6,7 +6,9 @@
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import { Main } from "../../../../types/IPC/Main"
     import { sendMain } from "../../../IPC/main"
-    import { outputs } from "../../../stores"
+    import { dictionary, outputs } from "../../../stores"
+    import { translateText } from "../../../utils/language"
+    import T from "../../helpers/T.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
     import ChurchAccount from "./church/ChurchAccount.svelte"
@@ -35,14 +37,14 @@
             churches = await myChurches()
             if (!churches.find((c) => c.id === activeId)) activeId = churches[0]?.id || ""
         } catch (err) {
-            message = errorText(err, "Could not load your churches. Try again.")
+            message = errorText(err, translateText("account.load_churches_failed"))
         }
     }
     onMount(loadChurches)
 
     async function sendCode() {
         if (!email.includes("@")) {
-            message = "Enter your email."
+            message = translateText("account.enter_email")
             return
         }
         busy = true
@@ -50,9 +52,9 @@
         try {
             await churchLibrary.sendSignInCode(email)
             codeSent = true
-            message = "We sent a code to that email."
+            message = translateText("account.code_sent")
         } catch (err) {
-            message = errorText(err, "The code could not be sent. Try again.")
+            message = errorText(err, translateText("account.code_failed"))
         }
         busy = false
     }
@@ -65,7 +67,7 @@
             session = (await churchLibrary.signInWithGoogle()) || session
             if (session) await loadChurches()
         } catch (err) {
-            message = errorText(err, "Google could not sign you in. Try again.")
+            message = errorText(err, translateText("account.google_failed"))
         }
         withGoogle = false
     }
@@ -80,7 +82,7 @@
             code = ""
             await loadChurches()
         } catch (err) {
-            message = errorText(err, "That code did not work. Try again.")
+            message = errorText(err, translateText("account.code_wrong"))
         }
         busy = false
     }
@@ -103,7 +105,7 @@
             newChurchName = ""
             await loadChurches()
         } catch (err) {
-            message = errorText(err, "The church could not be created. Try again.")
+            message = errorText(err, translateText("account.church_create_failed"))
         }
         busy = false
     }
@@ -115,7 +117,7 @@
             inviteCode = ""
             await loadChurches()
         } catch (err) {
-            message = errorText(err, "That invite code did not work.")
+            message = errorText(err, translateText("account.invite_wrong"))
         }
         busy = false
     }
@@ -131,16 +133,16 @@
             const done = await syncChurch(activeId, (n) => (received = n))
             planFull = done.planRefused
             const lines = [
-                done.sent ? `${done.sent} songs sent to the library.` : "",
-                done.removed ? `${done.removed} songs you deleted were removed from the library.` : "",
-                done.received ? `${done.received} songs updated on this computer.` : "",
-                ...done.conflicts.map((title) => `"${title}" was also changed on another computer. Yours is kept as "${title} (this computer's copy)".`),
-                done.held ? `${done.held} library songs are missing from this computer. To be safe, they were not deleted from the library.` : "",
+                done.sent ? translateText("account.songs_sent", null, [String(done.sent)]) : "",
+                done.removed ? translateText("account.songs_removed", null, [String(done.removed)]) : "",
+                done.received ? translateText("account.songs_updated", null, [String(done.received)]) : "",
+                ...done.conflicts.map((title) => translateText("account.song_conflict", null, [title, `${title} (this computer's copy)`])),
+                done.held ? translateText("account.songs_held", null, [String(done.held)]) : "",
                 done.refused
             ].filter(Boolean)
-            message = lines.join(" ") || "Everything is already up to date."
+            message = lines.join(" ") || translateText("account.up_to_date")
         } catch (err) {
-            message = errorText(err, "The sync stopped. Try again.")
+            message = errorText(err, translateText("account.sync_stopped"))
         }
     }
     const syncedAt = (at: number) => new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
@@ -148,10 +150,10 @@
     // one part of the church at a time, so each fits the window
     type View = "songs" | "people" | "plan" | "account"
     const VIEWS: [View, string][] = [
-        ["songs", "Songs"],
-        ["people", "People"],
-        ["plan", "Plan"],
-        ["account", "Account"]
+        ["songs", "account.view_songs"],
+        ["people", "account.view_people"],
+        ["plan", "account.view_plan"],
+        ["account", "account.view_account"]
     ]
     let view: View = "songs"
     function show(next: View) {
@@ -206,9 +208,9 @@
             if (ok && data.url) {
                 billingOpened = true
                 sendMain(Main.URL, data.url)
-            } else message = data.message || "Billing is not available right now."
+            } else message = data.message || translateText("account.billing_unavailable")
         } catch (err) {
-            message = errorText(err, "Billing could not be reached. Check the connection and try again.")
+            message = errorText(err, translateText("account.billing_unreachable"))
         }
     }
 
@@ -223,11 +225,11 @@
 <svelte:window on:focus={backInTheApp} />
 
 {#if !session}
-    <p class="muted">Your church's songs, plan and Scriptural AI, on every computer. No password.</p>
+    <p class="muted"><T id="account.library_intro" /></p>
     <div class="actions google">
         {#if withGoogle}
-            <p class="muted">Finish in your browser, then come back here.</p>
-            <MaterialButton variant="text" small on:click={() => sendMain(Main.BROWSER_SIGN_IN_CANCEL)}>Cancel</MaterialButton>
+            <p class="muted"><T id="account.finish_in_browser" /></p>
+            <MaterialButton variant="text" small on:click={() => sendMain(Main.BROWSER_SIGN_IN_CANCEL)}><T id="account.cancel" /></MaterialButton>
         {:else}
             <MaterialButton variant="contained" on:click={continueWithGoogle}>
                 <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"
@@ -236,18 +238,18 @@
                         d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
                     /></svg
                 >
-                Continue with Google
+                <T id="account.continue_google" />
             </MaterialButton>
         {/if}
     </div>
-    <p class="muted">Or we email you a code.</p>
+    <p class="muted"><T id="account.or_code" /></p>
     <div class="actions">
-        <MaterialTextInput label="Email" type="email" value={email} on:input={(e) => (email = e.detail)} />
+        <MaterialTextInput label="account.email" type="email" value={email} on:input={(e) => (email = e.detail)} />
         {#if codeSent}
-            <MaterialTextInput label="Code from the email" value={code} on:input={(e) => (code = e.detail)} autofocus />
-            <MaterialButton variant="contained" disabled={busy || code.trim().length < 6} on:click={signIn}>Sign in</MaterialButton>
+            <MaterialTextInput label="account.email_code" value={code} on:input={(e) => (code = e.detail)} autofocus />
+            <MaterialButton variant="contained" disabled={busy || code.trim().length < 6} on:click={signIn}><T id="account.sign_in" /></MaterialButton>
         {:else}
-            <MaterialButton variant="contained" disabled={busy} on:click={sendCode}>Send code</MaterialButton>
+            <MaterialButton variant="contained" disabled={busy} on:click={sendCode}><T id="account.send_code" /></MaterialButton>
         {/if}
     </div>
 {:else}
@@ -269,35 +271,35 @@
 
         <div class="actions views">
             {#each VIEWS as [id, name]}
-                <MaterialButton variant="text" small isActive={view === id} on:click={() => show(id)}>{name}</MaterialButton>
+                <MaterialButton variant="text" small isActive={view === id} on:click={() => show(id)}>{translateText(name, $dictionary)}</MaterialButton>
             {/each}
         </div>
 
         {#if planState?.paymentFailed}
             <div class="spaced row">
-                <p>Payment failed. Update your card.</p>
-                {#if canPay}<MaterialButton variant="outlined" small on:click={() => openBilling("billing-portal")}>Update card</MaterialButton>{/if}
+                <p><T id="account.payment_failed" /></p>
+                {#if canPay}<MaterialButton variant="outlined" small on:click={() => openBilling("billing-portal")}><T id="account.update_card" /></MaterialButton>{/if}
             </div>
         {/if}
 
         {#if view === "songs"}
             {#if overPlan}
-                <p class="muted">Your church is over its plan, so new songs, files and people cannot be added. You can still open and download everything.</p>
+                <p class="muted"><T id="account.over_plan" /></p>
             {/if}
             <div class="row spaced">
                 <p class="muted">
-                    {#if syncing}Syncing. {received ? `${received} songs received` : ""}
+                    {#if syncing}<T id="account.syncing" /> {received ? translateText("account.songs_received", $dictionary, [String(received)]) : ""}
                     {:else if $syncStatus.error}{$syncStatus.error}
-                    {:else if $syncStatus.at}Last synced at {syncedAt($syncStatus.at)}. Press Sync now after you change songs.
-                    {:else}Press Sync now to send your songs and get the library's.{/if}
+                    {:else if $syncStatus.at}<T id="account.last_synced" replace={[syncedAt($syncStatus.at)]} />
+                    {:else}<T id="account.press_sync" />{/if}
                 </p>
-                <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync now</MaterialButton>
+                <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}><T id="account.sync_now" /></MaterialButton>
             </div>
 
             {#if planFull && canPrompt}
                 <div class="row spaced">
-                    <p class="muted">{canPay ? "Your plan is full." : "Your plan is full. Ask your church's owner or an admin to upgrade."}</p>
-                    {#if canPay}<MaterialButton variant="outlined" small on:click={() => show("plan")}>See plans</MaterialButton>{/if}
+                    <p class="muted">{canPay ? translateText("account.plan_full", $dictionary) : translateText("account.plan_full_ask", $dictionary)}</p>
+                    {#if canPay}<MaterialButton variant="outlined" small on:click={() => show("plan")}><T id="account.see_plans" /></MaterialButton>{/if}
                 </div>
             {/if}
         {:else if active}
@@ -308,7 +310,7 @@
                     {#if planState}
                         <ChurchPlan state={planState} {canPay} on:checkout={(e) => openBilling("billing-checkout", e.detail)} on:portal={() => openBilling("billing-portal")} />
                     {:else}
-                        <p class="muted">The plan could not be loaded. Close this window and open it again.</p>
+                        <p class="muted"><T id="account.plan_not_loaded" /></p>
                     {/if}
                 {:else}
                     <ChurchAccount church={active} {churches} email={session.email} on:changed={churchChanged} on:signedout={signedOut} />
@@ -318,35 +320,35 @@
 
         {#if view === "songs" && planState}
             <div class="row spaced">
-                <p class="muted">{PLAN_NAMES[planState.plan] || planState.plan} plan</p>
+                <p class="muted"><T id="account.named_plan" replace={[PLAN_NAMES[planState.plan] || planState.plan]} /></p>
                 {#if planState.plan === "free" && canPay && canPrompt}
-                    <MaterialButton variant="text" small on:click={() => show("plan")}>See plans</MaterialButton>
+                    <MaterialButton variant="text" small on:click={() => show("plan")}><T id="account.see_plans" /></MaterialButton>
                 {/if}
             </div>
         {/if}
     {:else}
-        <p class="muted">Start your church's library, or join one with the invite code someone sent you.</p>
+        <p class="muted"><T id="account.start_or_join" /></p>
     {/if}
 
     {#if !churches.length || showOther}
         <hr />
         <div class="actions">
-            <MaterialTextInput label="Church name" value={newChurchName} on:input={(e) => (newChurchName = e.detail)} />
-            <MaterialButton variant="outlined" disabled={busy || newChurchName.trim().length < 2} on:click={startChurch}>Start</MaterialButton>
+            <MaterialTextInput label="account.church_name" value={newChurchName} on:input={(e) => (newChurchName = e.detail)} />
+            <MaterialButton variant="outlined" disabled={busy || newChurchName.trim().length < 2} on:click={startChurch}><T id="account.start" /></MaterialButton>
         </div>
         <div class="actions">
-            <MaterialTextInput label="Invite code" value={inviteCode} on:input={(e) => (inviteCode = e.detail)} />
-            <MaterialButton variant="outlined" disabled={busy || inviteCode.trim().length < 6} on:click={join}>Join</MaterialButton>
+            <MaterialTextInput label="account.invite_code" value={inviteCode} on:input={(e) => (inviteCode = e.detail)} />
+            <MaterialButton variant="outlined" disabled={busy || inviteCode.trim().length < 6} on:click={join}><T id="account.join" /></MaterialButton>
         </div>
     {/if}
 
     <div class="row spaced footer">
-        <p class="muted">Signed in as {session.email}</p>
+        <p class="muted"><T id="account.signed_in_as" replace={[session.email]} /></p>
         <div class="actions">
             {#if churches.length && !showOther}
-                <MaterialButton variant="text" small on:click={() => (showOther = true)}>Start or join another</MaterialButton>
+                <MaterialButton variant="text" small on:click={() => (showOther = true)}><T id="account.start_or_join_another" /></MaterialButton>
             {/if}
-            <MaterialButton variant="text" small on:click={signOut}>Sign out</MaterialButton>
+            <MaterialButton variant="text" small on:click={signOut}><T id="account.sign_out" /></MaterialButton>
         </div>
     </div>
 {/if}

@@ -1,12 +1,14 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { setActiveScripture } from "../../../converters/bible"
-    import { activePopup, scriptures } from "../../../stores"
+    import { activePopup, dictionary, scriptures } from "../../../stores"
     import { ACTIVE_CHURCH_KEY } from "../../../scriptural/ai"
     import { bibleAction } from "../../../scriptural/bibleAccess"
     import { churchLibrary, ScripturalError } from "../../../scriptural/connection"
     import { downloadedId, downloadVersion } from "../../../scriptural/download"
     import { SCRIPTURAL_VERSIONS, type ScripturalVersion } from "../../../scriptural/versions"
+    import { translateText } from "../../../utils/language"
+    import T from "../../helpers/T.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialTextInput from "../../inputs/MaterialTextInput.svelte"
 
@@ -47,7 +49,7 @@
             const id = downloadedId(version.code)
             if (id) setActiveScripture(id)
         } catch (err) {
-            messages[version.code] = err instanceof ScripturalError ? err.message : "The download stopped. Try again."
+            messages[version.code] = err instanceof ScripturalError ? err.message : translateText("account.download_stopped")
         }
         delete progress[version.code]
         progress = progress
@@ -60,7 +62,7 @@
             requests[version.code] = data || "pending"
         } catch (err) {
             console.warn("Bible access request failed:", err)
-            messages[version.code] = "The request could not be sent. Check the internet connection, then try again."
+            messages[version.code] = translateText("account.request_failed")
             messages = messages
         }
     }
@@ -74,13 +76,13 @@
 
 <svelte:window on:focus={readAccess} />
 
-<p class="muted">Download a version once and it works offline. Each one is about 5 MB. Free versions download now; the NIV, NKJV and other licensed versions come with a Church plan, once approved.</p>
+<p class="muted"><T id="account.bibles_intro" /></p>
 
 {#if planUnknown}
-    <p>Your church plan could not be checked. Free versions still download. Check the internet connection and open this again.</p>
+    <p><T id="account.plan_unknown" /></p>
 {/if}
 
-<MaterialTextInput label="Search versions" value={search} on:input={(e) => (search = e.detail)} />
+<MaterialTextInput label="account.search_versions" value={search} on:input={(e) => (search = e.detail)} />
 
 <ul>
     {#each shown as version (version.code)}
@@ -88,22 +90,22 @@
         <li>
             <div class="name">
                 <span>{version.name}</span>
-                <span class="muted">{version.code}, {version.language}{version.licensed ? ", licensed" : ""}</span>
+                <span class="muted">{version.code}, {version.language}{version.licensed ? `, ${translateText("account.licensed", $dictionary)}` : ""}</span>
                 {#if messages[version.code]}<span class="note">{messages[version.code]}</span>{/if}
             </div>
 
             {#if progress[version.code] !== undefined}
                 <span class="muted">{Math.round(progress[version.code] * 100)}%</span>
             {:else if action === "download"}
-                <MaterialButton variant="outlined" small on:click={() => download(version)}>{downloaded[version.code] ? "Update" : "Download"}</MaterialButton>
+                <MaterialButton variant="outlined" small on:click={() => download(version)}>{downloaded[version.code] ? translateText("account.update", $dictionary) : translateText("account.download", $dictionary)}</MaterialButton>
             {:else if action === "sign_in"}
-                <MaterialButton variant="text" small on:click={openChurchLibrary}>Sign in to get it</MaterialButton>
+                <MaterialButton variant="text" small on:click={openChurchLibrary}><T id="account.sign_in_to_get" /></MaterialButton>
             {:else if action === "see_plans"}
-                <MaterialButton variant="text" small on:click={openChurchLibrary}>Needs a Church plan</MaterialButton>
+                <MaterialButton variant="text" small on:click={openChurchLibrary}><T id="account.needs_plan" /></MaterialButton>
             {:else if action === "waiting"}
-                <span class="muted">Asked, waiting for approval</span>
+                <span class="muted"><T id="account.waiting_approval" /></span>
             {:else}
-                <MaterialButton variant="outlined" small on:click={() => ask(version)}>Ask for it</MaterialButton>
+                <MaterialButton variant="outlined" small on:click={() => ask(version)}><T id="account.ask_for_it" /></MaterialButton>
             {/if}
         </li>
     {/each}

@@ -1,6 +1,9 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
+    import T from "../../../components/helpers/T.svelte"
+    import { dictionary } from "../../../stores"
+    import { translateText } from "../../../utils/language"
     import { NAME } from "../../voice/matthias"
     import { chatSessions } from "../../llm/llmManager"
     import { Matthias, MATTHIAS_CHAT, matthiasStatus } from "../../voice/matthiasAgent"
@@ -33,12 +36,12 @@
 </script>
 
 <div class="ask">
-    <input type="text" bind:this={input} bind:value={words} on:keydown={onKeydown} placeholder="Tell {NAME} what to do" aria-label="Tell {NAME} what to do" />
+    <input type="text" bind:this={input} bind:value={words} on:keydown={onKeydown} placeholder={translateText("matthias.tell", $dictionary, [NAME])} aria-label={translateText("matthias.tell", $dictionary, [NAME])} />
     {#if working}
-        <MaterialButton variant="outlined" small title="Stop what is being done" on:click={() => Matthias.stop()}>Stop</MaterialButton>
+        <MaterialButton variant="outlined" small title="matthias.stop_title" on:click={() => Matthias.stop()}><T id="matthias.stop" /></MaterialButton>
     {/if}
     {#if hasChat && !working}
-        <MaterialButton variant="outlined" small title="Clear the conversation" on:click={() => Matthias.clearChat()}>Clear chat</MaterialButton>
+        <MaterialButton variant="outlined" small title="matthias.clear_conversation" on:click={() => Matthias.clearChat()}><T id="matthias.clear_chat" /></MaterialButton>
     {/if}
     <MaterialButton icon="send" title="chat.send" disabled={!words.trim()} on:click={send} />
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
+    import T from "../../../components/helpers/T.svelte"
     import { ai } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { enableLiveCopilot } from "../../liveCopilot"
@@ -24,7 +25,7 @@
 
 <MaterialToggleSwitch label={translateText("actions.enable_specific", null, ["settings.ai"])} checked={isEnabled} on:change={(e) => updateValue("enabled", e.detail)} />
 
-<p class="lead">Listens to the preacher and the singing, and offers the scripture and songs it hears. You choose whether it asks first or puts them up itself.</p>
+<p class="lead"><T id="matthias.intro" /></p>
 
 {#if isEnabled}
     <STTOptions />
@@ -34,11 +35,11 @@
     <AutoScriptureOptions />
 
     <!-- the model behind the chat and the smarter detection: Scriptural AI, your own key, or free on this computer -->
-    <Title label="Smarter matching (optional)" icon="ai" />
-    <p class="lead">An AI model catches passages described in the preacher's own words, and answers questions in the chat.</p>
+    <Title label="matthias.smarter_matching" icon="ai" />
+    <p class="lead"><T id="matthias.smarter_note" /></p>
     <LlmOptions />
 {:else}
-    <p class="lead">Speech is turned into text on this computer. Nothing leaves it unless you pick an online AI model.</p>
+    <p class="lead"><T id="matthias.privacy_off" /></p>
 {/if}
 
 <ServiceRecords />

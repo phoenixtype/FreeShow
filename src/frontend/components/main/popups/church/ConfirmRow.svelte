@@ -1,6 +1,7 @@
 <script lang="ts">
     // asked in place, under what was pressed: opening a second window would close this one
     import { createEventDispatcher } from "svelte"
+    import T from "../../../helpers/T.svelte"
     import MaterialButton from "../../../inputs/MaterialButton.svelte"
 
     export let question: string
@@ -15,7 +16,7 @@
     <p>{question}</p>
     <slot />
     <div class="actions">
-        <MaterialButton variant="text" small on:click={() => dispatch("cancel")}>Cancel</MaterialButton>
+        <MaterialButton variant="text" small on:click={() => dispatch("cancel")}><T id="account.cancel" /></MaterialButton>
         <MaterialButton variant="outlined" small {red} {disabled} on:click={() => dispatch("confirm")}>{action}</MaterialButton>
     </div>
 </div>

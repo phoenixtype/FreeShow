@@ -3,13 +3,14 @@
     import { openLiveCopilot } from "../../ai/liveCopilot"
     import { addStarterHymns } from "../../converters/starterSongs"
     import { STARTER_HYMNS } from "../../converters/starterSongs.data"
-    import { activePopup, activeProject, ai, outputs, popupData, projects, projectView, quickSearchActive, scriptures, shows, showRecentlyUsedProjects, special, version } from "../../stores"
+    import { activePopup, activeProject, ai, dictionary, outputs, popupData, projects, projectView, quickSearchActive, scriptures, shows, showRecentlyUsedProjects, special, version } from "../../stores"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
     import Link from "../inputs/Link.svelte"
     import MaterialButton from "../inputs/MaterialButton.svelte"
     import Center from "../system/Center.svelte"
+    import { translateText } from "../../utils/language"
     import { getVOTD } from "./votd"
 
     function createProject() {
@@ -47,10 +48,10 @@
     const HIDE_KEY = "home-get-ready-hidden"
     let hidden = localStorage.getItem(HIDE_KEY) === "1"
     $: steps = [
-        { label: "Add your songs", hint: "Import from EasyWorship, ProPresenter and others, or sync your church library", done: Object.keys($shows).some((id) => id !== "default"), open: () => activePopup.set("import") },
+        { label: translateText("account.ready_songs", $dictionary), hint: translateText("account.ready_songs_hint", $dictionary), done: Object.keys($shows).some((id) => id !== "default"), open: () => activePopup.set("import") },
         {
-            label: "Download a Bible",
-            hint: "KJV, BSB and more, free and offline",
+            label: translateText("account.ready_bible", $dictionary),
+            hint: translateText("account.ready_bible_hint", $dictionary),
             done: Object.values($scriptures).some((a) => !a.api && !a.collection),
             open: () => {
                 popupData.set({ importType: "scriptural" })
@@ -58,16 +59,16 @@
             }
         },
         {
-            label: "Choose the screen",
-            hint: "Pick the projector or TV the congregation sees",
+            label: translateText("account.ready_screen", $dictionary),
+            hint: translateText("account.ready_screen_hint", $dictionary),
             done: Object.values($outputs).some((a) => a.screen && !a.stageOutput),
             open: () => {
                 popupData.set({ activateOutput: true })
                 activePopup.set("choose_screen")
             }
         },
-        { label: "Plan the service", hint: "A project holds the songs, scripture and media in order", done: Object.entries($projects).some(([id, p]) => id !== "default" && p?.shows?.length), open: createProject },
-        { label: "Turn on Live Copilot", hint: "It hears the scripture and songs and offers to put them up", done: !!($ai.enabled && $ai.stt?.micDeviceId), open: openLiveCopilot }
+        { label: translateText("account.ready_plan", $dictionary), hint: translateText("account.ready_plan_hint", $dictionary), done: Object.entries($projects).some(([id, p]) => id !== "default" && p?.shows?.length), open: createProject },
+        { label: translateText("account.ready_copilot", $dictionary), hint: translateText("account.ready_copilot_hint", $dictionary), done: !!($ai.enabled && $ai.stt?.micDeviceId), open: openLiveCopilot }
     ]
     $: showSteps = !hidden && steps.some((s) => !s.done)
     function hideSteps() {
@@ -108,7 +109,7 @@
 
     {#if showSteps}
         <div class="ready">
-            <h2>Get ready for Sunday</h2>
+            <h2><T id="account.ready_title" /></h2>
             {#each steps as step, i}
                 <button class="step" class:done={step.done} on:click={step.open}>
                     <span class="mark"
@@ -121,9 +122,9 @@
                 </button>
             {/each}
             {#if !steps[0].done}
-                <MaterialButton variant="outlined" small icon="add" on:click={addStarterHymns}>Add {STARTER_HYMNS.length} starter hymns</MaterialButton>
+                <MaterialButton variant="outlined" small icon="add" on:click={addStarterHymns}><T id="account.add_starter_hymns" replace={[String(STARTER_HYMNS.length)]} /></MaterialButton>
             {/if}
-            <MaterialButton variant="text" small on:click={hideSteps}>Hide these steps</MaterialButton>
+            <MaterialButton variant="text" small on:click={hideSteps}><T id="account.hide_steps" /></MaterialButton>
         </div>
     {/if}
 

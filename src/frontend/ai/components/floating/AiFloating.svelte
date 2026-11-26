@@ -7,11 +7,13 @@
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import Tabs from "../../../components/main/Tabs.svelte"
-    import { activePage, activePopup, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, focusMode, language, mediaDownloads, popupData, resized, settingsTab, sttTempDisabled } from "../../../stores"
+    import { activePage, activePopup, activeTriggerFunction, ai, aiSmartAction, aiSttStatus, dictionary, focusMode, language, mediaDownloads, popupData, resized, settingsTab, sttTempDisabled } from "../../../stores"
     import { classifyListenError, listenNotice, type ListenProblem, shouldRetryListening } from "../../stt/listenStatus"
     import { audioLevelStore, listenProblem, micSilent, resolveSttEngine, SpeechToText } from "../../stt/stt"
     import { copilotListening, copilotOpen, copilotState, type CopilotState } from "../../liveCopilot"
     import { AiManager } from "../../manager/AiManager"
+    import T from "../../../components/helpers/T.svelte"
+    import { translateText } from "../../../utils/language"
     import AiChat from "./AiChat.svelte"
     import AiTranscription from "./AiTranscription.svelte"
     import MatthiasStatus from "./MatthiasStatus.svelte"
@@ -29,8 +31,8 @@
     // Active tab state
     let activeTab: "transcription" | "chat" = "transcription"
     const tabs = {
-        transcription: { name: "Heard", icon: "microphone" },
-        chat: { name: "Requests", icon: "chat" }
+        transcription: { name: "matthias.tab_heard", icon: "microphone" },
+        chat: { name: "matthias.tab_requests", icon: "chat" }
     }
 
     // moves made by hand are seen from the start, so it never takes the screen from someone using it
@@ -244,11 +246,11 @@
         <header>
             <Icon id="ai" size={1.2} white />
             <h2>{NAME}</h2>
-            <span class="listening" role="status">{isListening ? "Listening" : state === "loading" && !$sttTempDisabled ? "Starting" : "Not listening"}</span>
+            <span class="listening" role="status">{isListening ? translateText("matthias.listening", $dictionary) : state === "loading" && !$sttTempDisabled ? translateText("matthias.starting", $dictionary) : translateText("matthias.not_listening", $dictionary)}</span>
             {#if isListening}
-                <span class="level" role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round($audioLevelStore * 100)}><span style="width: {Math.round($audioLevelStore * 100)}%"></span></span>
+                <span class="level" role="meter" aria-label={translateText("matthias.microphone_level", $dictionary)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round($audioLevelStore * 100)}><span style="width: {Math.round($audioLevelStore * 100)}%"></span></span>
             {/if}
-            <MaterialToggleSwitch label="" title="Listen" checked={isListening || (state === "error" && !$sttTempDisabled)} disabled={state === "loading" || state === "processing"} on:change={(e) => toggleListening(e.detail)} small />
+            <MaterialToggleSwitch label="" title="matthias.listen" checked={isListening || (state === "error" && !$sttTempDisabled)} disabled={state === "loading" || state === "processing"} on:change={(e) => toggleListening(e.detail)} small />
             <MaterialButton icon="settings" title="menu.settings" style="padding: 10px;" on:click={openSettings} />
             <MaterialButton icon="close" title="actions.close" style="padding: 10px;" on:click={toggleExpand} />
         </header>
@@ -259,7 +261,7 @@
                 <MaterialButton variant="outlined" on:click={() => problem && fixProblem(problem)}>{listenNotice(problem).action}</MaterialButton>
             </div>
         {:else if isListening && $micSilent}
-            <p class="notice" role="status">Listening, but no sound is coming in. Check the microphone.</p>
+            <p class="notice" role="status"><T id="matthias.no_sound" /></p>
         {/if}
 
         <ScreenControl listening={isListening} />

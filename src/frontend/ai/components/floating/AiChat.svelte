@@ -7,7 +7,7 @@
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Center from "../../../components/system/Center.svelte"
     import { planProblem } from "../../../scriptural/planNotice"
-    import { activeEdit, activeShow, ai, popupData } from "../../../stores"
+    import { activeEdit, activeShow, ai, dictionary, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { addChatMessage, chatSessions, getLLMManager } from "../../llm/llmManager"
     import { getSlideChatSystemPrompt } from "../../llm/prompts"
@@ -46,36 +46,36 @@
     $: working = isAgent ? $matthiasStatus?.state === "working" : isSending
     $: if (chatMessages.length || working) void tick().then(scrollToBottomChat)
     const stepLabels: { [key: string]: string } = {
-        get_live_state: "Checked the screen",
-        get_transcript: "Read what was said",
-        show_found: "Showed a match",
-        set_listening: "Changed listening",
-        set_agent_mode: "Changed agent mode",
-        search_bible: "Searched the Bible",
-        read_passage: "Read a passage",
-        show_scripture: "Showed a passage",
-        list_songs: "Looked through the songs",
-        get_song: "Read a song",
-        add_song: "Added a song",
-        present_song: "Showed a song",
-        control_screen: "Changed the screen",
-        open_plan: "Opened a plan",
-        remove_from_plan: "Took an item off the plan",
-        show_plan_item: "Showed a plan item",
-        show_section: "Went to a part of the song",
-        set_bible_version: "Changed the Bible version",
-        show_overlay: "Changed an overlay",
-        show_picture_or_video: "Showed a picture or video",
-        control_sound: "Changed the sound",
-        open_page: "Opened a page",
-        list_plans: "Looked at the plans",
-        create_plan: "Made a plan",
-        add_to_plan: "Added to the plan",
-        speaker_timer: "Changed the speaker timer",
-        draw_on_screen: "Drew on the screen",
-        clean_up_drawing: "Cleaned up the drawing",
-        clear_drawing: "Cleared the drawing",
-        make_list: "Made a list"
+        get_live_state: "matthias.step_get_live_state",
+        get_transcript: "matthias.step_get_transcript",
+        show_found: "matthias.step_show_found",
+        set_listening: "matthias.step_set_listening",
+        set_agent_mode: "matthias.step_set_agent_mode",
+        search_bible: "matthias.step_search_bible",
+        read_passage: "matthias.step_read_passage",
+        show_scripture: "matthias.step_show_scripture",
+        list_songs: "matthias.step_list_songs",
+        get_song: "matthias.step_get_song",
+        add_song: "matthias.step_add_song",
+        present_song: "matthias.step_present_song",
+        control_screen: "matthias.step_control_screen",
+        open_plan: "matthias.step_open_plan",
+        remove_from_plan: "matthias.step_remove_from_plan",
+        show_plan_item: "matthias.step_show_plan_item",
+        show_section: "matthias.step_show_section",
+        set_bible_version: "matthias.step_set_bible_version",
+        show_overlay: "matthias.step_show_overlay",
+        show_picture_or_video: "matthias.step_show_picture_or_video",
+        control_sound: "matthias.step_control_sound",
+        open_page: "matthias.step_open_page",
+        list_plans: "matthias.step_list_plans",
+        create_plan: "matthias.step_create_plan",
+        add_to_plan: "matthias.step_add_to_plan",
+        speaker_timer: "matthias.step_speaker_timer",
+        draw_on_screen: "matthias.step_draw_on_screen",
+        clean_up_drawing: "matthias.step_clean_up_drawing",
+        clear_drawing: "matthias.step_clear_drawing",
+        make_list: "matthias.step_make_list"
     }
     $: chatMessages = $chatSessions[activeSessionKey] || []
 
@@ -103,7 +103,7 @@
         const llm = getLLMManager()
         // what was typed stays in the box until there is something to send it to
         if (!llm) {
-            addChatMessage(activeSessionKey, "assistant", "Choose a model in Settings, Live Copilot, then send this again.")
+            addChatMessage(activeSessionKey, "assistant", translateText("matthias.choose_model_send"))
             return
         }
         chatInput = ""
@@ -113,14 +113,14 @@
 
         try {
             const res = await llm.sendMessage(activeSessionKey, inputPrompt, { systemPrompt: getSlideChatSystemPrompt(targetType, getEditItems()) })
-            if (!res) addChatMessage(activeSessionKey, "assistant", $planProblem || "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot, then try again.")
+            if (!res) addChatMessage(activeSessionKey, "assistant", $planProblem || translateText("matthias.no_answer"))
             if (res?.action && res.action.type === "APPLY_TO_SLIDE") {
                 ChatAction.handle(res.action)
             }
             setTimeout(scrollToBottomChat)
         } catch (err) {
             console.error("Failed to send message:", err)
-            addChatMessage(activeSessionKey, "assistant", "That did not work. Try again.")
+            addChatMessage(activeSessionKey, "assistant", translateText("matthias.did_not_work"))
         } finally {
             isSending = false
             setTimeout(scrollToBottomChat)
@@ -164,7 +164,7 @@
                     <div class="empty-state">
                         {#if !isAgent}<Icon id="ai" size={2.2} gradient />{/if}
                         <p class="placeholder">
-                            {#if isAgent}Type what you want done, or try one of these{:else}<T id="chat.ask" />{/if}
+                            {#if isAgent}<T id="matthias.type_or_try" />{:else}<T id="chat.ask" />{/if}
                         </p>
                         {#if isAgent}
                             <MatthiasExamples clickable on:ask={(e) => Matthias.ask(e.detail, true, true)} />
@@ -177,7 +177,7 @@
                         <p>{msg.content}</p>
 
                         {#if msg.action}
-                            <MaterialButton title="Execute Action" style="margin-top: 10px;padding: 0;border-radius: 50px;" on:click={() => ChatAction.handle(msg.action)}>
+                            <MaterialButton title="matthias.execute_action" style="margin-top: 10px;padding: 0;border-radius: 50px;" on:click={() => ChatAction.handle(msg.action)}>
                                 <AiRing opacity={0.85}>
                                     <div style="display: flex;align-items: center;justify-content: space-between;gap: 8px;padding: 8px 14px;">
                                         <Icon id={getActionIcon(msg.action.type)} size={1.1} white />
@@ -192,7 +192,7 @@
                 {#if working}
                     <div class="chat-message assistant placeholder">
                         {#each isAgent ? $matthiasSteps : [] as step}
-                            <p class:failed={!step.ok}>{step.ok ? stepLabels[step.tool] || step.tool : `${stepLabels[step.tool] || step.tool}: did not work`}</p>
+                            <p class:failed={!step.ok}>{step.ok ? translateText(stepLabels[step.tool] || step.tool, $dictionary) : translateText("matthias.step_failed", $dictionary, [translateText(stepLabels[step.tool] || step.tool, $dictionary)])}</p>
                         {/each}
                         <p><T id="ai.processing" /></p>
                     </div>
@@ -205,7 +205,7 @@
             </div>{/if}
     {:else}
         <Center faded>
-            <p class="placeholder">Choose a model in Settings, Live Copilot, to use the chat.</p>
+            <p class="placeholder"><T id="matthias.choose_model_chat" /></p>
         </Center>
     {/if}
 </div>
