@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Video loops: Scriptural Project</title>
-        <meta name="description" content="Download Scriptural's church video loops, countdowns and backgrounds to keep on your own computers, and add more of your own." />
+        <meta name="description" content="Scriptural's church video loops, countdowns and backgrounds, free inside the app, and how to add your own." />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -14,7 +14,7 @@
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Scriptural Project" />
         <meta property="og:title" content="Video loops: Scriptural Project" />
-        <meta property="og:description" content="Download Scriptural's church video loops, countdowns and backgrounds to keep on your own computers, and add more of your own." />
+        <meta property="og:description" content="Scriptural's church video loops, countdowns and backgrounds, free inside the app, and how to add your own." />
         <meta property="og:url" content="https://project.scriptural.online/loops" />
         <meta property="og:image" content="https://project.scriptural.online/og.jpg" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -169,32 +169,8 @@
             <h2>Use them in the app</h2>
             <p>Nothing to download. In the app, open <b>Media</b>, then <b>Online</b>, then <b>Scriptural</b>, pick a category, and click a loop. New loops appear there without an update.</p>
 
-            <h2>Download the whole pack</h2>
-            <p>For a computer with no internet at church, or to keep your own copy, this downloads every loop to a folder. The pack is about 1 GB, so start it on a good connection. You need <a href="https://nodejs.org">Node</a> 20 or newer and <a href="https://github.com/phoenixtype/FreeShow">the repository</a>.</p>
-            <pre><code>node scripts/backgrounds/get-loops.mjs ~/Church-Loops</code></pre>
-            <p>If it stops, run it again. Files already there are skipped, and a loop added later arrives on the next run. A <code>CREDITS.txt</code> lists who made each file and its licence.</p>
-            <h3>Only part of it</h3>
-            <pre><code>node scripts/backgrounds/get-loops.mjs --list
-node scripts/backgrounds/get-loops.mjs ~/Church-Loops --category worship
-node scripts/backgrounds/get-loops.mjs ~/Church-Loops --ours --stills</code></pre>
-            <p><code>--list</code> shows the categories and how many files each holds. <code>--category</code> takes one of them. <code>--ours</code> keeps only loops we made. <code>--stills</code> adds the pictures.</p>
-
-            <h2>Put them in your church library</h2>
-            <p>Once downloaded, the same folder loads into your church's library with the <a href="/church-setup">setup command</a>, so every computer in your church gets them:</p>
-            <pre><code>npx tsx scripts/church-library/church.mts import "Grace Community" ~/Church-Loops</code></pre>
-
             <h2>Add your own</h2>
-            <p>Your own loops, from a motion designer or a media team, go in the same folder and load the same way. The app plays MP4, MOV and WebM. For a smooth loop, use 1920×1080 at 30 frames a second, 15 to 30 seconds long, with the last second fading into the first.</p>
-
-            <h2>Find more to add</h2>
-            <p>For people who look after the library for many churches. Our pipeline finds free film on <a href="https://commons.wikimedia.org">Wikimedia Commons</a> and turns it into loops that repeat cleanly.</p>
-            <ol>
-                <li>Pick a clip marked CC0 or public domain. Check its licence on its page.</li>
-                <li>Add it to <code>scripts/backgrounds/footage.json</code> with a label, a category, its credit, its licence and its Commons address.</li>
-                <li>Run <code>python3 scripts/backgrounds/build.py</code>. It cuts the loop, makes its picture, and updates the list.</li>
-                <li>Run <code>scripts/backgrounds/upload.sh</code>, then deploy the site. Everyone's app and the download command see it on their next visit.</li>
-            </ol>
-            <p>Only add what may be shared. If a clip's licence is not clear, leave it out.</p>
+            <p>Put your own loops in a folder and add that folder under <b>Media</b> in the app. It plays MP4, MOV and WebM. For a smooth loop, use 1920×1080 at 30 frames a second, 15 to 30 seconds long, with the last second fading into the first.</p>
             <hr />
             <footer>
                 <p><a href="/">Home</a> · <a href="/guide">Using the app</a> · <a href="/loops">Video loops</a> · <a href="/church-setup">Set up a church</a> · <a href="/pricing">Plans</a></p>

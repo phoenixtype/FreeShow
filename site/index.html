@@ -502,9 +502,7 @@
                     <div>
                         <h1>God’s Word, up as it is read.</h1>
                         <p class="lead">Songs and scripture on screen for church meetings. It listens to the preacher and brings up each verse, so no one has to hunt for it.</p>
-                        <div class="downloads" id="downloads">
-                            <a class="secondary" href="https://github.com/phoenixtype/FreeShow/releases">All downloads</a>
-                        </div>
+                        <div class="downloads" id="downloads"><p class="small">Loading downloads…</p></div>
                         <p class="small">Free for Mac, Windows and Linux. <span id="version"></span></p>
                     </div>
                     <div aria-hidden="true">
@@ -610,7 +608,6 @@
                     <a href="/loops">Video loops</a>
                     <a href="/church-setup">Set up a church</a>
                     <a href="/pricing">Plans</a>
-                    <a href="https://github.com/phoenixtype/FreeShow/releases">All downloads</a>
                     <a href="https://scriptural.online/privacy">Privacy Policy</a>
                     <a href="https://scriptural.online/terms">Terms of Service</a>
                 </nav>
@@ -626,11 +623,13 @@
                 { test: (n) => n.endsWith("x86_64.AppImage"), label: "Linux" }
             ]
 
+            const downloads = document.getElementById("downloads")
+            const notLoaded = () => (downloads.innerHTML = '<p class="small">The downloads did not load. Refresh the page in a minute.</p>')
+
             fetch("https://api.github.com/repos/phoenixtype/FreeShow/releases/latest")
                 .then((response) => (response.ok ? response.json() : null))
                 .then((release) => {
-                    if (!release?.assets) return
-                    const box = document.getElementById("downloads")
+                    if (!release?.assets) return notLoaded()
                     const ua = navigator.userAgent
                     const preferred = /Windows/.test(ua) ? "Windows" : /Mac/.test(ua) ? "Mac (Apple silicon)" : "Linux"
                     const links = []
@@ -643,10 +642,11 @@
                         if (label !== preferred) link.className = "secondary"
                         links.push({ link, first: label === preferred })
                     }
-                    links.sort((a, b) => b.first - a.first).forEach(({ link }) => box.insertBefore(link, box.lastElementChild))
+                    if (!links.length) return notLoaded()
+                    downloads.replaceChildren(...links.sort((a, b) => b.first - a.first).map(({ link }) => link))
                     document.getElementById("version").textContent = `Version ${release.tag_name.replace(/^v/, "")}`
                 })
-                .catch(() => {})
+                .catch(notLoaded)
 
             const top_ = document.getElementById("top")
             const onScroll = () => top_.classList.toggle("scrolled", scrollY > 50)
