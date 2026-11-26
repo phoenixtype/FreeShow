@@ -7,7 +7,8 @@ import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
 import { geminiConfig, geminiMicros, usableAnswer } from "../_shared/gemini.ts"
 
 const CLAUDE_MODEL = "claude-sonnet-5-5"
-const GEMINI_MODEL = "gemini-2.5-flash"
+// Google retires 2.5 Flash on 2026-12-01 and names this as its replacement
+const GEMINI_MODEL = "gemini-3.5-flash-lite"
 const MAX_TOKENS = 4096
 // Claude thinks before it answers, and its thinking comes out of max_tokens. At low effort
 // it is brief, and Claude always gets the whole cap, however short an answer was asked for.

@@ -1,6 +1,6 @@
 // The pure parts of the Gemini fallback, so they can be tested without a call.
 
-// gemini-2.5-flash (and gemini-3.5-flash-lite, which Google routes it to), in
+// gemini-3.5-flash-lite, in
 // millionths of a dollar per token; thinking is billed as output
 const PRICE = { input: 0.3, output: 2.5, cached: 0.03 }
 
