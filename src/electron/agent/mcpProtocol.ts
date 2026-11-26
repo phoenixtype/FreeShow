@@ -6,6 +6,7 @@ export interface McpTool {
     description: string
     inputSchema: any
     readOnly?: boolean
+    destructive?: boolean
 }
 export type McpContent = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string }
 export interface McpApp {
@@ -44,7 +45,7 @@ export async function handleMcpMessage(message: any, app: McpApp): Promise<any> 
         if (method === "ping") return result(id, {})
         if (method === "tools/list") {
             const tools = await app.tools()
-            return result(id, { tools: tools.map(({ name, description, inputSchema, readOnly }) => ({ name, description, inputSchema, annotations: { readOnlyHint: !!readOnly, destructiveHint: false } })) })
+            return result(id, { tools: tools.map(({ name, description, inputSchema, readOnly, destructive }) => ({ name, description, inputSchema, annotations: { readOnlyHint: !!readOnly, destructiveHint: !readOnly && !!destructive } })) })
         }
         if (method === "tools/call") {
             if (typeof params?.name !== "string") return failure(id, -32602, "A tool call needs a name.")

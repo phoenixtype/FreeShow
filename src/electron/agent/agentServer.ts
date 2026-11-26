@@ -38,6 +38,8 @@ const ownTools: McpTool[] = [
     },
     {
         name: "add_media",
+        // a file of the same name in the media folder is replaced
+        destructive: true,
         description: "Add a picture, video, sound, PDF or slide deck to the media folder, from a web address or a file on this computer, and show it now if asked.",
         inputSchema: {
             type: "object",

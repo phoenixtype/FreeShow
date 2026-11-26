@@ -3,7 +3,11 @@ import { handleMcpMessage, refuseRequest, type McpApp } from "./mcpProtocol"
 
 const app: McpApp = {
     version: "1.2.3",
-    tools: async () => [{ name: "get_live_state", description: "x", inputSchema: { type: "object", properties: {} }, readOnly: true }],
+    tools: async () => [
+        { name: "get_live_state", description: "x", inputSchema: { type: "object", properties: {} }, readOnly: true },
+        { name: "control_screen", description: "x", inputSchema: { type: "object", properties: {} }, destructive: true },
+        { name: "add_song", description: "x", inputSchema: { type: "object", properties: {} } }
+    ],
     call: vi.fn(async (name) => ({ content: [{ type: "text" as const, text: name }] }))
 }
 const ask = (method: string, params?: any, id: any = 1) => handleMcpMessage({ jsonrpc: "2.0", id, method, params }, app)
@@ -14,7 +18,10 @@ describe("handleMcpMessage", () => {
         expect((await ask("initialize", { protocolVersion: "1999-01-01" })).result.protocolVersion).toBe("2025-11-25")
     })
     it("lists and calls tools", async () => {
-        expect((await ask("tools/list")).result.tools[0]).toMatchObject({ name: "get_live_state", annotations: { readOnlyHint: true } })
+        const listed = (await ask("tools/list")).result.tools
+        expect(listed[0]).toMatchObject({ name: "get_live_state", annotations: { readOnlyHint: true, destructiveHint: false } })
+        expect(listed[1]).toMatchObject({ name: "control_screen", annotations: { readOnlyHint: false, destructiveHint: true } })
+        expect(listed[2]).toMatchObject({ name: "add_song", annotations: { readOnlyHint: false, destructiveHint: false } })
         expect((await ask("tools/call", { name: "get_live_state" })).result.content[0].text).toBe("get_live_state")
     })
     it("answers notifications with nothing, and bad requests with an error", async () => {

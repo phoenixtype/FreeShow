@@ -46,6 +46,9 @@ describe("agent tools", () => {
         expect(get(outLocked)).toBe(true)
         const control = listAgentTools().find((tool) => tool.name === "control_screen")
         expect(control?.inputSchema.properties.command.enum).not.toContain("unlock")
+        expect(control?.destructive).toBe(true)
+        expect(listAgentTools().find((tool) => tool.name === "remove_from_plan")?.destructive).toBe(true)
+        expect(listAgentTools().find((tool) => tool.name === "get_live_state")?.destructive).toBe(false)
     })
 
     it("keeps internal tools from a model's pick, and lets the app's own server use them", async () => {

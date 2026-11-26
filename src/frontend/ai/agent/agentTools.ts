@@ -41,6 +41,8 @@ export interface AgentTool {
     description: string
     inputSchema: { type: "object"; properties: Record<string, any>; required?: string[] }
     readOnly?: boolean
+    /** may take something away (clears the screen, removes a plan item): outside agents should ask first */
+    destructive?: boolean
     /** changes what the room sees, so not while the operator is moving the screen */
     screen?: boolean
     /** not offered to the in-app chat or listed to outside agents: used by the app's own server */
@@ -218,6 +220,7 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "set_agent_mode",
+        destructive: true,
         description: "Let the app lead the screen by itself from what it hears (scripture, songs, clearing up), or hand it back to the operator.",
         inputSchema: { type: "object", properties: { on: { type: "boolean" } }, required: ["on"] },
         run: ({ on }) => {
@@ -345,6 +348,7 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "clear_drawing",
+        destructive: true,
         description: "Remove the drawing from the screen.",
         inputSchema: none,
         screen: true,
@@ -369,6 +373,7 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "control_screen",
+        destructive: true,
         description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. screen_on and screen_off switch the projector window. lock stops anything changing the screen; only the operator can unlock it.",
         inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "restore", "screen_on", "screen_off", "lock"] } }, required: ["command"] },
         screen: true,
@@ -439,6 +444,7 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "remove_from_plan",
+        destructive: true,
         description: "Take one item off the open service plan. The song stays in the library, and the operator can undo it with Ctrl+Z. Nothing else is ever deleted.",
         inputSchema: { type: "object", properties: { item: text("The item's name") }, required: ["item"] },
         run: ({ item }) => {
@@ -577,7 +583,7 @@ export const agentTools: AgentTool[] = [
     }
 ]
 
-export const listAgentTools = () => agentTools.filter((tool) => !tool.internal).map(({ name, description, inputSchema, readOnly }) => ({ name, description, inputSchema, readOnly: !!readOnly }))
+export const listAgentTools = () => agentTools.filter((tool) => !tool.internal).map(({ name, description, inputSchema, readOnly, destructive }) => ({ name, description, inputSchema, readOnly: !!readOnly, destructive: !!destructive }))
 
 export const changesScreen = (name: string) => !!agentTools.find((tool) => tool.name === name)?.screen
 
