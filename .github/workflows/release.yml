@@ -58,6 +58,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
         run: npm run release
 
   publish_linux:
@@ -86,6 +95,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
         run: npm run release
 
   # This needs it's own build
@@ -127,6 +145,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
           USE_SYSTEM_FPM: true
         run: npm run release
 
@@ -168,6 +195,15 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # our own API keys, written into the app by scripts/ownKeys.js; a missing one hides that provider
+          SCRIPTURAL_PIXABAY_KEY: ${{ secrets.SCRIPTURAL_PIXABAY_KEY }}
+          SCRIPTURAL_UNSPLASH_KEY: ${{ secrets.SCRIPTURAL_UNSPLASH_KEY }}
+          SCRIPTURAL_BIBLEAPI_KEY: ${{ secrets.SCRIPTURAL_BIBLEAPI_KEY }}
+          SCRIPTURAL_PCO_CLIENT_ID: ${{ secrets.SCRIPTURAL_PCO_CLIENT_ID }}
+          SCRIPTURAL_PCO_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_PCO_CLIENT_SECRET }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_ID: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_ID }}
+          SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET: ${{ secrets.SCRIPTURAL_CHURCHAPPS_CLIENT_SECRET }}
+          SCRIPTURAL_AMAZINGLIFE_CLIENT_ID: ${{ secrets.SCRIPTURAL_AMAZINGLIFE_CLIENT_ID }}
           SECRET_CSC_LINK: ${{ secrets.CSC_LINK }}
           SECRET_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           SECRET_APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
