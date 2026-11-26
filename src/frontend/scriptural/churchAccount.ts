@@ -49,7 +49,7 @@ export type PaidPlan = "church" | "multi_campus"
 // prices as Stripe holds them (lookup keys scriptural_project_<plan>_<period>); limits as church_limits has them
 export const PLANS: { id: PaidPlan; name: string; monthly: number; yearly: number; includes: string }[] = [
     { id: "church", name: "Church", monthly: 19, yearly: 190, includes: "10 people, any number of songs, 1,000 Scriptural AI requests a month" },
-    { id: "multi_campus", name: "Multi-campus", monthly: 49, yearly: 490, includes: "50 people, any number of songs, 5,000 Scriptural AI requests a month" }
+    { id: "multi_campus", name: "Multi-campus", monthly: 49, yearly: 490, includes: "Everything in Church, with 50 people instead of 10 and 5,000 Scriptural AI requests a month instead of 1,000" }
 ]
 export const PLAN_NAMES: Record<string, string> = { free: "Free", church: "Church", multi_campus: "Multi-campus" }
 export const priceId = (plan: PaidPlan, yearly: boolean) => `${plan}_${yearly ? "yearly" : "monthly"}`
