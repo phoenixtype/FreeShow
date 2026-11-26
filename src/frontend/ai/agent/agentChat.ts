@@ -5,6 +5,9 @@ import { listAgentTools, runAgentTool } from "./agentTools"
 
 export const MAX_STEPS = 10
 const MAX_RESULT_CHARS = 6000
+// every step is sent again with the next question, and the whole of it has to stay under the proxy's limit
+const OLD_RESULT_CHARS = 300
+const WHOLE_RESULTS = 2
 const MAX_HISTORY = 12
 const MANY_STEPS = 4
 
@@ -63,7 +66,8 @@ export async function runAgentChat(history: { role: string; content: string }[],
         .slice(-MAX_HISTORY)
         .map(({ role, content }) => `${role === "user" ? "Operator" : "You"}: ${content}`)
         .join("\n")
-    const steps: string[] = []
+    const steps: { call: string; said: string }[] = []
+    const done = () => steps.map(({ call, said }, i) => `${i + 1}. ${call} -> ${said.slice(0, i < steps.length - WHOLE_RESULTS ? OLD_RESULT_CHARS : MAX_RESULT_CHARS)}`).join("\n")
     const failed = new Set<string>()
     const did: string[] = []
     const readOnly = new Set(listAgentTools().filter((tool) => tool.readOnly).map((tool) => tool.name))
@@ -73,7 +77,7 @@ export async function runAgentChat(history: { role: string; content: string }[],
     let struggling = false
 
     for (let step = 0; step < MAX_STEPS; step++) {
-        const turn = await deps.ask(steps.length ? `${asked}\n\nWhat you have done for this message:\n${steps.join("\n")}` : asked, struggling || step >= MANY_STEPS)
+        const turn = await deps.ask(steps.length ? `${asked}\n\nWhat you have done for this message:\n${done()}` : asked, struggling || step >= MANY_STEPS)
         if (deps.stopped?.()) return { content: "Stopped." }
         if (!turn) return partly()
         if (!turn.tool) return turn
@@ -103,7 +107,7 @@ export async function runAgentChat(history: { role: string; content: string }[],
         }
         deps.onStep?.(turn.tool, answer.ok)
         const said = JSON.stringify(answer.ok ? answer.result : { error: answer.error }) || ""
-        steps.push(`${step + 1}. ${turn.tool}(${JSON.stringify(args)}) -> ${said.slice(0, MAX_RESULT_CHARS)}`)
+        steps.push({ call: `${turn.tool}(${JSON.stringify(args)})`, said })
     }
     return { content: "That took more steps than I am allowed. Tell me the next part to do." }
 }

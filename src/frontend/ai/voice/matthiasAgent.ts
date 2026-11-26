@@ -49,6 +49,9 @@ const PAUSE_AFTER_PHRASE_MS = 500
 const LONGEST_REQUEST_MS = 9000
 const REPEAT_MS = 8000
 const REWRITE_CHARS = 12
+// how long a model may work on one request: nobody in the room waits longer for a spoken one
+const SPOKEN_TURN_MS = 45_000
+const TYPED_TURN_MS = 120_000
 
 export class Matthias {
     // where the last answered call stood, counted over everything heard
@@ -113,10 +116,14 @@ export class Matthias {
     // one request at a time, in the order they came
     private static queue: Promise<unknown> = Promise.resolve()
     private static round = 0
+    // the model turn under way, if there is one
+    private static thinking: AbortController | null = null
 
     /** drops what is being worked on and all that waits behind it */
     static stop() {
         this.round++
+        this.thinking?.abort()
+        this.thinking = null
         this.queue = Promise.resolve()
         matthiasSteps.set([])
         matthiasStatus.set(null)
@@ -133,8 +140,9 @@ export class Matthias {
     /** a request in words. Spoken ones (certain: plainly said to Matthias) are only written down when something came of them. */
     static ask(words: string, certain = true, typed = false): Promise<void> {
         const requests = parseRequests(words)
-        // taking the screen back never waits its turn
-        if (requests.length === 1 && ((requests[0].type === "agent" && !requests[0].on) || requests[0].type === "lock")) this.stop()
+        // taking the screen back never waits its turn, and a plain command never waits behind a model
+        const takesBack = requests.length === 1 && ((requests[0].type === "agent" && !requests[0].on) || requests[0].type === "lock")
+        if (takesBack || (this.thinking && requests.every((request) => request.type !== "unknown"))) this.stop()
         if (typed) addChatMessage(MATTHIAS_CHAT, "user", words)
         const round = this.round
         const turn = this.queue.then(() => (round === this.round ? this.work(requests, words, certain, typed, round) : undefined))
@@ -437,10 +445,13 @@ export class Matthias {
         const systemPrompt = `${CHAT_SYSTEM_PROMPT}${agentInstructions()}\n\nYour name is ${NAME}.${spoken}`
         const history = getChatHistory(MATTHIAS_CHAT).map(({ role, content }) => ({ role, content }))
         const movesBefore = get(handMoves)
+        const turn = new AbortController()
+        this.thinking = turn
+        const deadline = setTimeout(() => turn.abort(), typed ? TYPED_TURN_MS : SPOKEN_TURN_MS)
         const answer = await runAgentChat(typed ? history : [...history, { role: "user", content: words }], {
-            ask: (prompt, struggling) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt, struggling }),
+            ask: (prompt, struggling) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt, struggling, signal: turn.signal }),
             context: context(!typed),
-            stopped,
+            stopped: () => stopped() || turn.signal.aborted,
             refuse: (tool) => (changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""),
             run: async (tool, args) => {
                 if (!changesScreen(tool)) return runAgentTool(tool, args)
@@ -449,8 +460,12 @@ export class Matthias {
                 return result
             },
             onStep: (tool, ok) => matthiasSteps.update((steps) => [...steps, { tool, ok }])
+        }).finally(() => {
+            clearTimeout(deadline)
+            if (this.thinking === turn) this.thinking = null
         })
         if (stopped()) return null
+        if (turn.signal.aborted) throw new ToolError("That took too long, so I stopped. Ask again, or ask for less at once.")
         if (!answer) throw new ToolError("I could not get an answer. Check the internet connection and the model in Settings, Live Copilot.")
         if (typed && answer.action) {
             // nothing is made until the button is pressed, whatever the model says it did

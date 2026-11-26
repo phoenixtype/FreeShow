@@ -181,15 +181,49 @@ it("works on one request at a time, and stops at once when told to", async () =>
     let finish: (a: unknown) => void = () => {}
     chat.run.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)))
     const first = Matthias.ask("prepare something long", true, true)
-    const second = Matthias.ask("next verse", true, true)
+    const second = Matthias.ask("compose another long thing", true, true)
     await vi.advanceTimersByTimeAsync(10)
-    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(chat.run).toHaveBeenCalledTimes(1)
     await Matthias.ask("stand down", true, true)
     expect(get(ai).matthias?.agentMode).toBe(false)
     finish({ content: "All done" })
     await Promise.all([first, second])
-    expect(manager.navigateNow).not.toHaveBeenCalled()
+    expect(chat.run).toHaveBeenCalledTimes(1)
     expect(vi.mocked(addChatMessage).mock.calls.some((c) => c[2] === "All done")).toBe(false)
+})
+
+// a model that only ends when it is told to stop
+function hungModel() {
+    const request = vi.fn((options: { signal: AbortSignal }) => new Promise<null>((resolve) => options.signal.addEventListener("abort", () => resolve(null))))
+    model.llm = { request }
+    chat.run.mockImplementationOnce(async (_history, deps) => {
+        await deps.ask("prompt", false)
+        return deps.stopped() ? { content: "Stopped." } : null
+    })
+    return request
+}
+
+it("does not make a plain command wait behind a model turn, and ends that turn", async () => {
+    const request = hungModel()
+    const first = Matthias.ask("prepare something long")
+    await vi.advanceTimersByTimeAsync(10)
+    await Matthias.ask("next verse")
+    await first
+    expect(manager.navigateNow).toHaveBeenCalledTimes(1)
+    expect(request.mock.calls[0][0].signal.aborted).toBe(true)
+})
+
+it.each([
+    ["spoken", false, 45_000],
+    ["typed", true, 120_000]
+])("gives up on a %s model turn at its deadline", async (_, typed, deadline) => {
+    const request = hungModel()
+    const turn = Matthias.ask("prepare something long", true, typed)
+    await vi.advanceTimersByTimeAsync(deadline - 1000)
+    expect(request.mock.calls[0][0].signal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(1000)
+    await turn
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: expect.stringMatching(/took too long/) })
 })
 
 it("leaves the screen alone once the operator has moved it, and still does the rest", async () => {

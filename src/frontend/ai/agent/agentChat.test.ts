@@ -73,6 +73,19 @@ describe("runAgentChat", () => {
         expect(answer?.content).toMatch(/AI model/)
     })
 
+    it("keeps the last two results whole and cuts the older ones", async () => {
+        run.mockImplementation(async (_tool, args) => ({ ok: true, result: `${args?.n}`.repeat(1000) }))
+        const turns = [1, 2, 3, 4].map((n) => ({ tool: "show_scripture", arguments: `{"n":${n}}` }))
+        let prompt = ""
+        await runAgentChat(history, { run, ask: async (p) => ((prompt = p), turns.shift() || { content: "ok" }) })
+        const lines = prompt.split("\n").filter((line) => /^\d\. /.test(line))
+        expect(lines).toHaveLength(4)
+        expect(lines[0].length).toBeLessThan(400)
+        expect(lines[1].length).toBeLessThan(400)
+        expect(lines[2].length).toBeGreaterThan(1000)
+        expect(lines[3].length).toBeGreaterThan(1000)
+    })
+
     it("lists the tools to the model", () => {
         expect(agentInstructions()).toContain("show_scripture(reference)")
     })

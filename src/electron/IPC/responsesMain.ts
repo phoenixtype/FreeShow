@@ -9,7 +9,7 @@ import type { MainResponses } from "../../types/IPC/Main"
 import { Main } from "../../types/IPC/Main"
 import { ToMain } from "../../types/IPC/ToMain"
 import type { ErrorLog, LyricSearchResult, OS } from "../../types/Main"
-import { completeLLM, fetchProviderModels } from "../ai/llm/llmProviders"
+import { cancelLLM, completeLLM, fetchProviderModels } from "../ai/llm/llmProviders"
 import { ollamaProvider } from "../ai/llm/providers/ollama"
 import { setAiKey } from "../ai/setup/aiKeys"
 import { browserSignIn, cancelBrowserSignIn } from "../scriptural/browserSignIn"
@@ -303,6 +303,7 @@ export const mainResponses: MainResponses = {
     [Main.BROWSER_SIGN_IN]: (data) => browserSignIn(data),
     [Main.BROWSER_SIGN_IN_CANCEL]: () => cancelBrowserSignIn(),
     [Main.AI_LLM_COMPLETE]: (data) => completeLLM(data),
+    [Main.AI_LLM_CANCEL]: (data) => cancelLLM(data.requestId),
     [Main.AI_OLLAMA_STATUS]: () => ollamaProvider.status(),
     [Main.AI_OLLAMA_PULL]: (data) => ollamaProvider.pull(data.model, (percent) => sendToMain(ToMain.AI_OLLAMA_PULL, { model: data.model, percent }))
 }
