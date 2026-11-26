@@ -13,6 +13,7 @@
     },
     "overrides": {
         "shell-quote": "^1.8.4",
+        "uuid": "^11.1.1",
         "tmp": "^0.2.7",
         "tar": "^7.5.20"
     },
@@ -145,7 +146,7 @@
         "macadam": "github:vassbo/macadam#1f0b7b4",
         "mdb-reader": "^1.2.1",
         "mp4box": "^0.6.5",
-        "music-metadata": "^7.14.0",
+        "music-metadata": "^11.16.1",
         "node-hid": "^3.4.0",
         "node-machine-id": "^1.1.12",
         "openmediatransport": "github:meros-co/openmediatransport-node#1eb7bb50b0c135fbb7ddbbbd858d774f630d9df4",
