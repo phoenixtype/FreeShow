@@ -8,6 +8,7 @@
 // change is decided by each database (row-level security), never by this app.
 
 import { Main } from "../../types/IPC/Main"
+import { plainRestError, plainSignInError } from "./plainErrors"
 
 // nothing waits on the network for ever: a hung request would stop every later sync
 const REQUEST_WAIT_MS = 30_000
@@ -121,7 +122,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
     async function authRequest(path: string, body: object): Promise<any> {
         const response = await fetch(`${AUTH_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", apikey: anonKey }, body: JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_WAIT_MS) })
         const data = await response.json().catch(() => ({}))
-        if (!response.ok) throw new AuthRejected(data?.msg || data?.error_description || data?.message || "Could not be reached. Try again.", response.status)
+        if (!response.ok) throw new AuthRejected(plainSignInError(response.status), response.status)
         return data
     }
 
@@ -200,7 +201,7 @@ function makeConnection(projectUrl: string, anonKey: string, sessionKey: string,
         })
         if (!response.ok) {
             const detail = await response.json().catch(() => null)
-            throw new ScripturalError(detail?.message || `The server answered ${response.status}`)
+            throw new ScripturalError(plainRestError(response.status, detail))
         }
         const text = await response.text()
         return { data: (text ? JSON.parse(text) : null) as T, response }
