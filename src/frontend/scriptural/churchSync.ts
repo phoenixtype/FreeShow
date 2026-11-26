@@ -288,6 +288,8 @@ export interface SyncStatus {
     error: string
 }
 export const syncStatus = writable<SyncStatus>({ running: false, at: null, error: "" })
+/** something here changed since the last sync; the top bar offers "Sync library" until it is pressed */
+export const librarySyncPending = writable(false)
 
 type SyncResult = { sent: number; received: number; refused: string }
 let current: { churchId: string; result: Promise<SyncResult> } | null = null
@@ -316,9 +318,10 @@ export function syncChurch(churchId: string, onProgress?: (count: number) => voi
             }
             const received = await syncSongs(churchId, onProgress, canWrite)
             syncStatus.set({ running: false, at: Date.now(), error: refused })
+            librarySyncPending.set(false)
             return { sent, received, refused }
         } catch (err) {
-            syncStatus.update((a) => ({ ...a, running: false, error: err instanceof ScripturalError ? err.message : "The church library could not be reached. It will try again." }))
+            syncStatus.update((a) => ({ ...a, running: false, error: err instanceof ScripturalError ? err.message : "The church library could not be reached. Press Sync to try again." }))
             throw err
         } finally {
             current = null

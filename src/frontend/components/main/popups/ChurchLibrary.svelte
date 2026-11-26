@@ -59,7 +59,6 @@
         try {
             session = (await churchLibrary.signInWithGoogle()) || session
             if (session) await loadChurches()
-            if (session && activeId) void sync()
         } catch (err) {
             message = errorText(err, "Google could not sign you in. Try again.")
         }
@@ -75,7 +74,6 @@
             codeSent = false
             code = ""
             await loadChurches()
-            if (activeId) void sync()
         } catch (err) {
             message = errorText(err, "That code did not work. Try again.")
         }
@@ -95,7 +93,6 @@
             activeId = await createChurch(newChurchName)
             newChurchName = ""
             await loadChurches()
-            if (activeId) void sync()
         } catch (err) {
             message = errorText(err, "The church could not be created. Try again.")
         }
@@ -108,7 +105,6 @@
             activeId = await joinChurch(inviteCode)
             inviteCode = ""
             await loadChurches()
-            if (activeId) void sync()
         } catch (err) {
             message = errorText(err, "That invite code did not work.")
         }
@@ -222,8 +218,8 @@
             <p class="muted">
                 {#if syncing}Syncing. {received ? `${received} songs received` : ""}
                 {:else if $syncStatus.error}{$syncStatus.error}
-                {:else if $syncStatus.at}Songs sync by themselves. Last synced at {syncedAt($syncStatus.at)}.
-                {:else}Songs sync by themselves while you are online.{/if}
+                {:else if $syncStatus.at}Last synced at {syncedAt($syncStatus.at)}. Press Sync now after you change songs.
+                {:else}Press Sync now to send your songs and get the library's.{/if}
             </p>
             <MaterialButton variant="contained" icon="refresh" disabled={syncing || !activeId} on:click={sync}>Sync now</MaterialButton>
         </div>

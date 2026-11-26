@@ -12,8 +12,23 @@
     import TopButton from "../inputs/TopButton.svelte"
     import MaterialButton from "../inputs/MaterialButton.svelte"
     import { copilotOpen, copilotState, openLiveCopilot } from "../../ai/liveCopilot"
+    import { librarySyncPending, syncChurch, syncStatus } from "../../scriptural/churchSync"
+    import { ACTIVE_CHURCH_KEY } from "../../scriptural/ai"
+    import { newToast } from "../../utils/common"
 
     export let isWindows = false
+
+    // the church library syncs only from this button or the library window, never by itself
+    async function syncLibrary() {
+        const churchId = localStorage.getItem(ACTIVE_CHURCH_KEY)
+        if (!churchId) return activePopup.set("church_library")
+        try {
+            const done = await syncChurch(churchId)
+            newToast(done.refused || (done.sent || done.received ? `Library synced: ${done.sent} sent, ${done.received} received.` : "The library is up to date."))
+        } catch {
+            newToast($syncStatus.error || "The sync stopped. Try again.")
+        }
+    }
 
     // room for every button to say what it is
     let innerWidth = 0
@@ -130,6 +145,12 @@
             >
         </MaterialButton>
         <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel={!wide} />
+        {#if $librarySyncPending}
+            <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1em;" title="Send your song changes to the church library" disabled={$syncStatus.running} on:click={syncLibrary}>
+                <Icon id="refresh" size={1.3} white />
+                <span>{$syncStatus.running ? "Syncing" : "Sync library"}</span>
+            </MaterialButton>
+        {/if}
         <MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.3em 1em;" title="Account" on:click={() => activePopup.set("church_library")}>
             <Icon id="profiles" size={1.4} white />
             {#if wide}<span>Account</span>{/if}

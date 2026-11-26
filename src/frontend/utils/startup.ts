@@ -9,7 +9,7 @@ import { requestMain, requestMainMultiple, sendMain, sendMainMultiple } from "..
 import { cameraManager } from "../media/cameraManager"
 import { activePopup, activeProfile, alertMessage, cachePath, cloudSyncData, contentProviderData, currentWindow, dataPath, deviceId, driveKeys, isDev, isOptimizedMode, loaded, loadedState, os, outputs, profiles, providerConnections, shows, special, version, windowState } from "../stores"
 import { startTracking } from "./analytics"
-import { startAutoSync } from "../scriptural/autoSync"
+import { watchLibraryChanges } from "../scriptural/autoSync"
 import { setupCloudSync } from "./cloudSync"
 import { wait, waitUntilValueIsDefined } from "./common"
 import { getDefaultElements } from "./createData"
@@ -85,7 +85,7 @@ async function startupMain() {
 
     startTracking()
     contentProviderSync(true)
-    startAutoSync()
+    watchLibraryChanges()
 
     // custom alert
     // if (Math.random() < 0.01) {
@@ -168,11 +168,11 @@ export async function contentProviderSync(startup = false, remainingOnly = false
     }
 
     const providers = [
-        { providerId: "planningcenter" as ContentProviderId, scope: "services", data: { syncFolderIds: get(contentProviderData).planningcenter?.syncFolderIds || [], songOrigin: get(contentProviderData).planningcenter?.songOrigin || "" }, autoSync: get(contentProviderData).planningcenter?.autoSync !== false },
+        { providerId: "planningcenter" as ContentProviderId, scope: "services", data: { syncFolderIds: get(contentProviderData).planningcenter?.syncFolderIds || [], songOrigin: get(contentProviderData).planningcenter?.songOrigin || "" }, autoSync: get(contentProviderData).planningcenter?.autoSync === true },
         { providerId: "churchApps" as ContentProviderId, scope: "plans", data: { shows: get(shows), categories: get(contentProviderData).churchApps?.syncCategories || [] } },
         { providerId: "amazinglife" as ContentProviderId, scope: "openid profile email" },
-        { providerId: "onstage" as ContentProviderId, scope: "presenter", data: get(contentProviderData).onstage || {}, autoSync: get(contentProviderData).onstage?.autoSync !== false },
-        { providerId: "temple" as ContentProviderId, scope: "services", autoSync: get(contentProviderData).temple?.autoSync !== false }
+        { providerId: "onstage" as ContentProviderId, scope: "presenter", data: get(contentProviderData).onstage || {}, autoSync: get(contentProviderData).onstage?.autoSync === true },
+        { providerId: "temple" as ContentProviderId, scope: "services", autoSync: get(contentProviderData).temple?.autoSync === true }
     ]
 
     providers.forEach(({ providerId, scope, data, autoSync }) => {

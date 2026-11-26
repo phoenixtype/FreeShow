@@ -392,7 +392,7 @@
         </MaterialButton>
     </InputRow>
 
-    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.temple?.autoSync !== false} on:change={(e) => updateProvider("temple", "autoSync", e.detail)} />
+    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.temple?.autoSync === true} on:change={(e) => updateProvider("temple", "autoSync", e.detail)} />
 
     <MaterialDropdown label="Song origin" options={providerOriginOptions} value={$contentProviderData.temple?.songOrigin || ""} on:change={(e) => updateProvider("temple", "songOrigin", e.detail)} />
 {:else if $providerConnections.planningcenter}
@@ -411,9 +411,9 @@
         </MaterialButton>
     </InputRow>
 
-    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.planningcenter?.autoSync !== false} on:change={(e) => updateProvider("planningcenter", "autoSync", e.detail)} />
+    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.planningcenter?.autoSync === true} on:change={(e) => updateProvider("planningcenter", "autoSync", e.detail)} />
 
-    {#if $contentProviderData.planningcenter?.autoSync !== false}
+    {#if $contentProviderData.planningcenter?.autoSync === true}
         <InputRow>
             <!-- <MaterialPopupButton label="popup.sync_folders" value="" name="" icon="folder" popupId="sync_folders" on:click={() => activePopup.set("sync_folders")} style="flex: 1;" /> -->
             <MaterialButton icon="folder" on:click={() => activePopup.set("sync_folders")} style="flex: 1;">
@@ -477,7 +477,7 @@
         </MaterialButton>
     </InputRow>
 
-    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.onstage?.autoSync !== false} on:change={(e) => updateProvider("onstage", "autoSync", e.detail)} />
+    <MaterialToggleSwitch label="settings.auto_sync_startup" checked={$contentProviderData.onstage?.autoSync === true} on:change={(e) => updateProvider("onstage", "autoSync", e.detail)} />
 
     {#if onstageTeams.length > 1}
         <MaterialDropdown label="Team" options={onstageTeamOptions} value={onstageCurrentTeamId} on:change={(e) => switchOnStageTeam(e.detail)} />
