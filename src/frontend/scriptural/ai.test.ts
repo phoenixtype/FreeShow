@@ -43,3 +43,11 @@ it.each([
     expect(reply.error).toMatch(words)
     expect(reply.error).not.toContain("relation")
 })
+
+it("tells the proxy whether it is listening to a sermon or answering someone", async () => {
+    answer(200, { text: "ok" })
+    await completeWithScripturalAI({ prompt: "hi" }, "listen")
+    expect(invoke.mock.calls[0][1]).toMatchObject({ task: "listen" })
+    await completeWithScripturalAI({ prompt: "hi" })
+    expect(invoke.mock.calls[1][1]).toMatchObject({ task: "ask" })
+})

@@ -9,7 +9,7 @@ import { CHAT_RESPONSE_SCHEMA, CHAT_SYSTEM_PROMPT, getSlideChatSystemPrompt, SLI
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
 import { readPassage } from "../scripture/passage"
 import { closeSchema, parseReply } from "./schema"
-import { fitsSchema, listenWords, modelSteps, type ModelStep } from "./routing"
+import { fitsSchema, listenWords, modelSteps, type AiTask, type ModelStep } from "./routing"
 import type { FreeShowAction } from "../manager/ChatAction"
 
 export interface ChatMessage {
@@ -34,6 +34,8 @@ interface LLMRequestOptions {
     jsonSchema?: any
     temperature?: number
     maxTokens?: number
+    /** left out: "ask" */
+    task?: AiTask
     /** the model on this computer already got this request wrong: ask the stronger one first */
     struggling?: boolean
     /** skips a model this request should not be spent on */
@@ -82,7 +84,7 @@ export class LLMManager {
 
     async request<T>(asked: LLMRequestOptions): Promise<T | null> {
         const options = asked.jsonSchema ? { ...asked, jsonSchema: closeSchema(asked.jsonSchema) } : asked
-        const { struggling, allow, signal, ...completion } = options
+        const { struggling, allow, signal, task = "ask", ...completion } = options
         const steps = modelSteps({ provider: this.providerId, model: this.model, local: get(ai).llm?.localFallback, struggling })
 
         for (const [index, step] of steps.entries()) {
@@ -92,7 +94,7 @@ export class LLMManager {
                 const isLast = index === steps.length - 1
                 const requestId = crypto.randomUUID()
                 const proxied = step.providerId === "scriptural"
-                const asking = proxied ? completeWithScripturalAI(completion) : requestMain(Main.AI_LLM_COMPLETE, { ...step, options: completion, requestId }, undefined, isLast ? 60000 : FIRST_ANSWER_MS)
+                const asking = proxied ? completeWithScripturalAI(completion, task) : requestMain(Main.AI_LLM_COMPLETE, { ...step, options: completion, requestId }, undefined, isLast ? 60000 : FIRST_ANSWER_MS)
                 const response = await unlessStopped<Awaited<typeof asking>>(asking, signal, () => !proxied && sendMain(Main.AI_LLM_CANCEL, { requestId }))
                 if (signal?.aborted) return null
 
@@ -142,6 +144,7 @@ export class LLMManager {
                 systemPrompt: STT_CONTROLLER_PROMPT,
                 jsonSchema: STT_CONTROLLER_SCHEMA,
                 prompt: chunkWithOverlap,
+                task: "listen",
                 allow
             })
             if (!result?.content) return null

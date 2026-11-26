@@ -3,6 +3,7 @@
 // the plan's monthly allowance on the server.
 
 import type { LLMCompletionOptions } from "../../types/ai/Ai"
+import type { AiTask } from "../ai/llm/routing"
 import { churchLibrary } from "./connection"
 import { planNotice, planProblem } from "./planNotice"
 
@@ -24,11 +25,11 @@ function refusal(status: number, code: string): string {
 
 let noticed = false
 
-export async function completeWithScripturalAI(options: Omit<LLMCompletionOptions, "signal">): Promise<{ text: string; error?: string; status?: number }> {
+export async function completeWithScripturalAI(options: Omit<LLMCompletionOptions, "signal">, task: AiTask = "ask"): Promise<{ text: string; error?: string; status?: number }> {
     const churchId = localStorage.getItem(ACTIVE_CHURCH_KEY)
     if (!churchLibrary.getSession() || !churchId) return { text: "", error: SIGN_IN }
     try {
-        const { ok, status, data } = await churchLibrary.invoke<{ text?: string; error?: string }>("ai-complete", { churchId, prompt: options.prompt, systemPrompt: options.systemPrompt, jsonSchema: options.jsonSchema, maxTokens: options.maxTokens })
+        const { ok, status, data } = await churchLibrary.invoke<{ text?: string; error?: string }>("ai-complete", { churchId, prompt: options.prompt, systemPrompt: options.systemPrompt, jsonSchema: options.jsonSchema, maxTokens: options.maxTokens, task })
         if (ok) {
             planProblem.set("")
             planNotice.set("")

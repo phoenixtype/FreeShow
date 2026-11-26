@@ -47,11 +47,13 @@ export async function completeLLM(data: { providerId: AIProviderId; model: strin
     }
 }
 
-export function fetchProviderModels(providerId: AIProviderId) {
+export async function fetchProviderModels(providerId: AIProviderId) {
     try {
         if (providerId === "scriptural") return []
         const key = resolveApiKey(providerId)
-        return llmProviders[providerId as LocalProviderId].fetchModels(key)
+        const provider = llmProviders[providerId as LocalProviderId]
+        // the one a request uses when none is chosen: cheap and quick enough for a service
+        return (await provider.fetchModels(key)).map((model) => ({ ...model, recommended: model.id === provider.fallbackModel }))
     } catch (err: any) {
         return { text: "", error: err?.message }
     }

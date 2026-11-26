@@ -55,3 +55,12 @@ it("stops the call on this computer and asks no other model once it is cancelled
     expect(sendMain).toHaveBeenCalledWith("AI_LLM_CANCEL", { requestId: sent.requestId })
     expect(plan).not.toHaveBeenCalled()
 })
+
+it("says which requests are only listening", async () => {
+    requestMain.mockResolvedValue({ text: "", error: "down" })
+    await new LLMManager("scriptural", "").detectMatch({ chunkWithOverlap: "words", newWordsCount: 60 })
+    expect(plan.mock.calls[0][1]).toBe("listen")
+    plan.mockClear()
+    await ask()
+    expect(plan.mock.calls[0][1]).toBe("ask")
+})

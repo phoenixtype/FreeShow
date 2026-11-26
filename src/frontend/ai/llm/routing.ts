@@ -4,6 +4,9 @@
 
 import type { AIProviderId } from "../../../types/ai/Ai"
 
+/** "listen" runs all through a sermon; "ask" is someone waiting for an answer. Scriptural AI is told which. */
+export type AiTask = "listen" | "ask"
+
 export interface ModelStep {
     providerId: AIProviderId
     model: string
