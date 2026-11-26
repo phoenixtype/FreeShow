@@ -68,6 +68,7 @@ export function template(strings: Dictionary): any {
             { label: strings.popup?.shortcuts || "Shortcuts", click: () => mc("shortcuts") },
             { label: strings.main?.docs || "Docs", click: () => openURL("https://freeshow.app/docs") },
             { label: strings.guide?.start || "Quick start guide", click: () => mc("quick_start_guide") },
+            { label: strings.main?.send_feedback || "Send feedback", click: () => openURL("mailto:support@scriptural.online?subject=Scriptural%20Project%20feedback") },
             { label: strings.main?.about || "About", click: () => mc("about") }
         ]
     }

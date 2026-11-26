@@ -246,6 +246,7 @@ const clickActions = {
     // view
     // help
     docs: () => sendMain(Main.URL, "https://freeshow.app/docs"),
+    send_feedback: () => sendMain(Main.URL, "mailto:support@scriptural.online?subject=Scriptural%20Project%20feedback"),
     shortcuts: () => activePopup.set("shortcuts"),
     about: () => activePopup.set("about"),
     quick_search: () => quickSearchActive.set(true),
