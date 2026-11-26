@@ -14,7 +14,7 @@ import { startExport } from "./data/export"
 import { cleanupProtectedCache, registerProtectedProtocol } from "./data/protected"
 import { config, setupStores } from "./data/store"
 import { receiveMain, sendMain, sendToMain } from "./IPC/main"
-import { autoErrorReport } from "./IPC/responsesMain"
+import { autoErrorReport, createLog, logError } from "./IPC/responsesMain"
 import { receiveNDI } from "./ndi/talk"
 import { receiveOMT } from "./omt/talk"
 import { OutputHelper } from "./output/OutputHelper"
@@ -23,6 +23,7 @@ import { RtmpBridge } from "./streaming/RtmpBridge"
 import { callClose, exitApp, saveAndClose } from "./utils/close"
 import { applyCommandLineSwitches } from "./utils/commandLineSwitches"
 import { applyGraphicsDeviceSelection, scheduleGpuHealthCheck } from "./utils/gpu"
+import { recoverWindow } from "./utils/recovery"
 import { isDraggableAreaVisible, isWithinDisplayBounds, mainWindowInitialize, openDevTools, parseCommandLineArgs } from "./utils/init"
 import { template } from "./utils/menuTemplate"
 import { spellcheck } from "./utils/spellcheck"
@@ -375,6 +376,11 @@ app.on("will-quit", () => {
 })
 
 app.on("web-contents-created", (_e, contents) => {
+    recoverWindow(contents, (message) => {
+        console.error(message)
+        logError(createLog(new Error(message)), "main")
+    })
+
     contents.on("will-attach-webview", (_event, webPreferences) => {
         // remove unused preload scripts
         delete webPreferences.preload

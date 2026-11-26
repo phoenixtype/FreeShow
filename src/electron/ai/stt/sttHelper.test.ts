@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { NemotronDriver } from "./models/nemotronWorker"
 import { findRepeatedTail, isMusicAnnotation, segmentConfidence } from "./sttHelper"
 
 const times = (phrase: string, count: number) => Array.from({ length: count }, () => phrase).join(" ")
@@ -57,5 +58,25 @@ describe("music annotation", () => {
         expect(isMusicAnnotation("the music ministry will lead us now")).toBe(false)
         expect(isMusicAnnotation("the music ministry (led by Grace) will come now")).toBe(false)
         expect(isMusicAnnotation("[BLANK_AUDIO]")).toBe(false)
+    })
+})
+
+describe("a computer that cannot keep up", () => {
+    const heard = () => {
+        const driver = new NemotronDriver({ language: "en", onSegment: () => {}, onError: () => {} })
+        const taken: number[] = []
+        driver.pushAudio = (buffer) => void taken.push(buffer[0])
+        return { driver, taken }
+    }
+
+    it("lets late audio go until it has caught up", () => {
+        const { driver, taken } = heard()
+        const now = 100_000
+        driver.pushLive(new Uint8Array([1]), now - 200, now)
+        driver.pushLive(new Uint8Array([2]), now - 9000, now)
+        // still behind: a few seconds late is not caught up yet
+        driver.pushLive(new Uint8Array([3]), now - 3000, now)
+        driver.pushLive(new Uint8Array([4]), now - 500, now)
+        expect(taken).toEqual([1, 4])
     })
 })

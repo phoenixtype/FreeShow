@@ -10,10 +10,12 @@ const NEMOTRON_FILES = {
     vad: "silero_vad.onnx"
 } as const
 
-export type NemotronWorkerRequest = { type: "start"; language?: string; decodeLanguage?: string; modelDir?: string } | { type: "audio"; data: Uint8Array } | { type: "stop" }
+export type NemotronWorkerRequest = { type: "start"; language?: string; decodeLanguage?: string; modelDir?: string } | { type: "audio"; data: Uint8Array; at?: number } | { type: "stop" }
 export type NemotronWorkerResponse = { type: "ready" } | { type: "segment"; segment: TranscriberSegment } | { type: "interim"; text: string } | { type: "error"; message: string } | { type: "stopped" } | { type: "alive" }
 
 const SAMPLE_RATE = 16000
+const TOO_LATE_MS = 8000
+const CAUGHT_UP_MS = 1000
 
 // the export's encoder grid: one step per 1120ms of audio, 12.5 decoder frames per second
 const CHUNK_SHIFT_MS = 1120
@@ -54,6 +56,7 @@ export class NemotronDriver implements TranscriptionDriver {
     private emittedAtOpen = 0
     private emittedChars = 0
     private nextEmitStartMs = 0
+    private behind = false
 
     constructor(options: NemotronOptions) {
         this.options = options
@@ -118,6 +121,27 @@ export class NemotronDriver implements TranscriptionDriver {
         this.recognizer = null
         this.vad = null
         this.stream = null
+    }
+
+    /**
+     * A computer that cannot keep up lets audio go rather than falling further behind:
+     * words from half a minute ago are no use on screen, and the queue would grow all meeting.
+     */
+    pushLive(buffer: Uint8Array, capturedAt: number, now = Date.now()): void {
+        const late = now - capturedAt
+        if (late > (this.behind ? CAUGHT_UP_MS : TOO_LATE_MS)) {
+            this.behind = true
+            return
+        }
+        if (this.behind) {
+            this.behind = false
+            // what came before the gap does not join to what comes after it
+            if (this.recognizer && this.stream) {
+                if (this.inUtterance) this.closeUtterance(this.readHypothesis(), true)
+                this.resetDecoder()
+            }
+        }
+        this.pushAudio(buffer)
     }
 
     pushAudio(buffer: Uint8Array): void {
@@ -290,7 +314,7 @@ if (parentPort) {
                 await driver.start()
                 post({ type: "ready" })
             } else if (data.type === "audio") {
-                driver?.pushAudio(data.data)
+                driver?.pushLive(data.data, data.at ?? Date.now())
             } else if (data.type === "stop") {
                 await driver?.stop()
                 driver = null

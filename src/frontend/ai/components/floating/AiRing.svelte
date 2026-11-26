@@ -32,11 +32,9 @@
         border-radius: var(--ring-radius);
         padding: var(--ring-width);
         background: var(--ai-gradient);
-        background-size: 200% 200%;
         transition:
             border-radius 0.4s cubic-bezier(0.16, 1, 0.3, 1),
             box-shadow 0.3s ease;
-        animation: rotateGradient 10s ease infinite;
     }
 
     .card-border-wrapper.fill {
@@ -70,24 +68,6 @@
             0 0 10px rgba(143, 185, 200, 0.45);
         pointer-events: none;
         animation: wordConfirmPulse var(--word-confirm-duration, 240ms) ease-out forwards;
-    }
-
-    @keyframes rotateGradient {
-        0% {
-            background-position: 50% 50%;
-        }
-        25% {
-            background-position: 100% 50%;
-        }
-        55% {
-            background-position: 50% 50%;
-        }
-        75% {
-            background-position: 0% 50%;
-        }
-        100% {
-            background-position: 50% 50%;
-        }
     }
 
     @keyframes wordConfirmPulse {

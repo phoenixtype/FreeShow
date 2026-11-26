@@ -1,10 +1,12 @@
+import os from "os"
 import path from "path"
 import type { SttEngineOptions } from "../../../../types/ai/AiSettings"
 import { LocalModelManager } from "../../setup/LocalModelManager"
 import type { TranscriberSegment } from "../sttHelper"
-import { NemotronDriver, type NemotronWorkerRequest, type NemotronWorkerResponse } from "./nemotronWorker"
+import type { NemotronWorkerRequest, NemotronWorkerResponse } from "./nemotronWorker"
 
-const WORKER_START_TIMEOUT = 30000
+// the model is 680 MB: an older computer with a spinning disk takes a while to read it
+const WORKER_START_TIMEOUT = 55000
 const WORKER_FLUSH_TIMEOUT = 3000
 const WORKER_STALL_TIMEOUT = 60000
 const WORKER_STALL_CHECK_INTERVAL = 5000
@@ -16,7 +18,6 @@ export class NemotronTranscriber {
     private onInterim?: (text: string) => void
 
     private child: Electron.UtilityProcess | null = null
-    private fallback: NemotronDriver | null = null
     private stopped = false
 
     private readyResolve: ((ok: boolean) => void) | null = null
@@ -35,21 +36,11 @@ export class NemotronTranscriber {
         this.onInterim = onInterim
     }
 
+    // decoding only ever runs in its own process: on the app's main thread it would freeze every window
     async start() {
         this.modelDir = LocalModelManager.getModelDir("nemotron")
         if (await this.startWorker()) return true
-        if (this.startErrorMessage) throw new Error(this.startErrorMessage)
-
-        this.fallback = new NemotronDriver({
-            language: this.options.language || "en",
-            decodeLanguage: this.options.language,
-            modelDir: this.modelDir,
-            onSegment: this.onSegment,
-            onInterim: this.onInterim,
-            onError: this.onError
-        })
-        await this.fallback.start()
-        return true
+        throw new Error(this.startErrorMessage || "Speech recognition did not start. Close other programs and try again.")
     }
 
     async stop() {
@@ -75,20 +66,12 @@ export class NemotronTranscriber {
             } catch {}
         }
 
-        if (this.fallback) {
-            await this.fallback.stop()
-            this.fallback = null
-        }
         return true
     }
 
     pushAudio(buffer: Uint8Array) {
-        if (this.child) {
-            this.post(this.child, { type: "audio", data: buffer })
-            return true
-        }
-        if (!this.fallback) return false
-        this.fallback.pushAudio(buffer)
+        if (!this.child) return false
+        this.post(this.child, { type: "audio", data: buffer, at: Date.now() })
         return true
     }
 
@@ -104,6 +87,14 @@ export class NemotronTranscriber {
         }
 
         this.child = child
+        // the screens come first: decoding takes the processor time they leave
+        child.once("spawn", () => {
+            try {
+                if (child.pid) os.setPriority(child.pid, os.constants.priority.PRIORITY_BELOW_NORMAL)
+            } catch (err) {
+                console.warn("[nemotron] Could not lower the decode priority:", err)
+            }
+        })
         this.lastWorkerMessageAt = Date.now()
         this.armStallWatchdog()
 
