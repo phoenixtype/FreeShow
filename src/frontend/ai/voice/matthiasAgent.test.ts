@@ -39,7 +39,7 @@ const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn(), f
 vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 
 import { get } from "svelte/store"
-import { ai, outLocked } from "../../stores"
+import { ai, aiSuggestions, outLocked } from "../../stores"
 import { handMoves } from "../agent/control"
 import { runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
@@ -92,6 +92,18 @@ it("searches, shows the best, and moves to another", async () => {
     expect(manager.showReference).toHaveBeenLastCalledWith("Philippians 4:6")
     await Matthias.ask("another one")
     expect(manager.showReference).toHaveBeenLastCalledWith("Matthew 6:25")
+})
+
+it("offers the songs that have a remembered line, and shows none by itself", async () => {
+    vi.mocked(runAgentTool).mockResolvedValueOnce({ ok: true, result: { songs: [{ id: "a", name: "Amazing Grace", match: "weak" }] } })
+    await Matthias.ask("find the song that says how sweet the sound")
+    expect(runAgentTool).toHaveBeenCalledWith("find_song_by_words", { line: "how sweet the sound" })
+    expect(manager.showSong).not.toHaveBeenCalled()
+    const [offer] = get(aiSuggestions)
+    expect(offer.content).toBe("Amazing Grace")
+    offer.trigger?.()
+    expect(manager.showSong).toHaveBeenCalledWith({ id: "a", name: "Amazing Grace" })
+    expect(get(matthiasStatus)?.text).toMatch(/Amazing Grace/)
 })
 
 it("plays a song of the library", async () => {

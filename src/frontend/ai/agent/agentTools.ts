@@ -27,7 +27,7 @@ import { stepScreen } from "./stepScreen"
 import { onScreenTitle } from "../components/floating/onScreen"
 import { openProject } from "../../components/show/project"
 import { readPassage } from "../scripture/passage"
-import { liveShowId, showSection } from "../songs/librarySongs"
+import { findSongsByLine, liveShowId, showSection } from "../songs/librarySongs"
 import { matchTitle, PAGES } from "../voice/matthias"
 import { matchVersion } from "../voice/versions"
 import { isHeld, setAgentMode } from "./control"
@@ -300,6 +300,18 @@ export const agentTools: AgentTool[] = [
                 .filter(([, show]) => show && !show.private && (!needle || show.name?.toLowerCase().includes(needle)))
                 .map(([id, show]) => ({ id, name: show.name }))
             return { count: list.length, songs: list.slice(0, 100) }
+        }
+    },
+    {
+        name: "find_song_by_words",
+        description: 'Find songs by a line someone remembers from the words ("how sweet the sound"). Shows nothing: offer the matches, and use present_song only when asked.',
+        inputSchema: { type: "object", properties: { line: text("Three or more words from the song") }, required: ["line"] },
+        readOnly: true,
+        run: ({ line }) => {
+            if (String(line).trim().split(/\s+/).length < 3) throw new ToolError("Say more of the line, three words or more.")
+            const found = findSongsByLine(String(line))
+            if (!found.length) throw new ToolError(`No song in the library has "${line}".`)
+            return { songs: found.map(({ id, name, share }) => ({ id, name, match: share >= 0.6 ? "strong" : "weak" })), next: "Nothing was put on screen. Use present_song with the id of the one that is wanted." }
         }
     },
     {

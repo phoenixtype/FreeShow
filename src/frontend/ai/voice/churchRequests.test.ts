@@ -32,6 +32,7 @@ const SAID: Record<string, string[]> = {
     listen: ["stop listening", "go to sleep"],
     page: ["open settings", "go to the scripture tab", "open the song library", "take me to the media page"],
     tell: ["what's on the screen", "what's next", "what can you do", "which song is this", "what verse is this"],
+    "find-song": ["find the song that says how sweet the sound", "which song says you make a way", "what song goes great is your faithfulness", "find me a hymn with the words blessed assurance", "show the song that says then sings my soul", "search for the song which says waymaker miracle worker", "find the song with the line I once was lost but now am found"],
     // for the model: never to be put on screen by a guess
     unknown: ["make a plan for Sunday with Amazing Grace and Way Maker", "who wrote the book of Romans", "prepare the Easter service", "create a welcome slide", "how many songs do we have", "is the projector working", "thank you", "read me the words of Morning Hill without showing them", "read me the words of Morning Hill", "put up Morning Hill but not the chorus", "show me what the preacher said last week because I missed it"],
     "remove-from-plan": ["remove Amazing Grace from the plan", "take Way Maker out of the service", "delete the song Holy Forever from today's plan", "drop Morning Hill off the plan"]

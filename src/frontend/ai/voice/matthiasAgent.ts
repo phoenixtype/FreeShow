@@ -219,6 +219,8 @@ export class Matthias {
             case "countdown":
                 await this.tool("speaker_timer", { command: request.add ? "add" : "set", minutes: request.seconds / 60 })
                 return request.add ? `Added ${spell(request.seconds)}` : `Timer: ${spell(request.seconds)}`
+            case "find-song":
+                return this.findSong(request.line)
             case "audio":
                 await this.tool("control_sound", { command: request.command })
                 return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : "Sound is on"
@@ -366,6 +368,15 @@ export class Matthias {
     private static async passage(reference: string): Promise<string> {
         await AiManager.showReference(reference)
         return reference
+    }
+
+    /** offered, never put up: a remembered line is often half right */
+    private static async findSong(line: string): Promise<string> {
+        const { songs } = await this.tool("find_song_by_words", { line })
+        const offers = (songs as { id: string; name: string; match: string }[]).map(({ id, name, match }) => ({ id: uid(5), timestamp: Date.now(), content: name, confidence: match === "strong" ? 90 : 50, action: "present_song", kind: "song" as const, trigger: () => AiManager.showSong({ id, name }) }))
+        aiSuggestions.update((list) => [...offers, ...list.filter((s) => s.action === "presented" || !offers.some((offer) => offer.content === s.content))])
+        const names = (songs as { name: string }[]).map((song) => song.name)
+        return `Found ${names.join(", ")}. To show one, press it in the heard list or say "sing ${names[0]}"`
     }
 
     private static async song(name: string): Promise<string> {

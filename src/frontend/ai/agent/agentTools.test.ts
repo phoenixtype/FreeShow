@@ -25,7 +25,8 @@ vi.mock("./stepScreen", () => ({ stepScreen: vi.fn(async () => true) }))
 vi.mock("../components/floating/onScreen", () => ({ onScreenTitle: () => "" }))
 vi.mock("../../components/show/project", () => ({}))
 vi.mock("../scripture/passage", () => ({ readPassage: vi.fn(async () => "For God so loved the world") }))
-vi.mock("../songs/librarySongs", () => ({}))
+const library = vi.hoisted(() => ({ findSongsByLine: vi.fn((): { id: string; name: string; share: number }[] => []) }))
+vi.mock("../songs/librarySongs", () => library)
 vi.mock("../voice/matthias", () => ({ PAGES: [], matchTitle: (name: string, list: any[]) => (name === "welcome" ? list[0] : null) }))
 vi.mock("../voice/versions", () => ({}))
 vi.mock("./control", () => ({ isHeld: () => false, setAgentMode: vi.fn(() => false) }))
@@ -157,4 +158,27 @@ describe("showing by tool goes through the copilot's own memory", () => {
 it("cannot turn agent mode on for the operator", async () => {
     const answer = await runAgentTool("set_agent_mode", { on: true })
     expect(answer).toEqual({ ok: false, error: expect.stringMatching(/Turn on/) })
+})
+
+describe("finding a song by its words", () => {
+    beforeEach(() => vi.clearAllMocks())
+    it("lists the matches with how good each is, and shows none of them", async () => {
+        library.findSongsByLine.mockReturnValueOnce([
+            { id: "s1", name: "Amazing Grace", share: 1 },
+            { id: "s2", name: "Another", share: 0.25 }
+        ])
+        const answer = await runAgentTool("find_song_by_words", { line: "how sweet the sound" })
+        expect(answer.result).toEqual({
+            songs: [
+                { id: "s1", name: "Amazing Grace", match: "strong" },
+                { id: "s2", name: "Another", match: "weak" }
+            ],
+            next: expect.stringMatching(/present_song/)
+        })
+        expect(manager.showSong).not.toHaveBeenCalled()
+        expect(listAgentTools().find((tool) => tool.name === "find_song_by_words")?.readOnly).toBe(true)
+    })
+    it("says when no song has the line", async () => {
+        expect((await runAgentTool("find_song_by_words", { line: "quarterly budget report" })).error).toMatch(/No song/)
+    })
 })

@@ -118,3 +118,24 @@ describe("bestSlide", () => {
         expect(bestSlide(slides, "let us pray")).toBeNull()
     })
 })
+
+describe("finding a song by a remembered line", () => {
+    const library = new SongIndex([
+        { id: "grace", name: "Amazing Grace", text: "Amazing grace how sweet the sound that saved a wretch like me I once was lost but now am found" },
+        { id: "copy", name: "Amazing Grace (2)", text: "Amazing grace how sweet the sound that saved a wretch like me I once was lost but now am found" },
+        { id: "great", name: "How Great Thou Art", text: "O Lord my God when I in awesome wonder consider all the worlds thy hands have made then sings my soul" }
+    ])
+
+    it("names the song, once, as a whole match", () => {
+        expect(library.find("how sweet the sound that saved")).toEqual([{ id: "grace", name: "Amazing Grace", share: 1 }])
+    })
+    it("says how much of a half-remembered line it has", () => {
+        const [found] = library.find("then sings my heart to you again")
+        expect(found.id).toBe("great")
+        expect(found.share).toBeLessThan(0.5)
+    })
+    it("finds nothing for words no song has, or too few to tell", () => {
+        expect(library.find("the quarterly budget report is due")).toEqual([])
+        expect(library.find("amazing grace")).toEqual([])
+    })
+})

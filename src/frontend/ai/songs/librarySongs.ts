@@ -35,6 +35,8 @@ export function songDetector(): SongDetector | null {
     return detector
 }
 
+export const findSongsByLine = (line: string) => songDetector()?.find(line) || []
+
 export function liveShowId(): string {
     return getFirstActiveOutput()?.out?.slide?.id || ""
 }

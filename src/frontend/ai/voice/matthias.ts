@@ -66,7 +66,7 @@ export function findCalls(words: string): Call[] {
             const stop = call.ends >= 0 && call.ends < next ? call.ends : next
             return { at: call.start, closed: !!found[i + 1], request: words.slice(call.end, stop).trim(), hey: call.hey, loose: call.loose }
         })
-        .filter((call) => !call.loose || call.hey || ["unknown", "search"].indexOf(parseRequest(call.request).type) < 0)
+        .filter((call) => !call.loose || call.hey || ["unknown", "search", "find-song"].indexOf(parseRequest(call.request).type) < 0)
 }
 
 export type Request =
@@ -99,6 +99,7 @@ export type Request =
     | { type: "result"; direction: "next" | "previous" }
     | { type: "version"; name: string }
     | { type: "song"; name: string }
+    | { type: "find-song"; line: string }
     | { type: "search"; query: string; topic?: boolean }
     | { type: "show"; what: string }
     | { type: "unknown"; words: string }
@@ -108,6 +109,9 @@ export type PageName = (typeof PAGES)[number]
 
 const SHOW = "show(?: me| us)?|put up|foot up|put on|put|bring up|pull up|pool up|open(?: up)?|go to|turn to|take (?:me|us) to|give (?:me|us)|display|read|let us see|let's see|let us read|let's read|project"
 const FIND = "find(?: me| us)?|fine|search(?: for| the bible for| scripture for)?|look up|look for|where does (?:it|the bible|scripture) say|where is it written|which verse|what verse|what does the bible say about|what does scripture say about|what scripture"
+
+// "the song that says ...", "which hymn goes ..."
+const REMEMBERED = /^(?:(?:find|search(?: for)?|look (?:up|for)|which|what|show|get|play|sing|open)(?: me| us)? )(?:is )?(?:a |the |that )?(?:song|hymn)(?: is it)? (?:(?:that|which) )?(?:says|goes|sings|(?:has |with )(?:the )?(?:words|line|lyrics)) (.+)$/
 
 const OPEN_SENTENCE = /\b(?:without|not|don't|dont|never|instead|except|only|but|because|then)\b|^(?:me|us) (?:the )?(?:words|lyrics|text|chords)\b/
 const MOST_NAME_WORDS = 7
@@ -155,6 +159,8 @@ const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
     const whole = () => [parseRequest(spoken)]
+    // a remembered line is quoted as it is: its "and" and "then" are the song's
+    if (parseRequest(spoken).type === "find-song") return whole()
     const parts = spoken.split(THEN).filter((part) => part.trim())
     if (parts.length > 1) {
         const requests = parts.flatMap((part) => parseRequests(part))
@@ -192,6 +198,8 @@ function nearestCommand(words: string): string | null {
 
 function parseWords(t: string): Request {
     if (!t) return { type: "unknown", words: "" }
+    const remembered = t.match(REMEMBERED)
+    if (remembered) return { type: "find-song", line: remembered[1] }
 
     if (/^(?:unlock)(?: the)?(?: screen)?$/.test(t)) return { type: "lock", on: false }
     if (/^(?:lock|hold|freeze)(?: the| that| it)?(?: screen| there)?$/.test(t)) return { type: "lock", on: true }
