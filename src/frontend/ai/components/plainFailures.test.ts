@@ -19,6 +19,8 @@ it("says what to do when a key is refused", () => {
 
 it("says so when the church plan or an access request cannot be checked", () => {
     const bibles = read("../../components/main/popups/ScripturalBibles.svelte")
-    expect(bibles).toContain("Your church plan could not be checked.")
-    expect(bibles).not.toMatch(/err\.message : "The request could not be sent\./)
+    expect(bibles).toContain('<T id="account.plan_unknown" />')
+    expect(en.account.plan_unknown).toContain("Your church plan could not be checked.")
+    expect(bibles).not.toMatch(/err\.message : translateText\("account\.request_failed"/)
+    expect(bibles).toContain('messages[version.code] = translateText("account.request_failed")')
 })

@@ -3,7 +3,7 @@
     import { ApiBible } from "json-bible/lib/api"
     import type { Verse } from "json-bible/lib/Bible"
     import type { VerseReference } from "json-bible/lib/reference"
-    import { ANCIENT_NOTICE, bookFitsBible } from "../../../scriptural/ancientRules"
+    import { bookFitsBible } from "../../../scriptural/ancientRules"
     import { searchScriptural } from "../../../scriptural/search"
     import { onMount } from "svelte"
     import { defaultBibleBookNames } from "../../../converters/bebliaBible"
@@ -1192,8 +1192,8 @@
                     <div class="verses context #scripture_verse" class:showFloatingButtons={$resized.rightPanelDrawer > 5 && splittedVerses.length > 10} bind:this={versesScrollElem} class:center={!splittedVerses.length}>
                         {#if isAncient}
                             <p class="ancientNote">
-                                {ANCIENT_NOTICE}
-                                {#if ancientBook}<br />{ancientBook.name}: {ancientBook.warning}<br />Translation: {ancientBook.translation}{/if}
+                                <T id="account.ancient_notice" />
+                                {#if ancientBook}<br />{ancientBook.name}: {ancientBook.warning}<br /><T id="account.ancient_translation" replace={[ancientBook.translation]} />{/if}
                             </p>
                         {/if}
 

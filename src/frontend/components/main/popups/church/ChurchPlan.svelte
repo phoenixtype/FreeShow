@@ -2,6 +2,9 @@
     // pick a plan, then how often to pay, then one button
     import { createEventDispatcher } from "svelte"
     import { PLAN_NAMES, PLANS, priceId, type PaidPlan, type PlanState } from "../../../../scriptural/churchAccount"
+    import { dictionary } from "../../../../stores"
+    import { translateText } from "../../../../utils/language"
+    import T from "../../../helpers/T.svelte"
     import MaterialButton from "../../../inputs/MaterialButton.svelte"
 
     export let state: PlanState
@@ -15,32 +18,32 @@
     $: plan = PLANS.find((p) => p.id === chosen)!
 </script>
 
-<p>You are on the {PLAN_NAMES[state.plan] || state.plan} plan.{state.comped ? " It was given to your church, so there is nothing to pay." : ""}</p>
+<p>{translateText("account.on_plan", $dictionary, [PLAN_NAMES[state.plan] || state.plan])}{state.comped ? ` ${translateText("account.comped", $dictionary)}` : ""}</p>
 
 {#if !canPay}
-    <p class="muted">Ask your church's owner or an admin to change the plan.</p>
+    <p class="muted"><T id="account.ask_to_change_plan" /></p>
 {:else if state.canManageBilling}
-    <p class="muted">Change plan, update the card, get invoices or cancel on the billing page.</p>
+    <p class="muted"><T id="account.billing_page_note" /></p>
     <div class="actions">
-        <MaterialButton variant="outlined" small on:click={() => dispatch("portal")}>Manage billing</MaterialButton>
+        <MaterialButton variant="outlined" small on:click={() => dispatch("portal")}><T id="account.manage_billing" /></MaterialButton>
     </div>
 {:else if state.plan === "free"}
     <fieldset>
-        <legend>Plan</legend>
+        <legend><T id="account.view_plan" /></legend>
         {#each PLANS as option (option.id)}
             <label>
                 <input type="radio" bind:group={chosen} value={option.id} />
-                <span><b>{option.name}</b>, ${option.monthly} a month or ${option.yearly} a year<br /><span class="muted">{option.includes}</span></span>
+                <span><b>{option.name}</b><T id="account.plan_prices" replace={[String(option.monthly), String(option.yearly)]} /><br /><span class="muted">{option.includes}</span></span>
             </label>
         {/each}
     </fieldset>
     <fieldset class="period">
-        <legend>Pay</legend>
-        <label><input type="radio" bind:group={yearly} value={false} /> Monthly</label>
-        <label><input type="radio" bind:group={yearly} value={true} /> Yearly (2 months free)</label>
+        <legend><T id="account.pay" /></legend>
+        <label><input type="radio" bind:group={yearly} value={false} /> <T id="account.monthly" /></label>
+        <label><input type="radio" bind:group={yearly} value={true} /> <T id="account.yearly" /></label>
     </fieldset>
     <div class="actions">
-        <MaterialButton variant="contained" on:click={() => dispatch("checkout", priceId(chosen, yearly))}>Pay ${yearly ? `${plan.yearly} a year` : `${plan.monthly} a month`}</MaterialButton>
+        <MaterialButton variant="contained" on:click={() => dispatch("checkout", priceId(chosen, yearly))}>{yearly ? translateText("account.pay_yearly", $dictionary, [String(plan.yearly)]) : translateText("account.pay_monthly", $dictionary, [String(plan.monthly)])}</MaterialButton>
     </div>
 {/if}
 

@@ -3,9 +3,8 @@
     import { uid } from "uid"
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain, sendMain } from "../../../IPC/main"
-    import { ANCIENT_NOTICE } from "../../../scriptural/ancientRules"
     import { addAncientWritings } from "../../../scriptural/ancientWritings"
-    import { scriptures, popupData } from "../../../stores"
+    import { dictionary, scriptures, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { replace } from "../../../utils/languageData"
     import { customBibleData, getApiBiblesList } from "../../drawer/bible/scripture"
@@ -111,7 +110,7 @@
             await addAncientWritings()
         } catch (err) {
             console.warn("Other ancient writings could not be added:", err)
-            ancientError = "The books could not be added. Close this and try again."
+            ancientError = translateText("account.ancient_failed")
         }
     }
 
@@ -206,13 +205,13 @@
 
     <div class="ancient">
         <div>
-            <p><strong>Other ancient writings</strong></p>
-            <p>{ANCIENT_NOTICE} Listening never searches them: a verse goes on screen only when you pick it.</p>
-            {#if hasAncient}<p>Added. To remove it, right-click it in the list of Bibles.</p>{/if}
+            <p><strong><T id="account.ancient_title" /></strong></p>
+            <p>{translateText("account.ancient_notice", $dictionary)} {translateText("account.ancient_listening", $dictionary)}</p>
+            {#if hasAncient}<p><T id="account.ancient_added" /></p>{/if}
             {#if ancientError}<p>{ancientError}</p>{/if}
         </div>
         {#if !hasAncient}
-            <MaterialButton variant="outlined" icon="add" on:click={addAncient}>Add</MaterialButton>
+            <MaterialButton variant="outlined" icon="add" on:click={addAncient}><T id="account.add" /></MaterialButton>
         {/if}
     </div>
 {/if}

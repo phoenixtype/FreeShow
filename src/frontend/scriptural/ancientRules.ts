@@ -4,8 +4,6 @@
 import { get } from "svelte/store"
 import { scriptures } from "../stores"
 
-export const ANCIENT_NOTICE = "These books are not part of most Bibles. Some churches include some of them."
-
 // books are numbered from here, so a reference to a Bible book never lands on one
 export const ANCIENT_FIRST_BOOK = 201
 
