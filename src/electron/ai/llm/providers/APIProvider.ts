@@ -50,13 +50,24 @@ export abstract class APIModel {
         return new Error(e?.message || "Network error")
     }
 
+    /** what is wrong with a key, in words the person typing it can act on: the provider's own text is not shown */
+    private keyProblem(err: unknown): string {
+        const status = (err as any)?.response?.status
+        if (status === 401) return "That key was not accepted. Check that you copied all of it."
+        if (status === 403) return "This key is not allowed to do this. Check the account that made it."
+        if (status === 404) return "This key cannot use that model. Choose another model."
+        if (status === 429) return "Too many requests, or the account has no credit left. Try again in a few minutes."
+        if (typeof status === "number") return "The AI service is not answering right now. Try again in a minute."
+        return "The AI service could not be reached. Check the internet connection."
+    }
+
     protected async testEndpoint(url: string, headers: Record<string, string>, method: "GET" | "POST" = "GET", body?: any): Promise<{ ok: true } | { ok: false; error: string }> {
         try {
             const request = method === "POST" ? axios.post : axios.get
             await request(url, method === "POST" ? body : { headers, timeout: this.REQUEST_TIMEOUT }, { headers, timeout: this.REQUEST_TIMEOUT })
             return { ok: true }
         } catch (err) {
-            return { ok: false, error: this.toLLMError(err).message }
+            return { ok: false, error: this.keyProblem(err) }
         }
     }
 }

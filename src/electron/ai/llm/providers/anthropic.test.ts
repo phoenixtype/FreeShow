@@ -37,3 +37,16 @@ it("checks a key by looking the model up, which costs nothing", async () => {
     expect(get.mock.calls[0][0]).toBe("https://api.anthropic.com/v1/models/claude-haiku-5-5")
     expect(post).not.toHaveBeenCalled()
 })
+
+it.each([
+    [401, /not accepted/],
+    [403, /not allowed/],
+    [404, /cannot use that model/],
+    [429, /no credit/],
+    [529, /not answering/],
+    [undefined, /internet connection/]
+])("says what is wrong with a key in plain words (%s)", async (status, words) => {
+    get.mockRejectedValue(status ? { response: { status, data: { error: { message: "invalid x-api-key" } } } } : { code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND api.anthropic.com" })
+    const result = await anthropicProvider.testConnection("key", "")
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(words) })
+})

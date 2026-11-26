@@ -97,7 +97,7 @@
         const isValid = await requestMain(Main.AI_SET_KEY, { providerId: provider, key: keyInput })
         if (!isValid) {
             keyInput = ""
-            newToast("Invalid key")
+            newToast("That key was not accepted. Check that you copied all of it and that the computer is online, then paste it again.")
             return
         }
 

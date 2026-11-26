@@ -15,6 +15,7 @@
     const signedIn = !!churchLibrary.getSession() && !!churchId
     let plan = "free"
     let requests: { [code: string]: string } = {}
+    let planUnknown = false
 
     onMount(async () => {
         if (!signedIn) return
@@ -22,8 +23,10 @@
             const [{ data: limits }, { data: rows }] = await Promise.all([churchLibrary.rest<{ plan: string }[]>("rpc/church_limits", { method: "POST", body: { target: churchId } }), churchLibrary.rest<{ version: string; status: string }[]>(`bible_access_requests?select=version,status&church_id=eq.${churchId}`)])
             plan = limits?.[0]?.plan || "free"
             requests = Object.fromEntries((rows || []).map((r) => [r.version, r.status]))
-        } catch {
+        } catch (err) {
             // shown as the free plan; downloads of public-domain versions still work
+            console.warn("Church plan could not be read:", err)
+            planUnknown = true
         }
     })
 
@@ -50,7 +53,8 @@
             const { data } = await churchLibrary.rest<string>("rpc/request_bible_access", { method: "POST", body: { target: churchId, version_code: version.code } })
             requests[version.code] = data || "pending"
         } catch (err) {
-            messages[version.code] = err instanceof ScripturalError ? err.message : "The request could not be sent."
+            console.warn("Bible access request failed:", err)
+            messages[version.code] = "The request could not be sent. Check the internet connection, then try again."
             messages = messages
         }
     }
@@ -63,6 +67,10 @@
 </script>
 
 <p class="muted">Download a version once and it works offline. Free versions download now; the NIV, NKJV and other licensed versions come with a Church plan, once approved.</p>
+
+{#if planUnknown}
+    <p>Your church plan could not be checked. Free versions still download. Check the internet connection and open this again.</p>
+{/if}
 
 <MaterialTextInput label="Search versions" value={search} on:input={(e) => (search = e.detail)} />
 
