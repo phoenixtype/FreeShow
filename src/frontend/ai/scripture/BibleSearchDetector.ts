@@ -59,10 +59,10 @@ export class BibleSearchDetector {
         return null
     }
 
-    public findStandaloneVerseMatch(cleanInput: string, currentlyOutputted?: string | null): MatchResult | null {
+    public findStandaloneVerseMatch(cleanInput: string, currentlyOutputted?: string | null, withCue = false): MatchResult | null {
         const verseRegex = new RegExp(`\\b(?:${VERSE_PATTERN})\\s*(\\d+)(?:\\s*(?:[-–—]|${RANGE_PATTERN})\\s*(\\d+))?\\b`, "giu")
         const matches = Array.from(cleanInput.matchAll(verseRegex))
-        if (matches.length === 0) return this.findNextVerseCue(cleanInput, currentlyOutputted)
+        if (matches.length === 0) return withCue ? this.findNextVerseCue(cleanInput, currentlyOutputted) : null
 
         for (let i = matches.length - 1; i >= 0; i--) {
             const match = matches[i]
@@ -115,18 +115,40 @@ export class BibleSearchDetector {
             .filter((w) => w.length > 1)
     }
 
-    // a reader says the verse number before each verse
+    // A reader says the verse number before each verse. Number words are everywhere in talk,
+    // so the number has to start a sentence, and the words after it have to be that verse's.
     private findNextVerseCue(cleanInput: string, currentlyOutputted?: string | null): MatchResult | null {
         const current = currentlyOutputted ? this.parseReference(currentlyOutputted) : null
         if (!current) return null
 
-        const cue = Number(cleanInput.slice(-40).match(/\b(\d+)\b(?!.*\b\d+\b)/)?.[1])
+        const said = Array.from(cleanInput.matchAll(/(?:^|[.,;:!?"'\u201d\u2019])\s*(\d+)\b(?![:.]?\d)/g)).pop()
+        if (!said) return null
+        const after = cleanInput.slice((said.index ?? 0) + said[0].length)
+        if (after.length > 80) return null
+
+        const cue = Number(said[1])
         if (cue !== current.verse + 1 && cue !== current.verse + 2) return null
 
         const chapterData = this.cacheData.referenceIndex.get(`${current.book.toLowerCase()} ${current.chapter}`)
         if (!chapterData || cue > chapterData.verseCount) return null
+        const match: MatchResult = { type: "scripture", content: `${chapterData.bookName} ${chapterData.chapterNumber}:${cue}`, confidence: 85 }
 
-        return { type: "scripture", content: `${chapterData.bookName} ${chapterData.chapterNumber}:${cue}`, confidence: 85 }
+        const opening = this.openingWords(chapterData.startVerseId + cue - 1)
+        // no words to check it against (an online Bible): offered, not certain
+        if (!opening.size) return { ...match, confidence: 70 }
+        const confirmed = this.tokenizeText(after)
+            .slice(0, 4)
+            .filter((word) => opening.has(word)).length
+        return confirmed >= 2 ? match : null
+    }
+
+    /** the first words of a verse; none when this Bible has no text */
+    private openingWords(verseId: number): Set<string> {
+        const start = this.cacheData.verseTokensOffsets[verseId]
+        const end = Math.min(this.cacheData.verseTokensOffsets[verseId + 1], start + 6)
+        const opening = new Set<string>()
+        for (let i = start; i < end; i++) opening.add(this.cacheData.vocabPool[this.cacheData.verseTokens[i]])
+        return opening
     }
 
     // share of the verse's word weight that the spoken words account for
@@ -500,7 +522,8 @@ export class BibleSearchDetector {
     /** a reference said outright, whole or as a verse of the passage that is up */
     public findReference(words: string, currentlyOutputted = ""): MatchResult | null {
         const forms = [normalizeMishearings(words), words].map((form) => normalizeReferences(normalizeNumbers(form), this.cacheData))
-        return this.findReferenceMatch(forms[0]) || this.findReferenceMatch(forms[1]) || this.findStandaloneVerseMatch(forms[0], currentlyOutputted) || this.findStandaloneVerseMatch(forms[1], currentlyOutputted)
+        // the verse cue only reads the words as they were heard
+        return this.findReferenceMatch(forms[0]) || this.findReferenceMatch(forms[1]) || this.findStandaloneVerseMatch(forms[0], currentlyOutputted) || this.findStandaloneVerseMatch(forms[1], currentlyOutputted, true)
     }
 
     private readonly DEBUG_MODE = false
@@ -518,7 +541,7 @@ export class BibleSearchDetector {
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings corrected:", mishearingsCorrected)
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings normalized:", mishearingsNormalized)
 
-        const refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted)
+        const refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted, true)
 
         if (this.DEBUG_MODE) console.log("[DETECTION] Reference match result:", refMatch)
 
@@ -551,7 +574,8 @@ export class BibleSearchDetector {
         if (this.DEBUG_MODE) console.log("[DETECTION] Best content match:", bestContentMatch)
 
         // explicit book/chapter/verse reference has priority
-        if (refMatch && refMatch.confidence >= 75) return refMatch
+        // 70: a verse number heard where there is no text to check it against
+        if (refMatch && refMatch.confidence >= 70) return refMatch
 
         return bestContentMatch || null
     }
