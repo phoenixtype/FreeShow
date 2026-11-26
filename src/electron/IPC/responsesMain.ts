@@ -1,7 +1,5 @@
-import * as Sentry from "@sentry/electron/main"
 import type { BrowserWindow, DesktopCapturerSource } from "electron"
-import { app, desktopCapturer, screen, shell, systemPreferences } from "electron"
-import fs from "fs"
+import { app, clipboard, desktopCapturer, screen, shell, systemPreferences } from "electron"
 import os from "os"
 import path from "path"
 import { getMainWindow, isProd, mainWindow, maximizeMain, setGlobalMenu } from ".."
@@ -15,6 +13,7 @@ import { setAiKey } from "../ai/setup/aiKeys"
 import { browserSignIn, cancelBrowserSignIn } from "../scriptural/browserSignIn"
 import { aiHandleLocalSetup, LocalModelManager } from "../ai/setup/LocalModelManager"
 import { aiGetModelStatus } from "../ai/setup/status"
+import { diagnosticsText, keepLine } from "../utils/diagnostics"
 import { isAllowedExternalUrl } from "../utils/safeNavigation"
 import { seal, unseal } from "../utils/secretStore"
 import { SpeechToText } from "../ai/stt/SpeechToTextManager"
@@ -108,6 +107,7 @@ export const mainResponses: MainResponses = {
         createStores(data.oldPath)
     },
     [Main.LOG_ERROR]: (data) => logError(data),
+    [Main.COPY_DIAGNOSTICS]: () => copyDiagnostics(),
     [Main.OPEN_LOG]: () => openInSystem(_store.ERROR_LOG?.path || ""),
     [Main.OPEN_CACHE]: () => openInSystem(getThumbnailFolderPath(), true),
     [Main.OPEN_APPDATA]: () => openInSystem(appDataPath, true),
@@ -491,6 +491,12 @@ export function saveRecording(data: { blob: ArrayBuffer; name: string; path?: st
     }
 }
 
+// Help > Copy diagnostics: for an email to support
+function copyDiagnostics() {
+    clipboard.writeText(diagnosticsText({ version: getVersion(), os: `${process.platform} ${os.release()} (${process.arch})` }))
+    return true
+}
+
 // ERROR LOGGER
 const maxLogLength = 250
 export function logError(log: ErrorLog, key: "main" | "renderer" | "request" = "renderer") {
@@ -500,6 +506,8 @@ export function logError(log: ErrorLog, key: "main" | "renderer" | "request" = "
 
     let previousLog = storedLog[key] || []
     previousLog.push(log)
+
+    keepLine("error", [`${key}: ${log.message}`])
 
     if (previousLog.length > maxLogLength) previousLog = previousLog.slice(previousLog.length - maxLogLength)
     if (!previousLog.length) return
@@ -535,34 +543,6 @@ export function createLog(err: Error) {
         message: err.message,
         stack: err.stack
     } as ErrorLog
-}
-
-export function autoErrorReport() {
-    if (!isProd) return
-    if (config.get("autoErrorReporting") === false) return
-
-    // prevent random forks from sending error reports
-    try {
-        const releasePath = path.join(__dirname, "../../../public/release.json")
-        if (!fs.existsSync(releasePath)) return
-        const release = JSON.parse(fs.readFileSync(releasePath, "utf8"))
-        // dots to prevent auto find/replace
-        const officialRepo = "Church.Apps/F.r.e.e.S.h.o.w".replace(/\./g, "")
-        if (release?.repo !== officialRepo) return
-    } catch {
-        return
-    }
-
-    console.info("Starting Sentry error reporting...")
-
-    Sentry.init({
-        dsn: "https://5d1069c3cb6faaa6e7ad0d9dc0145361@o4510419080445952.ingest.us.sentry.io/4510419082346496",
-        beforeSend(event) {
-            // filter out known non-critical errors
-            const eventStr = JSON.stringify(event)
-            return ERROR_FILTER.some((filter) => eventStr.includes(filter)) ? null : event
-        }
-    })
 }
 
 // STORE MEDIA AS BASE64

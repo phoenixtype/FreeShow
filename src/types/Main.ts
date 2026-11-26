@@ -11,7 +11,6 @@ export interface Config {
     graphicsDevice: string | null
     /** last GPU problem reported, so it is not repeated every launch */
     gpuHealthNotice?: string
-    autoErrorReporting?: boolean
     mediaFolderPath?: string
 
     // ChurchApps API URLs and credentials

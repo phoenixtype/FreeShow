@@ -202,6 +202,7 @@ export enum Main {
     BROWSER_SIGN_IN = "BROWSER_SIGN_IN",
     BROWSER_SIGN_IN_CANCEL = "BROWSER_SIGN_IN_CANCEL",
     SECRET = "SECRET",
+    COPY_DIAGNOSTICS = "COPY_DIAGNOSTICS",
     AI_LLM_COMPLETE = "AI_LLM_COMPLETE",
     AI_OLLAMA_STATUS = "AI_OLLAMA_STATUS",
     AI_OLLAMA_PULL = "AI_OLLAMA_PULL"
@@ -447,6 +448,7 @@ export interface MainReturnPayloads {
     [Main.BROWSER_SIGN_IN]: Promise<{ code?: string; verifier?: string; error?: "cancelled" | "failed" }>
     [Main.BROWSER_SIGN_IN_CANCEL]: void
     [Main.SECRET]: string
+    [Main.COPY_DIAGNOSTICS]: boolean
     [Main.AI_LLM_COMPLETE]: Promise<{ text: string; error?: string; code?: string; retryAfter?: number }>
     [Main.AI_OLLAMA_STATUS]: Promise<{ running: boolean; models: string[] }>
     [Main.AI_OLLAMA_PULL]: Promise<{ ok: boolean; error?: string }>
