@@ -7,6 +7,7 @@ vi.mock("../agent/agentChat", () => ({ agentInstructions: () => "", runAgentChat
 vi.mock("../scripture/passage", () => ({ readPassage: vi.fn() }))
 vi.mock("../../stores", async () => ({ ai: (await import("svelte/store")).writable({ llm: { provider: "scriptural", localFallback: "gemma3:4b" } }) }))
 import { LLMManager } from "./llmManager"
+import { STT_CONTROLLER_PROMPT, STT_CONTROLLER_SCHEMA } from "./prompts"
 
 const schema = { type: "object", properties: { content: { type: "string" } }, required: ["content"] }
 const ask = (extra = {}) => new LLMManager("scriptural", "").request<any>({ prompt: "hi", jsonSchema: schema, ...extra })
@@ -42,4 +43,12 @@ it("asks Claude about a sermon only every 60 words when the local model is down"
     for (let i = 0; i < 8; i++) await manager.detectMatch({ chunkWithOverlap: "words", newWordsCount: 15 })
     expect(requestMain).toHaveBeenCalledTimes(8)
     expect(plan).toHaveBeenCalledTimes(2)
+})
+
+it("asks a listening model for passages only, and drops anything else it answers (E8)", async () => {
+    expect(STT_CONTROLLER_SCHEMA.properties.type.enum).toEqual(["scripture", "empty"])
+    expect(STT_CONTROLLER_PROMPT).not.toMatch(/"(lyrics|quote|announcement)"/)
+
+    requestMain.mockResolvedValue({ text: '{"type":"lyrics","content":"Amazing Grace","confidence":90}' })
+    expect(await new LLMManager("scriptural", "").detectMatch({ chunkWithOverlap: "words", newWordsCount: 500 })).toBeNull()
 })
