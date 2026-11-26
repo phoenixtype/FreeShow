@@ -4,7 +4,7 @@ import { normalizeMishearings } from "./mishearings"
 import { normalizeNumbers } from "./numbers"
 import { MIN_EVIDENCE, PRESENT_EVIDENCE, quoteEvidence } from "./quoteEvidence"
 import { CHAPTER_PATTERN, normalizeBookName, RANGE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
-import { normalizeReferences } from "./references"
+import { normalizeReferences, withoutOrdinalAside } from "./references"
 
 const COUNTED_WORDS = /^\s*(?:things|people|days|years|times|of|out|is|was|men|women|friends|letters)\b/iu
 const LEAD_IN = /\b(?:turn(?: with me)? to|book of|chapter of|in|read|reading|open(?: (?:your|our|the) bibles?)?(?: (?:with me )?(?:to|at))?)\s+(?:the (?:book of )?)?$/iu
@@ -26,14 +26,19 @@ export class BibleSearchDetector {
 
             if (cleanInput.length - (matchIndex + matchLength) > 120) continue
 
-            const matchedBookName = normalizeBookName(refMatch[1])
+            let matchedBookName = normalizeBookName(refMatch[1])
 
             const chapterNum = parseInt(refMatch[2], 10)
             const startVerseNum = refMatch[3] ? parseInt(refMatch[3], 10) : undefined
             const endVerseNum = refMatch[4] ? parseInt(refMatch[4], 10) : undefined
 
-            const refKey = `${matchedBookName.toLowerCase()} ${chapterNum}`
-            const chapterData = this.cacheData.referenceIndex.get(refKey)
+            const chapterOf = (name: string) => this.cacheData.referenceIndex.get(`${name.toLowerCase()} ${chapterNum}`)
+            let chapterData = chapterOf(matchedBookName)
+            // "second John 21 verse 15": no such place in that book, so the number was not part of its name
+            if (!chapterData || (startVerseNum || 0) > chapterData.verseCount) {
+                matchedBookName = matchedBookName.replace(/^[1-3]\s+/, "")
+                chapterData = chapterOf(matchedBookName)
+            }
             if (!chapterData) continue
 
             if (!startVerseNum) {
@@ -549,7 +554,12 @@ export class BibleSearchDetector {
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings corrected:", mishearingsCorrected)
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings normalized:", mishearingsNormalized)
 
-        const refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted, true)
+        let refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted, true)
+
+        // the book without the number, offered rather than certain
+        const aside = withoutOrdinalAside(mishearingsCorrected)
+        const unnumbered = aside && this.findReferenceMatch(normalizeReferences(normalizeNumbers(aside, language), this.cacheData))
+        if (unnumbered) refMatch = { ...unnumbered, confidence: Math.min(unnumbered.confidence, 74) }
 
         if (this.DEBUG_MODE) console.log("[DETECTION] Reference match result:", refMatch)
 

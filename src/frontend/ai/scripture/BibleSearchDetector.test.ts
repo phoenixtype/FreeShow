@@ -68,3 +68,22 @@ describe("a book name and a number is not always a chapter (B4)", () => {
         expect(await heard("turn to John once")).toBeUndefined()
     })
 })
+
+describe("a number before a book (B5)", () => {
+    it("is not part of the name when a pause follows it", async () => {
+        expect(await search("First, John 3:16 tells us")).toMatchObject({ content: "John 3:16", confidence: 74 })
+        expect(await search("number one, John 3 verse 16")).toMatchObject({ content: "John 3:16", confidence: 74 })
+        expect(await heard("first, corinthians 13 verse 4")).toBe("1 Corinthians 13:4")
+    })
+
+    it("is part of the name when it is said as one", async () => {
+        expect(await heard("1st John 1:9")).toBe("1 John 1:9")
+        expect(await heard("II Corinthians 5:17")).toBe("2 Corinthians 5:17")
+        expect(await heard("III John 1:4")).toBe("3 John 1:4")
+        expect(await heard("first John chapter one verse nine")).toBe("1 John 1:9")
+    })
+
+    it("is dropped when the numbered book has no such place", async () => {
+        expect(await heard("the first John 21 verse 15")).toBe("John 21:15")
+    })
+})

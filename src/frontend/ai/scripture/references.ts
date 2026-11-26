@@ -2,8 +2,21 @@ import type { BibleCacheData } from "./BibleCacheManager"
 import { correctBookNames } from "./nearestBook"
 import { CHAPTER_PATTERN, JOINER_PATTERN, normalizeBookName, OF_PATTERN, ORDINAL_PREFIX_PATTERN, PSALM_NORMALIZATION_MAP, PSALM_PATTERN, RANGE_PATTERN, THE_PATTERN, VERSE_PATTERN } from "./referenceDictionary"
 
+// "1st John", "II Corinthians"
+const NUMBERED_BOOKS = "samuel|kings|chronicles|corinthians|thessalonians|timothy|peter|john"
+const SHORT_ORDINALS: Record<string, string> = { "1st": "1", "2nd": "2", "3rd": "3", i: "1", ii: "2", iii: "3" }
+const SHORT_ORDINAL_REGEX = new RegExp(`(?<![\\p{L}\\p{N}])(1st|2nd|3rd|iii|ii|i)\\s+(?=(?:${NUMBERED_BOOKS})\\b)`, "giu")
+
+// "First, John 3:16": a pause after the number means it was probably counting a point, not naming 1 John
+const ORDINAL_ASIDE = new RegExp(`(?<![\\p{L}\\p{N}])(?:first(?:ly)?|second(?:ly)?|third(?:ly)?|1st|2nd|3rd|one|two|three|[1-3])\\s*[,;:.!]\\s*(?=(?:${NUMBERED_BOOKS})\\b)`, "giu")
+/** the words without such a number; null when there is none */
+export function withoutOrdinalAside(text: string): string | null {
+    const plain = text.replace(ORDINAL_ASIDE, "")
+    return plain === text ? null : plain
+}
+
 export function normalizeReferences(text: string, cacheData: BibleCacheData): string {
-    let normalized = text
+    let normalized = text.replace(SHORT_ORDINAL_REGEX, (_, ordinal: string) => `${SHORT_ORDINALS[ordinal.toLowerCase()]} `)
 
     // 1. Remove punctuation that breaks numbered books and normalize ordinal book prefixes (e.g., "1, john 4" or "first, john" -> "1 john")
     normalized = normalized.replace(new RegExp(`\\b([1-3]|${ORDINAL_PREFIX_PATTERN})\\s*[,.\\-_]\\s*([\\p{L}]+)`, "giu"), "$1 $2")
