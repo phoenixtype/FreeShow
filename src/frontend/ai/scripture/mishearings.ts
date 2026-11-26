@@ -1,3 +1,5 @@
+import { CHAPTER_PATTERN } from "./referenceDictionary"
+
 export const COMMON_MISHEARINGS: Record<string, string> = {
     // Phonetic & ASR Mishearings
     palm: "psalm",
@@ -77,6 +79,11 @@ export const COMMON_MISHEARINGS: Record<string, string> = {
     cha: "chapter"
 }
 
+// Everyday words and names as much as book names ("ask three questions", "Dan will pray"):
+// read as a book only where a chapter number follows.
+const NEEDS_NUMBER = new Set(["ask", "ex", "exit", "genius", "josh", "joan", "romance", "revolution", "revolutions", "mat", "dan", "sam", "tim", "gal", "col", "mal", "num", "gen", "rev", "rom", "phil", "cor"])
+const NUMBER_FOLLOWS = new RegExp(`^\\.?\\s*(?:\\d|(?:${CHAPTER_PATTERN})\\s+[\\p{L}\\d])`, "u")
+
 export function normalizeMishearings(text: string): string {
     let normalized = text.toLowerCase()
 
@@ -89,7 +96,9 @@ export function normalizeMishearings(text: string): string {
     const mishearingKeys = Object.keys(COMMON_MISHEARINGS).sort((a, b) => b.length - a.length)
     const mishearingRegex = new RegExp(`(?<!\\p{L})(${mishearingKeys.join("|")})(?!\\p{L})`, "giu")
 
-    return normalized.replace(mishearingRegex, (match) => {
-        return COMMON_MISHEARINGS[match.toLowerCase()] || match
+    return normalized.replace(mishearingRegex, (match, _word, offset: number, all: string) => {
+        const said = match.toLowerCase()
+        if (NEEDS_NUMBER.has(said) && !NUMBER_FOLLOWS.test(all.slice(offset + match.length))) return match
+        return COMMON_MISHEARINGS[said] || match
     })
 }

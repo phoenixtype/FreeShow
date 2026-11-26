@@ -28,3 +28,19 @@ describe("a number is not a verse cue (B2)", () => {
         expect(match).toMatchObject({ content: "Genesis 1:3", confidence: 70 })
     })
 })
+
+describe("ordinary words stay ordinary (B3)", () => {
+    it("does not read them as book names", async () => {
+        expect(await heard("thank Mark for five years")).toBeUndefined()
+        expect(await heard("let me ask three questions")).toBeUndefined()
+        expect(await heard("we will ask three")).toBeUndefined()
+        expect(await heard("Dan is going to give 2 announcements")).toBeUndefined()
+        expect(await heard("the exit is on your left, row 3")).toBeUndefined()
+    })
+
+    it("still reads a mishearing that is followed by a number", async () => {
+        expect(await heard("turn to rev 3:20")).toBe("Revelation 3:20")
+        expect(await heard("open romance chapter 8 verse 28")).toBe("Romans 8:28")
+        expect(await heard("1 cor 13:4")).toBe("1 Corinthians 13:4")
+    })
+})
