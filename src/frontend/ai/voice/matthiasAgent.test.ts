@@ -41,6 +41,7 @@ import { handMoves } from "../agent/control"
 import { runAgentTool } from "../agent/agentTools"
 import { stepScreen } from "../agent/stepScreen"
 import { addChatMessage, clearChatHistory } from "../llm/llmManager"
+import { planProblem } from "../../scriptural/planNotice"
 import { Matthias, matthiasStatus } from "./matthiasAgent"
 
 let position = 0
@@ -315,4 +316,13 @@ it("says what the tool said when it could not", async () => {
     vi.mocked(runAgentTool).mockResolvedValue({ ok: false, error: "The sound is still playing." })
     await Matthias.ask("stop the music")
     expect(get(matthiasStatus)).toEqual({ state: "failed", text: "The sound is still playing." })
+})
+
+it("says that the plan is the reason there is no answer", async () => {
+    model.llm = {}
+    chat.run.mockResolvedValueOnce(null)
+    planProblem.set("Scriptural AI comes with a Church plan.")
+    await Matthias.ask("compose a welcome", true, true)
+    expect(get(matthiasStatus)).toEqual({ state: "failed", text: "Scriptural AI comes with a Church plan." })
+    planProblem.set("")
 })

@@ -5,6 +5,7 @@ import { get, writable } from "svelte/store"
 import { uid } from "uid"
 import { toggleSttListening } from "../../components/actions/apiHelper"
 import { getFirstActiveOutput } from "../../components/helpers/output"
+import { planProblem } from "../../scriptural/planNotice"
 import { activeProject, ai, aiSuggestions, outLocked, overlays, projects, shows, sttTranscript } from "../../stores"
 import { mediaList } from "../agent/mediaLibrary"
 import { agentInstructions, runAgentChat } from "../agent/agentChat"
@@ -457,7 +458,7 @@ export class Matthias {
         })
         if (stopped()) return null
         if (turn.signal.aborted) throw new ToolError("That took too long, so I stopped. Ask again, or ask for less at once.")
-        if (!answer) throw new ToolError("I could not get an answer. Check the internet connection and the model in Settings, Live Copilot.")
+        if (!answer) throw new ToolError(get(planProblem) || "I could not get an answer. Check the internet connection and the model in Settings, Live Copilot.")
         if (typed && answer.action) {
             // nothing is made until the button is pressed, whatever the model says it did
             addChatMessage(MATTHIAS_CHAT, "assistant", "It is ready. Press the button to add it.", answer.action)

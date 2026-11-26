@@ -17,6 +17,7 @@
     import CopilotPreview from "./CopilotPreview.svelte"
     import MatthiasInput from "./MatthiasInput.svelte"
     import ScreenControl from "./ScreenControl.svelte"
+    import PlanNotice from "./PlanNotice.svelte"
     import SmartAction from "./SmartAction.svelte"
 
     let state: CopilotState = "loading"
@@ -209,6 +210,7 @@
         </header>
 
         <ScreenControl listening={isListening} />
+        <PlanNotice />
         {#if needsPreview}<CopilotPreview />{/if}
 
         <div class="tabs"><Tabs {tabs} bind:active={activeTab} /></div>
