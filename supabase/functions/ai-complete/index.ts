@@ -1,6 +1,6 @@
 // Scriptural AI: the app's AI features for churches on a paid plan, with no
 // key of their own. One request is counted per call against the church's
-// monthly allowance (use_ai_request). Claude answers; Gemini if Claude fails.
+// monthly allowance (use_ai_request_for). Claude answers; Gemini if Claude fails.
 // POST { churchId, prompt, systemPrompt?, jsonSchema?, maxTokens? } -> { text }
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
@@ -65,11 +65,13 @@ Deno.serve(async (req) => {
         const caller = await callerRole(req, String(body.churchId || ""))
         if (!caller) return json({ error: "unauthorized" }, 401)
 
-        // counted as the caller, so the database checks membership itself
-        const userDb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization")! } }, auth: { persistSession: false } })
-        const { data: allowed, error } = await userDb.rpc("use_ai_request", { target: body.churchId })
+        // counted by the server for the caller it verified; members cannot call this themselves
+        const { data: outcome, error } = await admin().rpc("use_ai_request_for", { target: body.churchId, person: caller.userId })
         if (error) throw error
-        if (!allowed) {
+        if (outcome === "not_allowed") return json({ error: "forbidden", message: "Scriptural AI is for owners, admins and editors of this church." }, 403)
+        if (outcome === "rate_limited") return json({ error: "rate_limited", message: "That's a lot of requests at once. Wait a minute and try again." }, 429)
+        if (outcome !== "ok") {
+            const userDb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization")! } }, auth: { persistSession: false } })
             const { data: limits } = await userDb.rpc("church_limits", { target: body.churchId }).single()
             const free = (limits as { plan?: string } | null)?.plan === "free"
             const message = free ? "Scriptural AI comes with a Church plan. Or add your own Claude or Gemini key in Settings." : "This month's Scriptural AI is used up. Upgrade, or add your own Claude or Gemini key in Settings."
