@@ -184,6 +184,14 @@ export function segmentConfidence(tokens: string[], logProbs: number[], text: st
     return count ? Math.round(Math.exp(sum / count) * 100) : undefined
 }
 
+// a crashed engine is started again, but not forever: one that keeps dying needs a person
+const CRASH_WINDOW_MS = 5 * 60 * 1000
+const MAX_CRASH_RESTARTS = 3
+
+export function canRestartAfterCrash(restartedAt: number[], now: number) {
+    return restartedAt.filter((at) => now - at < CRASH_WINDOW_MS).length < MAX_CRASH_RESTARTS
+}
+
 // MUSIC - the model labels non-speech ("[MUSIC PLAYING]", "(upbeat music)") rather than inventing words for it.
 // Shown in the transcript, never fed to detection.
 

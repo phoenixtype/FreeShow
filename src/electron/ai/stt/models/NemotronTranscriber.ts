@@ -1,8 +1,10 @@
 import os from "os"
 import path from "path"
 import type { SttEngineOptions } from "../../../../types/ai/AiSettings"
+import { ToMain } from "../../../../types/IPC/ToMain"
+import { sendToMain } from "../../../IPC/main"
 import { LocalModelManager } from "../../setup/LocalModelManager"
-import type { TranscriberSegment } from "../sttHelper"
+import { canRestartAfterCrash, type TranscriberSegment } from "../sttHelper"
 import type { NemotronWorkerRequest, NemotronWorkerResponse } from "./nemotronWorker"
 
 // the model is 680 MB: an older computer with a spinning disk takes a while to read it
@@ -27,6 +29,7 @@ export class NemotronTranscriber {
     private lastWorkerMessageAt = 0
     private stallTimer: NodeJS.Timeout | null = null
     private restarting = false
+    private crashRestarts: number[] = []
     private modelDir = ""
 
     constructor(options: SttEngineOptions, onSegment: (segment: TranscriberSegment) => void, onError: (message: string) => void, onInterim?: (text: string) => void) {
@@ -102,9 +105,11 @@ export class NemotronTranscriber {
         child.on("exit", (code) => {
             if (this.child !== child) return
             this.child = null
+            // a crash while starting up is reported by the start itself
+            const starting = Boolean(this.readyResolve)
             this.readyResolve?.(false)
             this.stoppedResolve?.()
-            if (!this.stopped) this.onError(`Nemotron transcription process exited unexpectedly (code ${code})`)
+            if (!this.stopped && !starting) void this.restartAfterCrash(code)
         })
 
         this.post(child, { type: "start", language: this.options.language || "en", decodeLanguage: this.options.language, modelDir: this.modelDir })
@@ -158,6 +163,27 @@ export class NemotronTranscriber {
             child.postMessage(message)
         } catch (err) {
             console.error("[nemotron] Failed to reach the decode process:", err)
+        }
+    }
+
+    private async restartAfterCrash(code: number) {
+        const message = `Nemotron transcription process exited unexpectedly (code ${code})`
+        const now = Date.now()
+        if (!canRestartAfterCrash(this.crashRestarts, now)) {
+            this.onError(message)
+            return
+        }
+
+        this.crashRestarts.push(now)
+        this.restarting = true
+        this.onInterim?.("")
+        sendToMain(ToMain.TOAST, "Speech recognition stopped and is starting again.")
+        try {
+            const ok = await this.startWorker()
+            if (this.stopped) await this.stop()
+            else if (!ok) this.onError(this.startErrorMessage || message)
+        } finally {
+            this.restarting = false
         }
     }
 
