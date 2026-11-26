@@ -4,10 +4,27 @@
     import MaterialButton from "../../components/inputs/MaterialButton.svelte"
     import MaterialToggleSwitch from "../../components/inputs/MaterialToggleSwitch.svelte"
     import { ai } from "../../stores"
+    import { newToast } from "../../utils/common"
     import { openDetectionLogs } from "./detectionLog"
+    import { saveRecap } from "./serviceRecap"
+
+    let saving = false
+    async function recap() {
+        saving = true
+        const result = await saveRecap().catch(() => "failed")
+        saving = false
+        if (result === "empty") newToast("Nothing has been on screen today, so there is nothing to save yet.")
+        else if (result === "saved") newToast("Recap saved.")
+        else if (result === "failed") newToast("The recap could not be saved. Try another folder.")
+    }
 </script>
 
 <Title label="Service records" icon="folder" />
+
+<p class="note">The verses and songs shown today, with their times, and any list made of the main points. It covers the time since the app was opened.</p>
+<div class="actions">
+    <MaterialButton variant="outlined" icon="export" disabled={saving} on:click={recap}>Save today's recap</MaterialButton>
+</div>
 
 {#if $ai.enabled}
     <MaterialToggleSwitch label="Keep a record of what was detected" checked={!!$ai.detectionLog} defaultValue={false} on:change={(e) => ai.update((a) => ({ ...a, detectionLog: e.detail }))} />

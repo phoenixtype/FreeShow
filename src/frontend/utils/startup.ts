@@ -11,6 +11,7 @@ import { activePopup, activeProfile, alertMessage, cachePath, cloudSyncData, con
 import { startTracking } from "./analytics"
 import { watchLibraryChanges } from "../scriptural/autoSync"
 import { tidyDetectionLogs } from "../ai/records/detectionLog"
+import { watchService } from "../ai/records/serviceRecap"
 import { setupCloudSync } from "./cloudSync"
 import { wait, waitUntilValueIsDefined } from "./common"
 import { getDefaultElements } from "./createData"
@@ -88,6 +89,7 @@ async function startupMain() {
     contentProviderSync(true)
     watchLibraryChanges()
     tidyDetectionLogs()
+    watchService()
 
     // custom alert
     // if (Math.random() < 0.01) {
