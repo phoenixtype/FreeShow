@@ -85,6 +85,7 @@ async function rpc(name, body = {}) {
 function showSignIn(note = "") {
     document.getElementById("tabs").hidden = true
     document.getElementById("sign-out").hidden = true
+    document.getElementById("authenticator").hidden = true
     document.getElementById("who").textContent = ""
     const email = el("input", { type: "email", placeholder: "Email", autocomplete: "email", "aria-label": "Email" })
     const code = el("input", { placeholder: "Code from the email", inputMode: "numeric", autocomplete: "one-time-code", "aria-label": "Code from the email", hidden: true })
@@ -110,6 +111,78 @@ function showSignIn(note = "") {
         }
     })
     main.replaceChildren(el("div", { className: "signin" }, el("h1", { textContent: "Sign in" }), el("p", { className: "muted", textContent: note || "For the people who run Scriptural Project." }), el("div", { className: "row" }, el("button", { className: "main", textContent: "Continue with Google", onclick: withGoogle })), el("p", { className: "muted small", textContent: "Or we email you a code." }), el("div", { className: "row" }, email, code, send)))
+}
+
+// SECOND STEP //
+// An admin with an authenticator must enter its code: the database refuses them otherwise.
+
+async function account(path, method = "GET", body) {
+    const access = await token()
+    if (!access) throw new Error("Your sign-in has ended. Sign in again.")
+    const response = await fetch(`${PROJECT}/auth/v1${path}`, { method, headers: { apikey: KEY, Authorization: `Bearer ${access}`, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(data.msg || data.error_description || "That did not work. Try again.")
+    return data
+}
+
+const totpFactors = async () => ((await account("/user")).factors || []).filter((factor) => factor.factor_type === "totp")
+const level = () => JSON.parse(atob(readSession().access.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).aal
+
+async function enterCode(factorId, code) {
+    const challenge = await account(`/factors/${factorId}/challenge`, "POST")
+    keepSession(await account(`/factors/${factorId}/verify`, "POST", { challenge_id: challenge.id, code: code.trim() }))
+}
+
+const codeField = () => el("input", { required: true, inputMode: "numeric", autocomplete: "one-time-code", "aria-label": "Code from your authenticator" })
+
+function showSecondStep(factorId) {
+    const code = codeField()
+    const form = el(
+        "form",
+        {
+            className: "signin",
+            onsubmit: async (event) => {
+                event.preventDefault()
+                try {
+                    await enterCode(factorId, code.value)
+                    await start()
+                } catch (err) {
+                    say(err.message, true)
+                }
+            }
+        },
+        el("h1", { textContent: "Enter your code" }),
+        el("p", { className: "muted", textContent: "Open your authenticator app and type the code for Scriptural Project." }),
+        el("div", { className: "row" }, code, el("button", { type: "submit", textContent: "Continue" }))
+    )
+    main.replaceChildren(form)
+    code.focus()
+}
+
+async function addAuthenticator() {
+    try {
+        // one left half set up blocks the next
+        for (const factor of await totpFactors()) if (factor.status !== "verified") await account(`/factors/${factor.id}`, "DELETE")
+        const factor = await account("/factors", "POST", { factor_type: "totp", friendly_name: "Platform admin", issuer: "Scriptural Project" })
+        const code = codeField()
+        const key = el("input", { readOnly: true, value: factor.totp.secret, "aria-label": "Setup key" })
+        ask(
+            "Add an authenticator",
+            "In your authenticator app choose to enter a setup key, copy this one in, then type the code it shows.",
+            [
+                ["Setup key", key],
+                ["Code", code]
+            ],
+            "Turn on",
+            async () => {
+                await enterCode(factor.id, code.value)
+                return "Authenticator added. You will be asked for its code when you sign in."
+            },
+            start
+        )
+    } catch (err) {
+        say(err.message, true)
+    }
 }
 
 // PIECES //
@@ -452,17 +525,27 @@ async function start() {
     if (!session) return showSignIn()
     document.getElementById("who").textContent = session.email
     document.getElementById("sign-out").hidden = false
-    document.getElementById("tabs").hidden = false
+    let verified
+    try {
+        verified = (await totpFactors()).find((factor) => factor.status === "verified")
+    } catch (err) {
+        return say(err.message, true)
+    }
+    const waiting = Boolean(verified) && level() !== "aal2"
+    document.getElementById("tabs").hidden = waiting
+    document.getElementById("authenticator").hidden = Boolean(verified)
+    if (waiting) return showSecondStep(verified.id)
     await open(location.hash.slice(1))
 }
 
+document.getElementById("authenticator").addEventListener("click", addAuthenticator)
 document.getElementById("sign-out").addEventListener("click", async () => {
     const session = readSession()
     sessionStorage.removeItem(SESSION)
     showSignIn()
     if (session) await fetch(`${PROJECT}/auth/v1/logout?scope=local`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${session.access}` } }).catch(() => null)
 })
-addEventListener("hashchange", () => readSession() && open(location.hash.slice(1)))
+addEventListener("hashchange", () => readSession() && start())
 
 const code = new URLSearchParams(location.search).get("code")
 const verifier = sessionStorage.getItem(VERIFIER)

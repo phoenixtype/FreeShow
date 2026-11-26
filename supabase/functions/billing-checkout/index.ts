@@ -60,7 +60,8 @@ Deno.serve(async (req) => {
             subscription_data: { metadata: { app: "scriptural-project", church_id: churchId } },
             allow_promotion_codes: true,
             automatic_tax: { enabled: true },
-            success_url: `${SITE}/thanks`,
+            // the thank-you page counts the sale from these
+            success_url: `${SITE}/thanks/?price=${price}&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${SITE}/pricing`
         })
         const { error: keepError } = await db.from("church_checkouts").upsert({ church_id: churchId, session_id: session.id, created_at: new Date().toISOString() })
