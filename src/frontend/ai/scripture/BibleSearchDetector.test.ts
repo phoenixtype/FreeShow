@@ -168,3 +168,23 @@ describe("smaller ways of saying it (B15)", () => {
         expect(await heard("Luke 2025")).toBeUndefined()
     })
 })
+
+describe("a reference does not wait for the quote search (R10)", () => {
+    it("is returned at once, even if newer words have arrived", async () => {
+        const detector = await testBible()
+        const quotes = vi.spyOn(detector, "findContentMatch")
+        let asked = 0
+        const match = await detector.search("turn with me to John 3:16", "", () => asked++ > 0)
+        expect(match?.content).toBe("John 3:16")
+        expect(quotes).not.toHaveBeenCalled()
+        quotes.mockRestore()
+    })
+
+    it("searches a short chunk once, not once per window", async () => {
+        const detector = await testBible()
+        const windows = vi.spyOn(detector as any, "evaluateContentMatch")
+        await detector.search("for God so loved the world that he gave his only begotten son", "")
+        expect(windows).toHaveBeenCalledTimes(1)
+        windows.mockRestore()
+    })
+})

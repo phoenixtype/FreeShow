@@ -33,14 +33,29 @@ export class AiManager {
     private static lastMatch: number = 0
     private static MAX_LLM_REQUEST_AFTER_MATCH = 5000
     private static latestSearchId: number = 0
+    // a search that has had less than this is let finish when the next words arrive
+    private static MIN_SEARCH_MS = 500
+    private static searches = new Set<{ id: number; startedAt: number }>()
+    private static startSearch() {
+        const now = Date.now()
+        for (const search of this.searches) if (now - search.startedAt >= this.MIN_SEARCH_MS) this.searches.delete(search)
+        const search = { id: ++this.latestSearchId, startedAt: now }
+        this.searches.add(search)
+        return search
+    }
+    /** what an older search finds now is old news */
+    private static cancelSearches(before = Infinity) {
+        for (const search of this.searches) if (search.id < before) this.searches.delete(search)
+    }
 
     static async processSTTChunk(chunk: { chunkWithOverlap: string; newWordsCount: number; confidence?: number }) {
         this.triggerBackgroundPreload()
         // watch the output from the first word heard, so slides moved by hand are seen
         this.listenToOutput()
 
-        const searchId = ++this.latestSearchId
-        const isCancelled = () => searchId !== this.latestSearchId
+        const search = this.startSearch()
+        const isCancelled = () => !this.searches.has(search)
+        const superseded = () => search.id !== this.latestSearchId
 
         // a spoken command ("next verse") moves the screen and is not searched for
         const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
@@ -52,6 +67,7 @@ export class AiManager {
         if (isCancelled()) return
 
         if (stringMatch) {
+            this.cancelSearches(search.id)
             this.newMatch(stringMatch)
             this.lastMatch = Date.now()
             return
@@ -70,12 +86,13 @@ export class AiManager {
             return
         }
 
-        // anything past here can spend AI requests: only when switched on, or in agent mode
-        if (!usesAiDetection(get(ai))) return
+        // anything past here can spend AI requests: only when switched on, or in agent mode,
+        // and only for the newest words
+        if (!usesAiDetection(get(ai)) || superseded()) return
         if (this.lastMatch && Date.now() - this.lastMatch < this.MAX_LLM_REQUEST_AFTER_MATCH) return
 
-        const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, isCancelled)
-        if (isCancelled()) return
+        const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, superseded)
+        if (superseded()) return
         if (meaningMatch) {
             this.newMatch(meaningMatch)
             this.lastMatch = Date.now()
@@ -88,7 +105,7 @@ export class AiManager {
         // only report to LLM if nothing is auto detected
         const llmMatch = await llmManager.detectMatch(chunk)
         // a newer chunk has spoken since: this answer is stale
-        if (isCancelled()) return
+        if (superseded()) return
         if (llmMatch) {
             this.newMatch(llmMatch)
             this.lastMatch = Date.now()
@@ -109,6 +126,7 @@ export class AiManager {
         this.listenToOutput()
         // what is still being searched was said before this
         this.latestSearchId++
+        this.cancelSearches()
         return this.navigate(command)
     }
 
@@ -222,8 +240,9 @@ export class AiManager {
         this.isPreloadStarted = true
 
         // load scriptures
+        const open = get(drawerTabsData)?.scripture?.activeSubTab || ""
         const localScriptureIds = this.getLocalScriptureIds()
-        BibleCacheManager.preloadAllInBackground(localScriptureIds)
+        BibleCacheManager.preloadAllInBackground([...localScriptureIds].sort((a, b) => Number(b === open) - Number(a === open)))
     }
 
     private static getLocalScriptureIds() {
@@ -266,7 +285,8 @@ export class AiManager {
 
         // Non-blocking concurrent scan
         Promise.all(
-            this.getLocalScriptureIds().map(async (id) => {
+            // only those in memory: loading every translation for every quote would never settle
+            BibleCacheManager.loadedIds().map(async (id) => {
                 // already checked
                 if (id === activeBibleId) return
 

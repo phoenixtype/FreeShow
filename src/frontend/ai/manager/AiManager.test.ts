@@ -170,3 +170,31 @@ describe("a few lyric words over a reading (B14)", () => {
         expect(presentSong).toHaveBeenCalledTimes(1)
     })
 })
+
+describe("words arriving while a search runs (R10)", () => {
+    // each chunk's search waits until the test lets it answer
+    const run = async (gapMs: number) => {
+        let now = 1_000_000
+        const clock = vi.spyOn(Date, "now").mockImplementation(() => now)
+        const answers: ((match: unknown) => void)[] = []
+        const cancelled: (() => boolean)[] = []
+        vi.mocked(BibleCacheManager.getCanon).mockResolvedValue({ search: (_t: string, _l: string, isCancelled: () => boolean) => new Promise((resolve) => (cancelled.push(isCancelled), answers.push(resolve))) } as any)
+
+        const first = AiManager.processSTTChunk({ chunkWithOverlap: "john three sixteen", newWordsCount: 3 })
+        await settle()
+        now += gapMs
+        const second = AiManager.processSTTChunk({ chunkWithOverlap: "and so we see", newWordsCount: 4 })
+        await settle()
+        const stopped = cancelled[0]()
+        answers[0](null)
+        answers[1](null)
+        await Promise.all([first, second])
+        clock.mockRestore()
+        return stopped
+    }
+
+    it("lets a search that has hardly started finish, and stops an old one", async () => {
+        expect(await run(100)).toBe(false)
+        expect(await run(700)).toBe(true)
+    })
+})

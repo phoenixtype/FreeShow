@@ -28,12 +28,20 @@ export interface BibleCacheData {
 const OTHER_NAMES: Record<number, string[]> = { 22: ["song of songs", "canticles", "song of solomon"], 66: ["apocalypse"] }
 
 export class BibleCacheManager {
+    // about 17 MB each: the open Bible and the two used before it
+    private static readonly MAX_LOADED = 3
     private static caches: Map<string, BibleSearchDetector> = new Map()
     private static rawCaches: Map<string, BibleCacheData> = new Map()
     private static cachePromises: Map<string, Promise<BibleSearchDetector | null>> = new Map()
 
     public static async getCache(bibleId: string): Promise<BibleSearchDetector | null> {
-        if (this.caches.has(bibleId)) return this.caches.get(bibleId)!
+        const loaded = this.caches.get(bibleId)
+        if (loaded) {
+            // last used, last to go
+            this.caches.delete(bibleId)
+            this.caches.set(bibleId, loaded)
+            return loaded
+        }
         if (this.cachePromises.has(bibleId)) return await this.cachePromises.get(bibleId)!
 
         const load = async () => {
@@ -48,6 +56,7 @@ export class BibleCacheManager {
 
             this.rawCaches.set(bibleId, cacheData)
             this.caches.set(bibleId, searchCache)
+            this.dropOldest()
             return searchCache
         }
 
@@ -66,6 +75,19 @@ export class BibleCacheManager {
         return await promise
     }
 
+    private static dropOldest() {
+        for (const id of this.loadedIds().slice(0, -this.MAX_LOADED)) {
+            this.caches.delete(id)
+            this.rawCaches.delete(id)
+            this.cachePromises.delete(id)
+        }
+    }
+
+    /** the Bibles in memory */
+    public static loadedIds(): string[] {
+        return [...this.caches.keys()]
+    }
+
     private static canon: Promise<BibleSearchDetector> | null = null
     /** references only, for when no Bible is stored on this computer */
     public static getCanon(): Promise<BibleSearchDetector> {
@@ -81,9 +103,10 @@ export class BibleCacheManager {
     }
 
     /**
-     * Preloads all local Bibles sequentially in the background without blocking frames.
+     * Preloads the first local Bibles sequentially in the background without blocking frames.
      */
-    public static preloadAllInBackground(bibleIds: string[]) {
+    public static preloadAllInBackground(allIds: string[]) {
+        const bibleIds = allIds.slice(0, this.MAX_LOADED)
         let index = 0
         const loadNext = () => {
             if (index >= bibleIds.length) return

@@ -344,6 +344,8 @@ export class BibleSearchDetector {
 
         for (let i = 0; i < windowSizes.length; i++) {
             if (isCancelled?.()) return null
+            // a window that already held everything said: a wider one is the same search
+            if (i > 0 && allTokens.length <= windowSizes[i - 1]) break
 
             if (i > 0) {
                 await new Promise((resolve) => setTimeout(resolve, 0))
@@ -458,6 +460,10 @@ export class BibleSearchDetector {
             let scoreRatio = recentHighValueIdfSum > 0 ? matchedQueryIdf / recentHighValueIdfSum : accumulatedIdf / matchedQueryIdf
 
             scoreRatio = Math.min(scoreRatio, 1.0)
+
+            // not enough even with the best phrase bonus: not worth comparing word order
+            const bestBoost = 1.6 * (isCurrent ? 1.25 : upcomingDist === 1 ? 1.15 : 1)
+            if (scoreRatio * bestBoost < (isCurrent || upcomingDist === 1 ? 0.18 : 0.28)) continue
 
             // Bonus for phrase / consecutive word matches vs scattered words
             const phraseMatch = this.computePhraseMatch(verseId, queryWordIds)
@@ -604,14 +610,19 @@ export class BibleSearchDetector {
 
         if (this.DEBUG_MODE) console.log("[DETECTION] Reference match result:", refMatch)
 
+        // a reference said outright goes up at once, without waiting on the quote search.
+        // 70: a verse number heard where there is no text to check it against
+        if (refMatch && refMatch.confidence >= 70) return refMatch
         if (isCancelled?.()) return null
 
         // 1. Run active-context and fresh-context evaluations simultaneously
+        // the same words are not searched twice
+        const corrected = this.tokenizeText(mishearingsCorrected).join(" ") !== this.tokenizeText(transcript).join(" ")
         const activeRawPromise = this.findContentMatch(transcript, currentlyOutputted, isCancelled)
-        const activeMishearingPromise = this.findContentMatch(mishearingsCorrected, currentlyOutputted, isCancelled)
+        const activeMishearingPromise = corrected ? this.findContentMatch(mishearingsCorrected, currentlyOutputted, isCancelled) : Promise.resolve(null)
 
         const freshRawPromise = currentlyOutputted ? this.findContentMatch(transcript, null, isCancelled) : Promise.resolve(null)
-        const freshMishearingPromise = currentlyOutputted ? this.findContentMatch(mishearingsCorrected, null, isCancelled) : Promise.resolve(null)
+        const freshMishearingPromise = currentlyOutputted && corrected ? this.findContentMatch(mishearingsCorrected, null, isCancelled) : Promise.resolve(null)
 
         const [activeRaw, activeMishearing, freshRaw, freshMishearing] = await Promise.all([activeRawPromise, activeMishearingPromise, freshRawPromise, freshMishearingPromise])
 
@@ -631,10 +642,6 @@ export class BibleSearchDetector {
         }
 
         if (this.DEBUG_MODE) console.log("[DETECTION] Best content match:", bestContentMatch)
-
-        // explicit book/chapter/verse reference has priority
-        // 70: a verse number heard where there is no text to check it against
-        if (refMatch && refMatch.confidence >= 70) return refMatch
 
         return bestContentMatch || null
     }

@@ -25,3 +25,18 @@ describe("a Bible that would not load (C3)", () => {
         expect(detector?.findReference("john 3 1") ?? null).toBeNull()
     })
 })
+
+describe("memory (R10)", () => {
+    it("keeps the Bible in use and two more", async () => {
+        load.mockImplementation(async () => bible())
+        for (const id of ["c", "d", "e"]) await BibleCacheManager.getCache(id)
+        await BibleCacheManager.getCache("c")
+        await BibleCacheManager.getCache("a")
+        expect(BibleCacheManager.loadedIds()).toEqual(["e", "c", "a"])
+        const loads = load.mock.calls.length
+        await BibleCacheManager.getCache("c")
+        expect(load.mock.calls.length).toBe(loads)
+        await BibleCacheManager.getCache("d")
+        expect(load.mock.calls.length).toBe(loads + 1)
+    })
+})
