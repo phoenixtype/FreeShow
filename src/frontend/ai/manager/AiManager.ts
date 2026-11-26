@@ -11,6 +11,7 @@ import { ai, aiSmartAction, aiSuggestions, drawerTabsData, outLocked, outputCach
 import { newToast } from "../../utils/common"
 import { handBack, isHeld, movedByHand, OwnChanges, type OwnChange } from "../agent/control"
 import { currentScripture, otherTab, presentPassage } from "../agent/presentPassage"
+import { usesAiDetection } from "../llm/aiDetection"
 import { getLLMManager } from "../llm/llmManager"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleVersion } from "../scripture/BibleVersionDetector"
@@ -68,6 +69,8 @@ export class AiManager {
             return
         }
 
+        // anything past here can spend AI requests: only when switched on, or in agent mode
+        if (!usesAiDetection(get(ai))) return
         if (this.lastMatch && Date.now() - this.lastMatch < this.MAX_LLM_REQUEST_AFTER_MATCH) return
 
         const meaningMatch = await searchByMeaning(chunk.chunkWithOverlap, chunk.newWordsCount, isCancelled)

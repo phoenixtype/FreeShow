@@ -1,6 +1,7 @@
 <script lang="ts">
     import Title from "../../../components/input/Title.svelte"
     import MaterialDropdown from "../../../components/inputs/MaterialDropdown.svelte"
+    import MaterialToggleSwitch from "../../../components/inputs/MaterialToggleSwitch.svelte"
     import { ai } from "../../../stores"
 
     function updateValue(kind: "scripture" | "lyrics", value: any) {
@@ -21,6 +22,8 @@
 <Title label="When it hears scripture" icon="scripture" />
 
 <MaterialDropdown label="Then" options={confidenceOptions} value={$ai.scripture?.confidence || "ask"} on:change={(e) => updateValue("scripture", e.detail)} />
+<MaterialToggleSwitch label="Use AI to catch verses the words miss" checked={!!$ai.llm?.detect} on:change={(e) => ai.update((a) => ({ ...a, llm: { ...(a.llm || {}), detect: e.detail } }))} />
+<p class="note">Off: verses are found on this computer only. On: what is heard is also sent to AI, which uses AI requests. Agent mode uses it too.</p>
 
 <!-- songs in the library, recognised while they are sung; once one is up it follows the singing -->
 <Title label="When it hears a song from your library" icon="song" />

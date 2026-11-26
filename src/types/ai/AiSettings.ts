@@ -44,6 +44,8 @@ interface LlmSettings {
     model?: string
     // a local Ollama model: first with Scriptural AI, the backup with any other provider (see routing.ts)
     localFallback?: string
+    // send what is heard to AI (meaning search and the model) when the words alone find nothing; off unless switched on
+    detect?: boolean
 }
 
 export type ConfidenceLevels = "ask" | "highest" | "high" | "medium"

@@ -487,5 +487,6 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     effects: (a: any) => effects.set(a),
     deletedDefaults: (a: any) => deletedDefaults.set({ ...get(deletedDefaults), ...a }),
     audioRouting: (v: any) => initAudioRouting(v),
-    ai: (a: any) => ai.set(a)
+    // agent mode leads the screen and spends AI requests: chosen each time, never remembered
+    ai: (a: any) => ai.set({ ...(a || {}), matthias: { ...(a?.matthias || {}), agentMode: false } })
 }

@@ -231,7 +231,8 @@ export interface TranscriptLine {
 /** everything heard since the app was opened, line by line; kept on this computer, in memory only */
 export const transcriptLog: Writable<TranscriptLine[]> = writable([])
 export const sttTranscript: Writable<{ finalized: string; unprocessed: string }> = writable({ finalized: "", unprocessed: "" })
-export const sttTempDisabled: Writable<boolean> = writable(false)
+// true until the operator asks to listen: the microphone never starts by itself when the app opens
+export const sttTempDisabled: Writable<boolean> = writable(true)
 
 // ----- SAVED VARIABLES -----
 

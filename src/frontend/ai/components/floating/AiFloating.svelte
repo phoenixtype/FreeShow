@@ -46,7 +46,7 @@
     let downloadingCount = 0
     $: currentlyDownloading = $mediaDownloads
     $: if (state !== "listening" && currentlyDownloading) {
-        if (currentlyDownloading.size < downloadingCount) enableListening()
+        if (currentlyDownloading.size < downloadingCount && !$sttTempDisabled) enableListening()
         downloadingCount = currentlyDownloading.size
     }
 
@@ -66,7 +66,8 @@
     $: syncSession(isEnabled, micDeviceId, engineId)
     async function syncSession(enabled: boolean | undefined, mic: string | undefined, engine: string) {
         const currentLock = ++sessionToken
-        const shouldBeActive = Boolean(enabled && mic)
+        // only once the operator has asked to listen (sttTempDisabled starts true each launch)
+        const shouldBeActive = Boolean(enabled && mic && !$sttTempDisabled)
         const micChanged = (mic || "") !== lastMic
         const engineChanged = engine !== lastEngine
 
