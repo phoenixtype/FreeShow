@@ -4,10 +4,12 @@ import { APIModel, type ModelOption } from "./APIProvider"
 
 const API_URL = "https://api.anthropic.com/v1/messages"
 const MODELS_URL = "https://api.anthropic.com/v1/models"
+// the models that accept an effort setting; Haiku 4.5, Sonnet 4.5 and older answer 400 to it
+const TAKES_EFFORT = /^claude-(?:fable-|mythos-|opus-(?:4-[5-9]\b|[5-9])|sonnet-(?:4-6|[5-9])|haiku-[5-9])/
 
 class AnthropicProvider extends APIModel {
     readonly id = "anthropic"
-    readonly fallbackModel = "claude-haiku-4-5"
+    readonly fallbackModel = "claude-haiku-5-5"
 
     private getHeaders(apiKey: string) {
         return { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" }
@@ -30,12 +32,9 @@ class AnthropicProvider extends APIModel {
         }
     }
 
+    // looking a model up proves the key and costs nothing
     async testConnection(apiKey: string, model: string) {
-        return this.testEndpoint(API_URL, this.getHeaders(apiKey), "POST", {
-            model: model || this.fallbackModel,
-            max_tokens: 1,
-            messages: [{ role: "user", content: "ping" }]
-        })
+        return this.testEndpoint(`${MODELS_URL}/${encodeURIComponent(model || this.fallbackModel)}`, this.getHeaders(apiKey), "GET")
     }
 
     async complete(apiKey: string, model: string, options: LLMCompletionOptions): Promise<string> {
@@ -44,8 +43,11 @@ class AnthropicProvider extends APIModel {
             max_tokens: options.maxTokens ?? 4096,
             messages: [{ role: "user", content: options.prompt }]
         }
-        if (options.systemPrompt) body.system = options.systemPrompt
-        if (options.jsonSchema) body.output_config = { format: { type: "json_schema", schema: options.jsonSchema } }
+        // the same for every question about a sermon and every step of a turn, so it is cached
+        if (options.systemPrompt) body.system = [{ type: "text", text: options.systemPrompt, cache_control: { type: "ephemeral" } }]
+        // these are short, plain answers someone is waiting for
+        const outputConfig = { ...(TAKES_EFFORT.test(body.model) ? { effort: "low" } : {}), ...(options.jsonSchema ? { format: { type: "json_schema", schema: options.jsonSchema } } : {}) }
+        if (Object.keys(outputConfig).length) body.output_config = outputConfig
 
         try {
             const { data } = await axios.post(API_URL, body, {
