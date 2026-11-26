@@ -65,7 +65,7 @@ export class AiManager {
 
         const eventMatch = this.eventDetection(chunk.chunkWithOverlap)
         if (eventMatch) {
-            this.newMatch(eventMatch)
+            this.newMatch(eventMatch, true)
             this.lastMatch = Date.now()
             return
         }
@@ -150,8 +150,8 @@ export class AiManager {
         return get(ai).matthias?.agentMode && (chosen === "ask" || chosen === "highest") ? "high" : chosen
     }
 
-    // famous events and parables said in passing: "when Jesus walked on water"
-    // (capped below "high" so they are offered, not presented, by default)
+    // famous events and parables said in passing: "when Jesus walked on water".
+    // Only ever offered: nobody asked for the passage
     private static eventDetection(textChunk: string): MatchResult | null {
         const event = detectBibleEvents(textChunk)[0]
         if (!event) return null
@@ -279,7 +279,10 @@ export class AiManager {
 
     /////
 
-    static newMatch(match: MatchResult) {
+    // being put up: not yet live, and not to be put up a second time
+    private static pendingContent = ""
+
+    static newMatch(match: MatchResult, offerOnly = false) {
         if (match.type === "empty" || !match.content) return
         // a verse of the range on screen being read keeps the whole range up
         if (match.type === "scripture" && (AiManager.liveContent === match.content || isReferenceWithin(AiManager.liveContent, match.content))) {
@@ -288,6 +291,7 @@ export class AiManager {
         }
 
         if (match.type !== "scripture" && match.type !== "scripture_version" && match.type !== "lyrics") return
+        if (match.content === this.pendingContent && !match.scriptureIsNewTranslation) return
 
         let suggestionDraft: any = {
             id: uid(5),
@@ -300,12 +304,15 @@ export class AiManager {
 
         const trigger = () => this.triggerMatchAction(match)
 
-        if (this.shouldAutoPlay(match)) {
+        if (!offerOnly && this.shouldAutoPlay(match)) {
             const suggestion = { ...suggestionDraft, action: "presented", trigger }
             this.addSuggestion(suggestion)
 
             console.info(`Auto-playing ${match.type}:`, match.content)
-            trigger()
+            this.pendingContent = match.content
+            trigger().finally(() => {
+                if (this.pendingContent === match.content) this.pendingContent = ""
+            })
             return
         }
 
@@ -319,14 +326,10 @@ export class AiManager {
         this.addSuggestion(suggestion)
     }
 
+    // long enough for the words that found it to have gone by; "back to verse sixteen" later is shown
+    private static RESHOW_BLOCK_MS = 20_000
     private static alreadySuggested(match: MatchResult): boolean {
-        // get suggested, but remove any suggestions that have lower confidence than the current match
-        const suggested = get(aiSuggestions)
-            .filter((a) => a.content !== match.content || a.confidence >= match.confidence)
-            .filter((a) => !isReferenceWithin(match.content, a.content))
-            .map((item) => item.content)
-
-        return suggested.includes(match.content)
+        return get(aiSuggestions).some((a) => a.content === match.content && a.confidence >= match.confidence && Date.now() - a.timestamp < this.RESHOW_BLOCK_MS)
     }
 
     private static shouldAutoPlay(match: MatchResult): boolean {

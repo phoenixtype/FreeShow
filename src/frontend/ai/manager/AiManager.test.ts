@@ -50,7 +50,9 @@ vi.mock("../songs/librarySongs", () => ({ followSong: vi.fn(), liveShowId: () =>
 vi.mock("../stt/stt", () => ({ resolveSttEngine: () => "nemotron", spokenLanguage: () => "en" }))
 
 import { get } from "svelte/store"
-import { aiSmartAction, aiSuggestions } from "../../stores"
+import { ai, aiSmartAction, aiSuggestions } from "../../stores"
+import { BibleCacheManager } from "../scripture/BibleCacheManager"
+import { detectBibleEvents } from "../scripture/bibleEvents"
 import { AiManager } from "./AiManager"
 
 const manager = AiManager as any
@@ -67,6 +69,7 @@ beforeEach(() => {
     manager.lastCommand = 0
     manager.shown = []
     manager.undone = null
+    manager.pendingContent = ""
 })
 
 describe("a whole utterance (B1)", () => {
@@ -96,5 +99,44 @@ describe("reading inside the range on screen (B9)", () => {
         AiManager.newMatch({ type: "scripture", content: "John 3:19", confidence: 98 })
         await settle()
         expect(screen.present.mock.calls.map((call) => call[0])).toEqual(["John 3:19"])
+    })
+})
+
+describe("showing again (B15)", () => {
+    const shownAgo = (ms: number) => [{ id: "a", content: "John 3:16", confidence: 100, timestamp: Date.now() - ms, action: "presented" }]
+    const back = { type: "scripture" as const, content: "John 3:16", confidence: 85 }
+
+    it("waits only a moment before a passage can come back", async () => {
+        aiSuggestions.set(shownAgo(5_000))
+        AiManager.newMatch(back)
+        await settle()
+        expect(screen.present).not.toHaveBeenCalled()
+
+        aiSuggestions.set(shownAgo(60_000))
+        AiManager.newMatch(back)
+        await settle()
+        expect(screen.present).toHaveBeenCalledTimes(1)
+    })
+
+    it("puts a reference up once when two chunks carry it", async () => {
+        let land = (_up: boolean) => {}
+        screen.present.mockImplementationOnce(() => new Promise<boolean>((resolve) => (land = resolve)))
+        const match = { type: "scripture" as const, content: "John 3:16", confidence: 98 }
+        AiManager.newMatch(match)
+        AiManager.newMatch(match)
+        land(true)
+        await settle()
+        expect(screen.present).toHaveBeenCalledTimes(1)
+    })
+
+    it("only offers a Bible story that was mentioned", async () => {
+        ai.set({ enabled: true, scripture: { confidence: "medium" } } as any)
+        vi.mocked(BibleCacheManager.getCanon).mockResolvedValue({ search: async () => null } as any)
+        vi.mocked(detectBibleEvents).mockReturnValueOnce([{ reference: "Matthew 14:22-33", confidence: 0.9 }] as any)
+        await AiManager.processSTTChunk({ chunkWithOverlap: "when Jesus walked on water", newWordsCount: 5 })
+        await settle()
+        expect(screen.present).not.toHaveBeenCalled()
+        expect(get(aiSuggestions)).toMatchObject([{ content: "Matthew 14:22-33", action: "present" }])
+        ai.set({ enabled: true, scripture: { confidence: "high" }, lyrics: { confidence: "high" } } as any)
     })
 })
