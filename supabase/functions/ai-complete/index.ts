@@ -4,6 +4,7 @@
 // POST { churchId, prompt, systemPrompt?, jsonSchema?, maxTokens? } -> { text }
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
+import { geminiConfig, geminiMicros, usableAnswer } from "../_shared/gemini.ts"
 
 const CLAUDE_MODEL = "claude-sonnet-5-5"
 const GEMINI_MODEL = "gemini-2.5-flash"
@@ -36,18 +37,19 @@ async function claude(body: { prompt: string; systemPrompt?: string; jsonSchema?
     return data.content?.find((b: { type: string }) => b.type === "text")?.text || ""
 }
 
-async function gemini(body: { prompt: string; systemPrompt?: string; maxTokens?: number }): Promise<string> {
+async function gemini(body: { prompt: string; systemPrompt?: string; jsonSchema?: unknown; maxTokens?: number }, spent: (micros: number) => void): Promise<string> {
     const key = Deno.env.get("GEMINI_API_KEY")
     if (!key) throw new Error("no Gemini key")
     // the key goes in a header: a URL ends up in error messages and logs
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: body.prompt }] }], ...(body.systemPrompt ? { systemInstruction: { parts: [{ text: body.systemPrompt }] } } : {}), generationConfig: { maxOutputTokens: Math.min(body.maxTokens || MAX_TOKENS, MAX_TOKENS) } }),
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: body.prompt }] }], ...(body.systemPrompt ? { systemInstruction: { parts: [{ text: body.systemPrompt }] } } : {}), generationConfig: geminiConfig(body.jsonSchema, Math.min(body.maxTokens || MAX_TOKENS, MAX_TOKENS)) }),
         signal: AbortSignal.timeout(45_000)
     })
     if (!response.ok) throw new Error(`Gemini ${response.status}`)
     const data = await response.json()
+    spent(geminiMicros(data.usageMetadata))
     return data.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || ""
 }
 
@@ -78,22 +80,29 @@ Deno.serve(async (req) => {
             return json({ error: free ? "plan_required" : "allowance_used", message }, 402)
         }
 
-        // only the server settles a request: a member could hand their own back
+        // only the server settles a request: a member could hand their own back.
+        // Settling swaps the amount held for this request for what it cost.
         let cost = 0
+        const spent = (micros: number) => (cost += micros)
         const settle = async (answered: boolean) => {
             const { error: settleError } = await admin().rpc("settle_ai_request", { target: body.churchId, cost, answered })
             if (settleError) console.error("Could not settle an AI request:", settleError.message)
         }
+        // an empty or half-written answer counts as no answer
+        const usable = (text: string) => {
+            if (!usableAnswer(text, !!body.jsonSchema)) throw new Error("no usable answer")
+            return text
+        }
 
         let text: string
         try {
-            text = await claude(body, (micros) => (cost += micros))
+            text = usable(await claude(body, spent))
         } catch (claudeError) {
             console.warn("Claude failed, trying Gemini:", String(claudeError))
             try {
-                text = await gemini(body)
+                text = usable(await gemini(body, spent))
             } catch (geminiError) {
-                // neither answered: the church is not charged for it
+                // neither answered: the church's request is given back (what was spent is still counted)
                 await settle(false)
                 console.error("Gemini failed too:", String(geminiError))
                 return json({ error: "ai_unavailable", message: "Scriptural AI is not answering right now. Try again in a minute." }, 503)
