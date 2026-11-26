@@ -8,6 +8,7 @@ import type { PCOFolderTreeNode } from "../../electron/contentProviders/planning
 import type { _store } from "../../electron/data/store"
 import type { EncoderDetection } from "../../electron/streaming/encoderDetection"
 import type { TimecodeMode } from "../../electron/timecode/timecode"
+import type { RecordsRequest, SaveResult } from "../ai/Records"
 import type { AIProviderId, AiSetupOptions, EngineStatus } from "../ai/Ai"
 import type { SttEngineOptions } from "../ai/AiSettings"
 import type { ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, MediaCodecInfo, OS, SpotifyState, Subtitle } from "../Main"
@@ -206,7 +207,8 @@ export enum Main {
     AI_LLM_COMPLETE = "AI_LLM_COMPLETE",
     AI_LLM_CANCEL = "AI_LLM_CANCEL",
     AI_OLLAMA_STATUS = "AI_OLLAMA_STATUS",
-    AI_OLLAMA_PULL = "AI_OLLAMA_PULL"
+    AI_OLLAMA_PULL = "AI_OLLAMA_PULL",
+    SERVICE_RECORDS = "SERVICE_RECORDS"
 }
 
 export interface MainSendPayloads {
@@ -331,6 +333,7 @@ export interface MainSendPayloads {
     [Main.AI_LLM_COMPLETE]: { providerId: AIProviderId; model: string; options: { systemPrompt?: string; prompt: string; jsonSchema?: any; temperature?: number; maxTokens?: number }; requestId?: string }
     [Main.AI_LLM_CANCEL]: { requestId: string }
     [Main.AI_OLLAMA_PULL]: { model: string }
+    [Main.SERVICE_RECORDS]: RecordsRequest
 }
 
 export interface MainReturnPayloads {
@@ -455,6 +458,7 @@ export interface MainReturnPayloads {
     [Main.AI_LLM_CANCEL]: void
     [Main.AI_OLLAMA_STATUS]: Promise<{ running: boolean; models: string[] }>
     [Main.AI_OLLAMA_PULL]: Promise<{ ok: boolean; error?: string }>
+    [Main.SERVICE_RECORDS]: Promise<SaveResult | void>
 }
 
 ///////////

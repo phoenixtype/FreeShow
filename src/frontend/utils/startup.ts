@@ -10,6 +10,7 @@ import { cameraManager } from "../media/cameraManager"
 import { activePopup, activeProfile, alertMessage, cachePath, cloudSyncData, contentProviderData, currentWindow, dataPath, deviceId, driveKeys, isDev, isOptimizedMode, loaded, loadedState, os, outputs, profiles, providerConnections, shows, special, version, windowState } from "../stores"
 import { startTracking } from "./analytics"
 import { watchLibraryChanges } from "../scriptural/autoSync"
+import { tidyDetectionLogs } from "../ai/records/detectionLog"
 import { setupCloudSync } from "./cloudSync"
 import { wait, waitUntilValueIsDefined } from "./common"
 import { getDefaultElements } from "./createData"
@@ -86,6 +87,7 @@ async function startupMain() {
     startTracking()
     contentProviderSync(true)
     watchLibraryChanges()
+    tidyDetectionLogs()
 
     // custom alert
     // if (Math.random() < 0.01) {

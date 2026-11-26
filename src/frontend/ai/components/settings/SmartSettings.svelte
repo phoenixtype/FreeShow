@@ -4,6 +4,7 @@
     import { translateText } from "../../../utils/language"
     import { enableLiveCopilot } from "../../liveCopilot"
     import AutoScriptureOptions from "./AutoScriptureOptions.svelte"
+    import ServiceRecords from "../../records/ServiceRecords.svelte"
     import Title from "../../../components/input/Title.svelte"
     import LlmOptions from "../popups/LlmOptions.svelte"
     import MatthiasOptions from "./MatthiasOptions.svelte"
@@ -39,6 +40,8 @@
 {:else}
     <p class="lead">Speech is turned into text on this computer. Nothing leaves it unless you pick an online AI model.</p>
 {/if}
+
+<ServiceRecords />
 
 <style>
     .lead {

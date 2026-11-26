@@ -49,12 +49,14 @@ vi.mock("../scripture/bibleEvents", () => ({ detectBibleEvents: vi.fn(() => []) 
 vi.mock("../scripture/meaningSearch", () => ({ searchByMeaning: vi.fn() }))
 vi.mock("../songs/librarySongs", () => ({ followSong: vi.fn(), liveShowId: () => "", presentSong: vi.fn(), songDetector: vi.fn(() => null) }))
 vi.mock("../stt/stt", () => ({ resolveSttEngine: () => "nemotron", spokenLanguage: () => "en" }))
+vi.mock("../records/detectionLog", () => ({ logDetection: vi.fn() }))
 
 import { get } from "svelte/store"
 import { ai, aiSmartAction, aiSuggestions } from "../../stores"
 import { presentSong, songDetector } from "../songs/librarySongs"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleEvents } from "../scripture/bibleEvents"
+import { logDetection } from "../records/detectionLog"
 import { AiManager } from "./AiManager"
 
 const manager = AiManager as any
@@ -298,5 +300,43 @@ describe("each way of catching things can be switched off", () => {
         off("verseCue")
         await chunk("four Nicodemus saith unto him")
         expect(search.mock.calls.map((call) => call[4])).toEqual([true, false])
+    })
+})
+
+describe("what is written to the detection log", () => {
+    const lines = () => vi.mocked(logDetection).mock.calls.map(([line]) => [line.tier, line.found, line.action])
+    const found = (match: object) => vi.mocked(BibleCacheManager.getCanon).mockResolvedValue({ search: async () => match } as any)
+    const chunk = (words: string) => AiManager.processSTTChunk({ chunkWithOverlap: words, newWordsCount: words.split(" ").length })
+    beforeEach(() => vi.mocked(logDetection).mockClear())
+
+    it("has the words heard, how it was found, and that it was shown and then undone", async () => {
+        found({ type: "scripture", content: "John 3:16", confidence: 98 })
+        await chunk("john three sixteen")
+        await settle()
+        AiManager.undoChange()
+        expect(lines()).toEqual([
+            ["reference", "John 3:16", "shown"],
+            ["reference", "John 3:16", "undone"]
+        ])
+        expect(vi.mocked(logDetection).mock.calls[0][0]).toMatchObject({ heard: "john three sixteen", confidence: 98 })
+    })
+
+    it("has an offer once, and the showing when the operator takes it", async () => {
+        found({ type: "scripture", content: "John 3:16", confidence: 60, scriptureMatchType: "content" })
+        ai.set({ enabled: true, scripture: { confidence: "ask" } } as any)
+        await chunk("for god so loved")
+        await chunk("loved the world")
+        expect(lines()).toEqual([["quote", "John 3:16", "offered"]])
+        await get(aiSuggestions)[0].trigger?.()
+        expect(lines()[1]).toEqual(["quote", "John 3:16", "shown"])
+        ai.set({ enabled: true, scripture: { confidence: "high" }, lyrics: { confidence: "high" } } as any)
+    })
+
+    it("has a spoken command, but not what was asked for by name", async () => {
+        await AiManager.processUtterance("Back.")
+        manager.lastCommand = 0
+        await AiManager.navigateNow({ type: "verse-step", delta: 1 })
+        await AiManager.showReference("John 3:16")
+        expect(lines()).toEqual([["command", "John 3:15", "shown"]])
     })
 })

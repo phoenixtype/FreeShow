@@ -1,5 +1,6 @@
 export interface AiSettings {
     enabled?: boolean
+    detectionLog?: boolean // keep a record of what was detected (off unless switched on)
     stt?: SttSettings
     llm?: LlmSettings
 

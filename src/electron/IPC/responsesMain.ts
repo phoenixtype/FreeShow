@@ -27,6 +27,7 @@ import { deleteBackup, getBackups, restoreFiles } from "../data/backup"
 import { getLocalIPs } from "../data/bonjour"
 import { checkIfMediaDownloaded, downloadLessonsMedia, downloadMedia } from "../data/downloadMedia"
 import { importShow } from "../data/import"
+import { serviceRecords } from "../data/records"
 import { save } from "../data/save"
 import { _store, appDataPath, config, createStores, getStore, getStoreValue, setStoreValue } from "../data/store"
 import { captureSlide, doesMediaExist, getThumbnail, getThumbnailFolderPath, pdfToImage, saveImage } from "../data/thumbnails"
@@ -78,6 +79,7 @@ export const mainResponses: MainResponses = {
     [Main.DRIVE_API_KEY]: () => getStore("DRIVE_API_KEY"),
     [Main.HISTORY]: () => getStore("HISTORY"),
     [Main.USAGE]: () => getStore("USAGE"),
+    [Main.SERVICE_RECORDS]: (data) => serviceRecords(data),
     [Main.CACHE]: () => getStore("CACHE"),
     // WINDOW
     [Main.CLOSE]: () => closeMain(),
