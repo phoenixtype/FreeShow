@@ -50,3 +50,28 @@ describe("notarizing", () => {
         await expect(notarize({ ...context, electronPlatformName: "win32" })).resolves.toBeUndefined()
     })
 })
+
+describe("leftover upstream identifiers (R8)", () => {
+    it("names the package and its author as Scriptural Project", () => {
+        const pkg = JSON.parse(read("package.json"))
+        expect(pkg.name).toBe("scriptural-project")
+        expect(pkg.author).toBe("Scriptural Project <support@scriptural.online>")
+        // the data folder and the installed app's identity come from these two and must not move
+        expect(pkg.productName).toBe("Scriptural Project")
+        expect(read("config/building/electron-builder.yaml")).toContain("appId: online.scriptural.project")
+    })
+
+    it("carries no analytics account", () => {
+        expect(read("src/frontend/utils/analytics.ts")).not.toMatch(/google-analytics|G-[A-Z0-9]{6,}|api_secret/i)
+    })
+
+    it("gives the snap config no upstream contact or links", () => {
+        expect(read("config/building/snapcraft.yaml")).not.toMatch(/freeshow\.app|churchapps/i)
+    })
+
+    it("does not run another organisation's workflow on every push", () => {
+        const scan = read(".github/workflows/polinrider-scan.yml")
+        expect(scan).not.toMatch(/^ {2}(push|pull_request|schedule):/m)
+        expect(scan).toContain("workflow_dispatch:")
+    })
+})

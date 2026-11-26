@@ -1,19 +1,13 @@
-name: freeshow
+name: scriptural-project
 version: 1.4.9
-title: FreeShow
-summary: Show song lyrics and more for free!
-description: A dynamic, user-friendly, and open-source presenter built for all of your presentations.
+title: Scriptural Project
+summary: Songs, scripture and live scripture detection for church meetings
+description: Scriptural for church meetings. Songs, scripture and live scripture detection.
 contact:
-    - dev@freeshow.app
+    - support@scriptural.online
 license: GPL-3.0-or-later
-donation:
-    - https://churchapps.org/partner
-issues:
-    - https://github.com/churchapps/freeshow/issues
-source-code:
-    - https://github.com/churchapps/freeshow
 website:
-    - https://freeshow.app
+    - https://project.scriptural.online
 platforms:
     amd64:
         build-on: amd64
