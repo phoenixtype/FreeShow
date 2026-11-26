@@ -6,6 +6,7 @@
 import { get } from "svelte/store"
 import { uid } from "uid"
 import { activePage, activeProject, activeTimers, aiSuggestions, audioChannelsData, outLocked, outputs, overlays, paintCache, playingAudio, projects, scriptures, shows, showsCache, styles, sttTranscript, timers, ai } from "../../stores"
+import { API_ACTIONS } from "../../components/actions/api"
 import { addToProject, createProject, getClearedState, getPlainText, playMedia, toggleSttListening } from "../../components/actions/apiHelper"
 import { getShortBibleName } from "../../components/drawer/bible/scripture"
 import { clearAudio } from "../../audio/audioFading"
@@ -32,10 +33,12 @@ import { matchTitle, PAGES } from "../voice/matthias"
 import { matchVersion } from "../voice/versions"
 import { isHeld, setAgentMode } from "./control"
 import { listFromPoints } from "./listFromPoints"
+import { liveTools } from "./liveTools"
 import { mediaList } from "./mediaLibrary"
 import { openPage } from "./openPage"
 import { nextPlanItem, planItems, removeFromOpenPlan, showPlanItem } from "./planItems"
 import { currentScripture, presentPassage } from "./presentPassage"
+import { confirm, requireUnlocked, settle, text, ToolError, until } from "./toolBasics"
 
 export interface AgentTool {
     name: string
@@ -51,14 +54,9 @@ export interface AgentTool {
     run: (args: any) => Promise<unknown> | unknown
 }
 
-export class ToolError extends Error {}
+export { ToolError }
 
-const text = (description: string) => ({ type: "string", description })
 const none = { type: "object" as const, properties: {} }
-
-const requireUnlocked = () => {
-    if (get(outLocked)) throw new ToolError("The screen is locked in the app. The operator has to unlock it first.")
-}
 
 /** saving a song or list opens it for the operator; Matthias adds quietly, so their page stays put */
 function addQuietly<T>(add: () => T): T {
@@ -70,22 +68,6 @@ function addQuietly<T>(add: () => T): T {
     }
 }
 
-const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-/** waits for the screen to show what was asked, so the answer is what happened and not what was sent */
-async function until(done: () => boolean, timeoutMs = 6000): Promise<boolean> {
-    const end = Date.now() + timeoutMs
-    while (Date.now() < end) {
-        if (done()) return true
-        await settle(100)
-    }
-    return done()
-}
-
-/** throws when the screen never shows it: a tool may only say done when it happened */
-async function confirm(done: () => boolean, otherwise: string, timeoutMs = 3000) {
-    if (!(await until(done, timeoutMs))) throw new ToolError(otherwise)
-}
 const NOT_ON_SCREEN = "It did not reach the screen. Check that a screen is switched on."
 const liveOut = () => getFirstActiveOutput()?.out
 const snapshot = () => JSON.stringify(liveOut() || {})
@@ -581,9 +563,16 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "control_sound",
-        description: "The sound the app is playing: stop it, or mute and unmute it.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["stop", "mute", "unmute"] } }, required: ["command"] },
-        run: async ({ command }) => {
+        description: "The sound the app is playing: stop it, mute and unmute it, or change the main volume.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["stop", "mute", "unmute", "louder", "quieter", "set_volume"] }, percent: { type: "number", description: "For set_volume, 0 to 100" } }, required: ["command"] },
+        run: async ({ command, percent }) => {
+            if (command === "louder" || command === "quieter" || command === "set_volume") {
+                if (command === "set_volume" && !(Number(percent) >= 0 && Number(percent) <= 100 && percent !== undefined)) throw new ToolError("Say how loud, from 0 to 100 percent.")
+                const now = Math.round((get(audioChannelsData).main?.volume ?? 1) * 100)
+                const wanted = Math.min(100, Math.max(0, command === "set_volume" ? Math.round(Number(percent)) : now + (command === "louder" ? 10 : -10)))
+                API_ACTIONS.change_volume({ volume: wanted / 100 })
+                return { volume: `${wanted} percent` }
+            }
             if (command === "stop") {
                 clearAudio("", { clearPlaylist: true, commonClear: true })
                 // the music fades out; microphones are left alone
@@ -630,6 +619,7 @@ export const agentTools: AgentTool[] = [
             return "Done."
         }
     },
+    ...liveTools,
     {
         name: "show_media",
         description: "Show a media file by path.",

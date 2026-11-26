@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../stores", async () => {
     const { writable } = await import("svelte/store")
-    const names = ["activeTimers", "timers", "playingAudio", "activePage", "activeProject", "aiSuggestions", "audioChannelsData", "outLocked", "outputs", "overlays", "paintCache", "projects", "scriptures", "shows", "showsCache", "styles", "sttTranscript", "ai"]
+    const names = ["activeTimers", "timers", "playingAudio", "activePage", "activeProject", "aiSuggestions", "audioChannelsData", "outLocked", "outputs", "overlays", "paintCache", "playingVideos", "projects", "scriptures", "shows", "showsCache", "styles", "sttTranscript", "ai"]
     return Object.fromEntries(names.map((name) => [name, writable(name === "outLocked" ? false : name === "activeTimers" ? [] : {})]))
 })
 vi.mock("../../components/actions/apiHelper", () => ({ playMedia: vi.fn(), addToProject: vi.fn(), createProject: vi.fn(), getClearedState: vi.fn(() => ({ all: false })), getPlainText: vi.fn(), toggleSttListening: vi.fn() }))
 vi.mock("../../components/drawer/bible/scripture", () => ({}))
+const video = vi.hoisted(() => ({ duration: 0, time: 0, paused: false }))
+const api = vi.hoisted(() => ({ get_playing_video_state: vi.fn(() => ({ ...video })), video_seekto: vi.fn(), change_volume: vi.fn(), id_start_timer: vi.fn(), id_pause_timer: vi.fn(), id_stop_timer: vi.fn(), stop_timers: vi.fn() }))
+vi.mock("../../components/actions/api", () => ({ API_ACTIONS: api }))
+const player = vi.hoisted(() => ({ play: vi.fn(() => (video.paused = false)), pause: vi.fn(() => (video.paused = true)) }))
+vi.mock("../../components/media/video/videoPlayer", () => ({ VideoPlayer: player }))
 vi.mock("../../audio/audioFading", () => ({ clearAudio: vi.fn() }))
 vi.mock("../../components/actions/apiGet", () => ({ getOutputSlideText: () => "" }))
 const screen = vi.hoisted(() => ({ out: {} as any }))
@@ -40,7 +45,7 @@ vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 import { get } from "svelte/store"
 import { playMedia } from "../../components/actions/apiHelper"
 import { copilotListening } from "../liveCopilot"
-import { ai, outLocked, overlays, playingAudio, shows, timers } from "../../stores"
+import { activeTimers, ai, audioChannelsData, outLocked, overlays, playingAudio, shows, timers } from "../../stores"
 import { listAgentTools, runAgentTool } from "./agentTools"
 
 describe("agent tools", () => {
@@ -180,5 +185,68 @@ describe("finding a song by its words", () => {
     })
     it("says when no song has the line", async () => {
         expect((await runAgentTool("find_song_by_words", { line: "quarterly budget report" })).error).toMatch(/No song/)
+    })
+})
+
+describe("video, volume and timers go through the app's own actions", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        vi.useFakeTimers()
+        outLocked.set(false)
+        screen.out = { background: { path: "/v/welcome.mp4" } }
+        Object.assign(video, { duration: 100, time: 40, paused: false })
+        activeTimers.set([])
+        timers.set({ o: { name: "Offering", type: "counter" }, s: { name: "Sermon", type: "counter" } } as any)
+        audioChannelsData.set({ main: { volume: 0.5 } } as any)
+    })
+    afterEach(() => vi.useRealTimers())
+    const run = async (name: string, args: any) => {
+        const answer = runAgentTool(name, args)
+        await vi.advanceTimersByTimeAsync(10_000)
+        return answer
+    }
+
+    it("pauses, plays and skips the video on screen", async () => {
+        expect((await run("control_video", { command: "pause" })).ok).toBe(true)
+        expect(player.pause).toHaveBeenCalledWith("/v/welcome.mp4", "o")
+        expect((await run("control_video", { command: "play" })).ok).toBe(true)
+        await run("control_video", { command: "forward", seconds: 30 })
+        expect(api.video_seekto).toHaveBeenLastCalledWith({ seconds: 70 })
+        await run("control_video", { command: "back", seconds: 90 })
+        expect(api.video_seekto).toHaveBeenLastCalledWith({ seconds: 0 })
+        await run("control_video", { command: "restart" })
+        expect(api.video_seekto).toHaveBeenLastCalledWith({ seconds: 0 })
+    })
+    it("says there is no video, and leaves a locked screen alone", async () => {
+        video.duration = 0
+        expect((await run("control_video", { command: "pause" })).error).toMatch(/No video/)
+        video.duration = 100
+        outLocked.set(true)
+        expect((await run("control_video", { command: "pause" })).ok).toBe(false)
+        expect(player.pause).not.toHaveBeenCalled()
+    })
+    it("turns the volume a step, or to a number", async () => {
+        api.change_volume.mockImplementation(({ volume }) => audioChannelsData.set({ main: { volume } } as any))
+        expect((await run("control_sound", { command: "louder" })).result).toEqual({ volume: "60 percent" })
+        expect((await run("control_sound", { command: "set_volume", percent: 5 })).result).toEqual({ volume: "5 percent" })
+        expect(api.change_volume).toHaveBeenLastCalledWith({ volume: 0.05 })
+        expect((await run("control_sound", { command: "quieter" })).result).toEqual({ volume: "0 percent" })
+        expect((await run("control_sound", { command: "set_volume" })).error).toMatch(/how loud/)
+    })
+    it("starts, pauses and stops a timer by its name", async () => {
+        api.id_start_timer.mockImplementation(({ id }) => activeTimers.set([{ id }]))
+        api.id_pause_timer.mockImplementation(({ id }) => activeTimers.set([{ id, paused: true }]))
+        api.id_stop_timer.mockImplementation(() => activeTimers.set([]))
+        expect((await run("control_timer", { command: "start", name: "offering" })).ok).toBe(true)
+        expect(api.id_start_timer).toHaveBeenCalledWith({ id: "o" })
+        expect((await run("control_timer", { command: "pause", name: "Offering" })).ok).toBe(true)
+        expect((await run("control_timer", { command: "stop", name: "Offering" })).ok).toBe(true)
+        expect((await run("control_timer", { command: "start", name: "lunch" })).error).toMatch(/Offering, Sermon|Nothing named/)
+        expect((await run("control_timer", {})).result).toEqual({
+            timers: [
+                { name: "Offering", running: false },
+                { name: "Sermon", running: false }
+            ]
+        })
     })
 })

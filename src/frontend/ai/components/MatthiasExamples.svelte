@@ -11,7 +11,7 @@
         { icon: "scripture", name: "Scripture", say: ["John three sixteen", "Next verse", "Read that in the NLT"] },
         { icon: "search", name: "Find", say: ["Find the verse about being anxious", "Another one"] },
         { icon: "song", name: "Songs", say: ["Sing Amazing Grace", "Back to the chorus", "Find the song that says how sweet the sound"] },
-        { icon: "project", name: "Service", say: ["Start the service", "Next item", "What's next?"] },
+        { icon: "project", name: "Service", say: ["Start the service", "Next item", "What's next?", "Pause the video", "Start the offering timer", "Volume up"] },
         { icon: "paint", name: "Draw", say: ["Draw what the preacher is describing", "Draw a cross", "Clean up the drawing", "Clear the drawing"] },
         { icon: "list", name: "Lists", say: ["List the main points", "Make a list from this message"] },
         { icon: "slide", name: "Screen", say: ["Clear the screen", "Bring it back", "Take over", "Stand down"] }

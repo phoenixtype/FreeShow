@@ -91,7 +91,9 @@ export type Request =
     | { type: "remove-from-plan"; what: string }
     | { type: "overlay"; name: string; on: boolean }
     | { type: "media"; name: string; kind?: "image" | "video" }
-    | { type: "audio"; command: "stop" | "mute" | "unmute" }
+    | { type: "audio"; command: "stop" | "mute" | "unmute" | "louder" | "quieter" | "set_volume"; percent?: number }
+    | { type: "video"; command: "play" | "pause" | "restart" | "forward" | "back"; seconds?: number }
+    | { type: "named-timer"; command: "start" | "pause" | "stop" | "stop_all"; name?: string }
     | { type: "countdown"; seconds: number; add?: boolean }
     | { type: "timer"; command: "start" | "next" | "play_pause" }
     | { type: "page"; page: PageName }
@@ -154,7 +156,7 @@ const POLITE = /^(?:(?:please|kindly|now|uh|um|so|okay|ok|just|quickly|go ahead 
 const THEN = /\s*(?:[,;]\s*)?\b(?:and then|and after that|after that|then)\b\s*/i
 const AND = /\s*,?\s+and\s+/i
 // what may follow a bare "and": never an open request, "and" is an ordinary word in those
-const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan"]
+const FOLLOWS = ["draw", "drawing", "clear", "clear-layer", "restore", "slide", "goto-slide", "section", "navigate", "version", "lock", "screen", "again", "plan", "timer", "agent", "audio", "countdown", "overlay", "remove-from-plan", "video", "named-timer"]
 
 /** the requests in what was said, in order; one that is not understood keeps it all together */
 export function parseRequests(spoken: string): Request[] {
@@ -196,6 +198,29 @@ function nearestCommand(words: string): string | null {
     return scored[0].score <= 0.25 && scored[1].score - scored[0].score > 0.05 ? scored[0].command : null
 }
 
+const VIDEO = "(?:the |our |this |that )?(?:video|clip|movie)"
+
+/** only "the video": a video asked for by name is one to put up */
+function videoRequest(t: string): Request | null {
+    if (new RegExp(`^(?:restart|replay) ${VIDEO}$|^(?:start|play) ${VIDEO} (?:again|over|from the (?:start|beginning|top))$`).test(t)) return { type: "video", command: "restart" }
+    if (new RegExp(`^pause ${VIDEO}$|^stop ${VIDEO}$`).test(t)) return { type: "video", command: "pause" }
+    if (new RegExp(`^(?:play|start|resume|unpause|continue) ${VIDEO}$`).test(t)) return { type: "video", command: "play" }
+    const skip = t.match(new RegExp(`^(?:(skip|jump|go|fast forward|forward)(?: ${VIDEO})?(?: (forward|ahead|on|back))?|(rewind|back)(?: ${VIDEO})?)(?: (\\d{1,3}) seconds?)?$`))
+    if (!skip) return null
+    const back = !!skip[3] || skip[2] === "back"
+    // "go on" and "forward" move the reading or the slide: a skip says how long, or names the video
+    if (!skip[4] && !(back && /video|clip|movie/.test(t))) return null
+    return { type: "video", command: back ? "back" : "forward", ...(skip[4] ? { seconds: Number(skip[4]) } : {}) }
+}
+
+const SOUND = "(?:the )?(?:volume|music|sound|audio)"
+function volumeRequest(t: string): Request | null {
+    if (new RegExp(`^(?:turn up ${SOUND}|turn ${SOUND} up|volume up|(?:a (?:bit|little) )?louder|(?:raise|increase) ${SOUND})$`).test(t)) return { type: "audio", command: "louder" }
+    if (new RegExp(`^(?:turn down ${SOUND}|turn ${SOUND} down|volume down|(?:a (?:bit|little) )?(?:quieter|softer)|(?:lower|decrease|reduce) ${SOUND})$`).test(t)) return { type: "audio", command: "quieter" }
+    const set = t.match(/^(?:(?:set|put|turn) (?:the )?)?volume (?:to |at )?(\d{1,3}|half)(?: ?percent| ?%)?$/)
+    return set ? { type: "audio", command: "set_volume", percent: set[1] === "half" ? 50 : Math.min(100, Number(set[1])) } : null
+}
+
 function parseWords(t: string): Request {
     if (!t) return { type: "unknown", words: "" }
     const remembered = t.match(REMEMBERED)
@@ -216,6 +241,11 @@ function parseWords(t: string): Request {
     if (/^(?:show|put up|read|repeat|give us|put) (?:it|that|this)(?: one)?(?: up)? again$|^(?:repeat|again|once more|one more time)(?: (?:it|that|this))?$/.test(t)) return { type: "again" }
     if (/^(?:(?:go )?back to|show|bring back|put up) (?:the )?(?:(?:previous|last) (?:scripture|passage|song)|one before|what was up before|what we had before)(?: again)?$|^(?:previous|last) (?:scripture|passage)$/.test(t)) return { type: "before", ...(/scripture|passage/.test(t) ? { kind: "scripture" } : /song/.test(t) ? { kind: "song" } : {}) }
     if (/^(?:bring|put) (?:it|that|this) back(?: up)?$|^undo$|^restore(?: it| the screen)?$/.test(t)) return { type: "restore" }
+    const clock = normalizeNumberWords(t)
+    const video = videoRequest(clock)
+    if (video) return video
+    const volume = volumeRequest(clock)
+    if (volume) return volume
     const overlay = t.match(/^(show|put up|put on|bring up|turn on|hide|remove|take down|take off|clear|turn off) (?:the |our )?(?:(logo|watermark)|(.+?) overlay)$/)
     if (overlay) return { type: "overlay", name: overlay[2] || overlay[3], on: /^(?:show|put|bring|turn on)/.test(overlay[1]) }
     const media = t.match(/^(?:show|play|put up|put on|bring up|start|run|project|display) (?:the |our )?(.+?) (video|clip|movie|picture|image|photo|background)$|^(?:change|set|switch) (?:the )?background to (?:the )?(.+)$/)
@@ -223,7 +253,6 @@ function parseWords(t: string): Request {
     if (/^(?:stop|turn off|fade(?: out)?|kill|cut|end) (?:the )?(?:music|audio|sound|track|pads?)$/.test(t)) return { type: "audio", command: "stop" }
     if (/^(?:mute|silence)(?: (?:the )?(?:music|audio|sound|track|speakers?|everything))$/.test(t)) return { type: "audio", command: "mute" }
     if (/^unmute(?: (?:the )?(?:music|audio|sound|track|speakers?|everything))?$/.test(t)) return { type: "audio", command: "unmute" }
-    const clock = normalizeNumberWords(t)
     const count = clock.match(/^(?:start|set|begin|put|run|give(?: (?:him|her|them|the (?:speaker|preacher|pastor)|pastor))?|set up) (?:a |an |the |up )*(?:(?:timer|countdown|clock)(?: (?:for|of|to))? )?(\d{1,3}|a|one|half an)[ -](minutes?|seconds?|hours?)(?: (?:timer|countdown|clock|for the (?:speaker|preacher|sermon)|to speak))?$/)
     const more = clock.match(/^(?:add|give (?:him|her|them|the (?:speaker|preacher|pastor)|pastor)) (\d{1,2}|an?) (?:more |extra )?(minutes?|seconds?)(?: more| to the (?:timer|clock|countdown))?$/)
     const span = (amount: string, unit: string) => (amount === "half an" ? 0.5 : Number(amount) || 1) * (unit.startsWith("hour") ? 3600 : unit.startsWith("min") ? 60 : 1)
@@ -260,8 +289,12 @@ function parseWords(t: string): Request {
     // anything else about a plan is for the model, not for the screen
     if (/\b(?:plan|project|set ?list)\b/.test(t) && !/^(?:find|search|what does|project)/.test(t)) return { type: "unknown", words: t }
     if (/^start (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "start" }
+    if (/^(?:stop|clear|reset) (?:all (?:the )?|the )?timers$|^stop (?:all|every) (?:timers?|countdowns?|clocks?)$/.test(t)) return { type: "named-timer", command: "stop_all" }
     if (/^(?:next|go to the next) (?:segment|speaker)$/.test(t)) return { type: "timer", command: "next" }
     if (/^(?:pause|stop|resume|continue) (?:the )?(?:speaker(?:'s)? )?(?:timer|countdown|clock)$/.test(t)) return { type: "timer", command: "play_pause" }
+
+    const timer = t.match(/^(start|run|begin|resume|pause|stop|reset) (?:the |our )?(?!(?:speaker|song|hymn|chorus)\b)(.+?) (?:timer|countdown|clock)$/)
+    if (timer) return { type: "named-timer", command: timer[1] === "pause" ? "pause" : /stop|reset/.test(timer[1]) ? "stop" : "start", name: timer[2] }
 
     if (/^(?:what|which) (?:verse|scripture|passage|song) is (?:this|that|it|on|up|showing)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }
     if (/^what(?:'s| is)(?: showing| up)?(?: on)?(?: the)?(?: screen| up| showing)$|^what is (?:up|showing)$/.test(t) || /^what(?:'s| is)(?: on)?$/.test(t)) return { type: "tell", about: "screen" }

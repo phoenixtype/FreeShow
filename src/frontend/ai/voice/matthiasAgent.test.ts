@@ -334,3 +334,18 @@ it("says that the plan is the reason there is no answer", async () => {
     expect(get(matthiasStatus)).toEqual({ state: "failed", text: "Scriptural AI comes with a Church plan." })
     planProblem.set("")
 })
+
+it("moves the video, turns the volume and runs a named timer", async () => {
+    await Matthias.ask("pause the video")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_video", { command: "pause" })
+    await Matthias.ask("skip ahead ten seconds")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_video", { command: "forward", seconds: 10 })
+    await Matthias.ask("set the volume to 40")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_sound", { command: "set_volume", percent: 40 })
+    await Matthias.ask("louder")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_sound", { command: "louder" })
+    await Matthias.ask("start the offering timer")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_timer", { command: "start", name: "offering" })
+    await Matthias.ask("stop all timers")
+    expect(runAgentTool).toHaveBeenLastCalledWith("control_timer", { command: "stop_all" })
+})

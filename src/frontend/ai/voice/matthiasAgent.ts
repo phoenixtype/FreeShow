@@ -221,15 +221,25 @@ export class Matthias {
                 return request.add ? `Added ${spell(request.seconds)}` : `Timer: ${spell(request.seconds)}`
             case "find-song":
                 return this.findSong(request.line)
-            case "audio":
-                await this.tool("control_sound", { command: request.command })
-                return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : "Sound is on"
+            case "audio": {
+                const result = await this.tool("control_sound", { command: request.command, ...(request.percent === undefined ? {} : { percent: request.percent }) })
+                return request.command === "stop" ? "Music stopped" : request.command === "mute" ? "Sound is off" : request.command === "unmute" ? "Sound is on" : `Volume: ${result.volume || "changed"}`
+            }
+            case "named-timer": {
+                await this.tool("control_timer", { command: request.command, ...(request.name ? { name: request.name } : {}) })
+                if (request.command === "stop_all") return "All timers stopped"
+                return `${request.name} timer ${request.command === "start" ? "started" : request.command === "pause" ? "paused" : "stopped"}`
+            }
             case "unknown":
                 return this.think(asked)
         }
 
         if (get(outLocked)) throw new ToolError("The screen is locked")
         switch (request.type) {
+            case "video": {
+                await this.tool("control_video", { command: request.command, ...(request.seconds ? { seconds: request.seconds } : {}) })
+                return { play: "Video playing", pause: "Video paused", restart: "Video from the start", forward: "Skipped forward", back: "Skipped back" }[request.command]
+            }
             case "screen":
                 await this.tool("control_screen", { command: request.on ? "screen_on" : "screen_off" })
                 return request.on ? "The screen is on" : "The screen is off"
