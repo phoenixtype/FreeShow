@@ -52,9 +52,11 @@ describe("notarizing", () => {
 })
 
 describe("leftover upstream identifiers (R8)", () => {
-    it("names the package and its author as Scriptural Project", () => {
+    it("names the author as Scriptural Project and keeps the package name", () => {
         const pkg = JSON.parse(read("package.json"))
-        expect(pkg.name).toBe("scriptural-project")
+        // the package name stays: changing it renames the Linux package (an old install would stay
+        // beside the new one) and can move the Windows install folder
+        expect(pkg.name).toBe("freeshow")
         expect(pkg.author).toBe("Scriptural Project <support@scriptural.online>")
         // the data folder and the installed app's identity come from these two and must not move
         expect(pkg.productName).toBe("Scriptural Project")
