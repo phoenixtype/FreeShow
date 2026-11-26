@@ -211,6 +211,15 @@ describe("backup.ts", () => {
             expect(sendToMain).toHaveBeenCalledWith(ToMain.RESTORE2, { finished: true })
         })
 
+        it("restores synced settings into their own store, never over this computer's settings", async () => {
+            vi.mocked(decompressZip).mockResolvedValue([{ name: "SYNCED_SETTINGS.json", content: JSON.stringify({ categories: {} }) }] as any)
+
+            await restoreFiles({ path: "/mock/backups/backup.zip" })
+
+            expect(setStore).toHaveBeenCalledWith(_store.SYNCED_SETTINGS, { categories: {} })
+            expect(setStore).not.toHaveBeenCalledWith(_store.SETTINGS, expect.anything())
+        })
+
         it("restores legacy SHOWS_CONTENT format", async () => {
             vi.mocked(readFolder).mockReturnValue(["SHOWS_CONTENT.json"])
             vi.mocked(readFile).mockReturnValue(JSON.stringify({ s1: { name: "Show One" } }))

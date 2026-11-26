@@ -228,7 +228,8 @@ export async function restoreFiles(data?: { path: string }) {
             return
         }
 
-        if (filePath.includes("SETTINGS")) {
+        // exactly SETTINGS.json: SYNCED_SETTINGS has its own store
+        if (path.basename(filePath, ".json") === "SETTINGS") {
             restoreStore(file.content, "SETTINGS")
             return
         }
