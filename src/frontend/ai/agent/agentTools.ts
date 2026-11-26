@@ -15,7 +15,6 @@ import { setPaintLines } from "../../components/draw/paintLines"
 import { cleanUp, illustrate, MAX_SHAPES, toStrokes } from "./illustration"
 import { loadShows } from "../../components/helpers/setShow"
 import { getLayoutRef } from "../../components/helpers/show"
-import { startShow } from "../../components/helpers/showActions"
 import { clearAll, clearBackground, clearOverlays, clearSlide, restoreOutput } from "../../components/output/clear"
 import { addSpeakerTime, nextProgramSegment, playPauseSpeaker, setSpeakerDuration, startProgram } from "../../components/drawer/timers/speakerTimerActions"
 import { SPEAKER_TIMER_ID } from "../../components/drawer/timers/speakerTimer"
@@ -23,6 +22,7 @@ import { convertText } from "../../converters/txt"
 import { ANON_KEY, FUNCTIONS_URL } from "../../scriptural/connection"
 import { setActiveScripture } from "../../converters/bible"
 import { copilotListening } from "../liveCopilot"
+import { AiManager } from "../manager/AiManager"
 import { stepScreen } from "./stepScreen"
 import { onScreenTitle } from "../components/floating/onScreen"
 import { openProject } from "../../components/show/project"
@@ -275,7 +275,13 @@ export const agentTools: AgentTool[] = [
             const passage = await readPassage(String(reference))
             if (!passage) throw new ToolError(`${reference} was not found in the open Bible. Check the reference, or open a Bible in the Scripture drawer.`)
             const before = JSON.stringify(getFirstActiveOutput()?.out?.slide || null)
-            await presentPassage(String(reference))
+            // the same way Matthias shows it, so "bring it back" knows about it (it goes through presentPassage)
+            try {
+                await AiManager.showReference(String(reference))
+            } catch (err) {
+                console.warn("show_scripture:", err)
+                throw new ToolError("The passage did not reach the screen. Check that a screen is switched on.")
+            }
             const shown = await until(() => getFirstActiveOutput()?.out?.slide?.id === "temp" && JSON.stringify(getFirstActiveOutput()?.out?.slide) !== before)
             // asking for what is already up changes nothing, and that is fine
             const live = liveState()
@@ -332,7 +338,7 @@ export const agentTools: AgentTool[] = [
             const total = getLayoutRef(found.id).length
             const index = Math.max(1, Number(slide) || 1) - 1
             if (index >= total) throw new ToolError(`"${found.name}" has ${total} slide${total === 1 ? "" : "s"}.`)
-            await startShow(found.id, index)
+            await AiManager.showSong(found, index)
             if (!(await until(() => getFirstActiveOutput()?.out?.slide?.id === found.id, 3000))) throw new ToolError("It did not reach the screen. Check that a screen is switched on.")
             return liveState().showing
         }

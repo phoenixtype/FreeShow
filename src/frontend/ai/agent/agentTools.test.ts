@@ -13,7 +13,7 @@ vi.mock("../../components/helpers/output", () => ({ getFirstActiveOutput: () => 
 vi.mock("../../components/draw/paintLines", () => ({}))
 vi.mock("./illustration", () => ({ MAX_SHAPES: 10 }))
 vi.mock("../../components/helpers/setShow", () => ({ loadShows: vi.fn() }))
-vi.mock("../../components/helpers/show", () => ({}))
+vi.mock("../../components/helpers/show", () => ({ getLayoutRef: () => [{}, {}, {}] }))
 vi.mock("../../components/helpers/showActions", () => ({}))
 vi.mock("../../components/output/clear", () => ({ clearAll: vi.fn(), clearBackground: vi.fn(), clearOverlays: vi.fn(), clearSlide: vi.fn(), restoreOutput: vi.fn() }))
 vi.mock("../../components/drawer/timers/speakerTimerActions", () => ({ addSpeakerTime: vi.fn(), nextProgramSegment: vi.fn(), playPauseSpeaker: vi.fn(), setSpeakerDuration: vi.fn(), startProgram: vi.fn() }))
@@ -24,7 +24,7 @@ vi.mock("../liveCopilot", async () => ({ copilotListening: (await import("svelte
 vi.mock("./stepScreen", () => ({ stepScreen: vi.fn(async () => true) }))
 vi.mock("../components/floating/onScreen", () => ({ onScreenTitle: () => "" }))
 vi.mock("../../components/show/project", () => ({}))
-vi.mock("../scripture/passage", () => ({}))
+vi.mock("../scripture/passage", () => ({ readPassage: vi.fn(async () => "For God so loved the world") }))
 vi.mock("../songs/librarySongs", () => ({}))
 vi.mock("../voice/matthias", () => ({ PAGES: [], matchTitle: (_n: string, list: any[]) => list[0] || null }))
 vi.mock("../voice/versions", () => ({}))
@@ -33,11 +33,13 @@ vi.mock("./listFromPoints", () => ({}))
 vi.mock("./mediaLibrary", () => ({ mediaList: () => [{ id: "/v/welcome.mp4", name: "welcome", kind: "video" }] }))
 vi.mock("./openPage", () => ({}))
 vi.mock("./planItems", () => ({ planItems: () => [{ id: "s1", index: 0, label: "Amazing Grace", type: "show" }], nextPlanItem: () => ({ id: "s1", index: 0, label: "Amazing Grace", type: "show" }), showPlanItem: vi.fn(), removeFromOpenPlan: vi.fn() }))
-vi.mock("./presentPassage", () => ({}))
+vi.mock("./presentPassage", () => ({ presentPassage: vi.fn() }))
+const manager = vi.hoisted(() => ({ showReference: vi.fn(), showSong: vi.fn() }))
+vi.mock("../manager/AiManager", () => ({ AiManager: manager }))
 import { get } from "svelte/store"
 import { playMedia } from "../../components/actions/apiHelper"
 import { copilotListening } from "../liveCopilot"
-import { ai, outLocked, overlays, playingAudio, timers } from "../../stores"
+import { ai, outLocked, overlays, playingAudio, shows, timers } from "../../stores"
 import { listAgentTools, runAgentTool } from "./agentTools"
 
 describe("agent tools", () => {
@@ -115,5 +117,34 @@ describe("a tool says done only when it happened", () => {
         expect((await run("speaker_timer", { command: "add", minutes: 2 })).ok).toBe(false)
         expect((await run("speaker_timer", { command: "start" })).ok).toBe(false)
         expect((await run("speaker_timer", { command: "set", minutes: 5 })).ok).toBe(false)
+    })
+})
+
+// what a tool puts up is Matthias's too, so "bring it back" and "the song before" know about it
+describe("showing by tool goes through the copilot's own memory", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        outLocked.set(false)
+        screen.out = {}
+    })
+
+    it("shows scripture with AiManager.showReference", async () => {
+        manager.showReference.mockImplementationOnce(async () => (screen.out = { slide: { id: "temp" } }))
+        const answer = await runAgentTool("show_scripture", { reference: "John 3:16" })
+        expect(manager.showReference).toHaveBeenCalledWith("John 3:16")
+        expect(answer.ok).toBe(true)
+    })
+
+    it("says so when the passage cannot be put up", async () => {
+        manager.showReference.mockRejectedValueOnce(new Error("John 3:16 could not be put up"))
+        expect(await runAgentTool("show_scripture", { reference: "John 3:16" })).toEqual({ ok: false, error: expect.stringMatching(/did not reach the screen/) })
+    })
+
+    it("shows a song with AiManager.showSong, from the slide asked for", async () => {
+        shows.set({ s1: { name: "Amazing Grace" } } as any)
+        manager.showSong.mockImplementationOnce(async () => (screen.out = { slide: { id: "s1" } }))
+        const answer = await runAgentTool("present_song", { name: "Amazing Grace", slide: 2 })
+        expect(manager.showSong).toHaveBeenCalledWith({ id: "s1", name: "Amazing Grace" }, 1)
+        expect(answer.ok).toBe(true)
     })
 })
