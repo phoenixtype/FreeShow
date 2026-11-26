@@ -36,3 +36,8 @@ export function shouldRetryListening(input: { state: string; asked: boolean; pro
     if (input.state !== "error" || !input.asked) return false
     return input.problem !== "model" && input.problem !== "permission"
 }
+
+export function downloadPercent(download: { progress: number; total: number } | undefined) {
+    if (!download?.total) return null
+    return Math.min(100, Math.floor((download.progress / download.total) * 100))
+}

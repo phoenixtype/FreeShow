@@ -8,6 +8,7 @@
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import { activePopup, ai, mediaDownloads, popupData } from "../../../stores"
     import { copilotListening } from "../../liveCopilot"
+    import { downloadPercent } from "../../stt/listenStatus"
     import { resolveSttEngine, SPOKEN_LANGUAGES, SpeechToText } from "../../stt/stt"
 
     $: options = $ai.stt || {}
@@ -44,6 +45,8 @@
         if (currentlyDownloading.size < downloadingCount) getStatus()
         downloadingCount = currentlyDownloading.size
     }
+
+    $: percent = downloadPercent($mediaDownloads.get("nemotron"))
 
     // MICS
 
@@ -96,7 +99,7 @@
     <MaterialDropdown label="Microphone" options={microphones} value={options.micDeviceId || ""} on:change={(e) => updateValue("micDeviceId", e.detail)} />
     <MaterialDropdown label="Spoken language" options={languages} value={options.engineOptions?.[selectedEngine]?.language || ""} on:change={(e) => updateLanguage(e.detail)} />
 {:else if currentlyDownloading?.size}
-    <p class="note">Getting the speech model ready. This happens once.</p>
+    <p class="note">Getting the speech model ready{percent === null ? "" : `: ${percent}%`}. This happens once (about 680 MB).</p>
 {:else}
     <!-- the speech model runs on this computer; it has to be downloaded once before listening -->
     <div class="setup">

@@ -2,13 +2,13 @@
     import { onMount } from "svelte"
     import type { EngineStatus } from "../../../../types/ai/Ai"
     import { Main } from "../../../../types/IPC/Main"
-    import T from "../../../components/helpers/T.svelte"
     import MaterialButton from "../../../components/inputs/MaterialButton.svelte"
     import Loader from "../../../components/main/Loader.svelte"
     import Tip from "../../../components/main/Tip.svelte"
     import { requestMain } from "../../../IPC/main"
-    import { mediaDownloads } from "../../../stores"
+    import { activePopup, mediaDownloads } from "../../../stores"
     import { newToast } from "../../../utils/common"
+    import { downloadPercent } from "../../stt/listenStatus"
 
     const engine = "nemotron"
 
@@ -30,34 +30,23 @@
     // the whole multi-file download reports under one stable "nemotron" key
     $: modelDownload = $mediaDownloads.get("nemotron")
     $: isModelDownloading = modelDownloadStarted || modelDownload?.status === "downloading"
-
-    function getPercent(download: { progress: number; total: number } | undefined) {
-        if (!download?.total) return ""
-        return ` ${Math.min(100, Math.floor((download.progress / download.total) * 100))}%`
-    }
+    $: percent = downloadPercent(modelDownload)
 
     // NEMOTRON MODEL
 
     let modelDownloadStarted = false
+    let unfinished = false
     async function downloadModel() {
         if (isModelDownloading) return
         modelDownloadStarted = true
+        unfinished = false
 
-        await requestMain(Main.AI_SETUP, { action: "download", engineId: "nemotron" }, undefined, 60 * 60 * 1000)
+        const done = await requestMain(Main.AI_SETUP, { action: "download", engineId: "nemotron" }, undefined, 60 * 60 * 1000)
         modelDownloadStarted = false
 
-        getStatus()
+        await getStatus()
+        unfinished = !done && !status?.ready
     }
-
-    // function cancelDownload() {
-    //     sendMain(Main.AI_SETUP, { action: "cancel", engineId: "nemotron" })
-    //     modelDownloadStarted = false
-    // }
-
-    // function deleteModel() {
-    //     sendMain(Main.AI_SETUP, { action: "delete", engineId: "nemotron" })
-    //     setTimeout(getStatus, 200)
-    // }
 </script>
 
 {#if !status}
@@ -66,12 +55,30 @@
     </div>
 {:else if status.unsupported}
     <Tip type="warning" value={status.error} />
-{:else if !status.ready}
-    <MaterialButton variant="outlined" icon="download" disabled={isModelDownloading} style="align-self: flex-end;margin-inline-start: auto;" on:click={downloadModel}>
-        <T id="cloud.replace" />{getPercent(modelDownload)}
-    </MaterialButton>
-
-    <!-- {#if isModelDownloading}
-            <MaterialButton variant="outlined" icon="close" title="actions.cancel" on:click={cancelDownload} />
-        {/if} -->
+{:else if status.ready}
+    <div class="row">
+        <p>The speech model is ready.</p>
+        <MaterialButton variant="contained" on:click={() => activePopup.set(null)}>Done</MaterialButton>
+    </div>
+{:else}
+    {#if unfinished}
+        <p class="problem" role="alert">The download did not finish. Check your internet connection and free disk space, then try again.</p>
+    {/if}
+    <div class="row">
+        <p>{isModelDownloading ? `Downloading${percent === null ? "" : ` ${percent}%`}` : "About 680 MB, downloaded once."}</p>
+        <MaterialButton variant="contained" icon="download" disabled={isModelDownloading} on:click={downloadModel}>{unfinished ? "Try again" : "Get the speech model"}</MaterialButton>
+    </div>
 {/if}
+
+<style>
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .problem {
+        margin-block: 6px;
+    }
+</style>

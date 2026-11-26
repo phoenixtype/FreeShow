@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { classifyListenError, isSilent, listenNotice, NO_AUDIO_MS, RECOVERY_DELAYS, SILENCE_NOTICE_MS, shouldRetryListening, streamLost } from "./listenStatus"
+import { classifyListenError, downloadPercent, isSilent, listenNotice, NO_AUDIO_MS, RECOVERY_DELAYS, SILENCE_NOTICE_MS, shouldRetryListening, streamLost } from "./listenStatus"
 
 describe("what went wrong with listening", () => {
     it("tells a missing speech model from a blocked microphone and anything else", () => {
@@ -36,6 +36,15 @@ describe("recovering a lost microphone", () => {
         const now = 100_000
         expect(isSilent(now, now - (SILENCE_NOTICE_MS - 1))).toBe(false)
         expect(isSilent(now, now - SILENCE_NOTICE_MS)).toBe(true)
+    })
+})
+
+describe("speech model download", () => {
+    it("shows whole percent, and nothing until the size is known", () => {
+        expect(downloadPercent({ progress: 341_100_000, total: 682_200_000 })).toBe(50)
+        expect(downloadPercent({ progress: 700, total: 600 })).toBe(100)
+        expect(downloadPercent({ progress: 0, total: 0 })).toBeNull()
+        expect(downloadPercent(undefined)).toBeNull()
     })
 })
 
