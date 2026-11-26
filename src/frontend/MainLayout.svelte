@@ -142,12 +142,10 @@
     }
 
     .column {
-        --copilot-width: clamp(400px, 32vw, 480px);
+        --copilot-width: clamp(320px, 32vw, 480px);
     }
-    @media screen and (min-width: 1180px) {
-        .column.docked {
-            padding-inline-end: var(--copilot-width);
-        }
+    .column.docked {
+        padding-inline-end: var(--copilot-width);
     }
 
     .row {
