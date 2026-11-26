@@ -31,7 +31,7 @@ export async function startBackup({ customTriggers, isCloudSync }: { customTrigg
         await syncBibles()
     } else {
         // "SYNCED_SETTINGS" and "STAGE" has to be before "SETTINGS" and "SHOWS" (can't remember why)
-        await syncStores("SETTINGS")
+        syncSettings()
     }
 
     // SHOWS
@@ -61,6 +61,13 @@ export async function startBackup({ customTriggers, isCloudSync }: { customTrigg
         if (store) entries.push({ name: id + ".json", filePath: store.path })
     }
 
+    // the agent token lets a program run the screen: it stays on this computer
+    function syncSettings() {
+        const settings: any = _store.SETTINGS?.store
+        if (!settings?.serverData?.agents?.password) return syncStores("SETTINGS")
+        entries.push({ name: "SETTINGS.json", content: JSON.stringify(withAgentToken(settings, "")) })
+    }
+
     async function syncBibles() {
         const biblesPath = getDataFolderPath("scriptures")
         if (!fs.existsSync(biblesPath)) return
@@ -86,6 +93,12 @@ export async function startBackup({ customTriggers, isCloudSync }: { customTrigg
             }
         }
     }
+}
+
+/** the settings with this agent token, or with none */
+function withAgentToken(settings: any, token: string) {
+    const { password: _, ...agents } = settings.serverData.agents
+    return { ...settings, serverData: { ...settings.serverData, agents: token ? { ...agents, password: token } : agents } }
 }
 
 export function getBackups() {
@@ -238,14 +251,16 @@ export async function restoreFiles(data?: { path: string }) {
 
         const data = JSON.parse(file)
 
+        let restored = data
         if (storeId === "SETTINGS") {
             delete data.dataPath
             delete data.showsPath
+            if (data.serverData?.agents) restored = withAgentToken(data, (_store.SETTINGS as any)?.store?.serverData?.agents?.password || "")
         }
 
-        setStore(_store[storeId], data)
+        setStore(_store[storeId], restored)
 
-        sendMain(storeId as Main, data)
+        sendMain(storeId as Main, restored)
     }
 
     function restoreShows(file: string) {
