@@ -100,6 +100,16 @@ create policy "editors upload church media" on storage.objects for insert to aut
             and public.church_within_plan(((storage.foldername(name))[1])::uuid)
             and public.church_storage_room(((storage.foldername(name))[1])::uuid) > 0
         else false end);
+-- replacing a file can make it bigger, so it needs room too
+drop policy "editors replace church media" on storage.objects;
+create policy "editors replace church media" on storage.objects for update to authenticated
+    using (case when bucket_id = 'church-media' and (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
+        then public.has_church_role(((storage.foldername(name))[1])::uuid, array['owner', 'admin', 'editor']) else false end)
+    with check (case when bucket_id = 'church-media' and (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
+        then public.has_church_role(((storage.foldername(name))[1])::uuid, array['owner', 'admin', 'editor'])
+            and public.church_within_plan(((storage.foldername(name))[1])::uuid)
+            and public.church_storage_room(((storage.foldername(name))[1])::uuid) > 0
+        else false end);
 create policy "editors delete church media" on storage.objects for delete to authenticated
     using (case when bucket_id = 'church-media' and (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
         then public.has_church_role(((storage.foldername(name))[1])::uuid, array['owner', 'admin', 'editor']) else false end);
