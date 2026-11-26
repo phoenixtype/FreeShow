@@ -123,8 +123,10 @@ export class AiManager {
     }
 
     private static async songDetection(text: string): Promise<boolean> {
-        const hit = songDetector()?.push(text)
-        if (!hit) return false
+        const heard = songDetector()?.push(text)
+        if (!heard) return false
+        // a preacher quoting a hymn over a reading is not the choir starting
+        const hit = !heard.sustained && this.scriptureRecently() ? { ...heard, confidence: Math.min(heard.confidence, 74) } : heard
         const recent = text.split(/\s+/).slice(-16).join(" ")
 
         // already up: on an auto-present setting, keep the screen on the line being sung,
@@ -142,6 +144,14 @@ export class AiManager {
 
         this.newMatch({ type: "lyrics", content: hit.name, confidence: hit.confidence, showId: hit.id, lyricsText: recent })
         return true
+    }
+
+    private static SCRIPTURE_RECENT_MS = 60_000
+    private static lastScripture = 0
+    /** a passage is up, or was in the last minute */
+    private static scriptureRecently(): boolean {
+        if (get(screenScripture)?.reference?.book && getFirstActiveOutput()?.out?.slide?.id === "temp") this.lastScripture = Date.now()
+        return Date.now() - this.lastScripture < this.SCRIPTURE_RECENT_MS
     }
 
     private static autoLevel(type: "scripture" | "lyrics"): ConfidenceLevels {
@@ -406,6 +416,7 @@ export class AiManager {
             this.liveContent = ""
             throw new Error(`${content} could not be put up`)
         }
+        this.lastScripture = Date.now()
         this.remember(content, "scripture", () => this.present(content, reference, id))
     }
 

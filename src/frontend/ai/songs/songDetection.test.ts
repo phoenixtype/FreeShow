@@ -79,6 +79,24 @@ describe("SongDetector", () => {
     })
 })
 
+describe("a song that keeps being sung (B14)", () => {
+    const FIRST = "when peace like a river attendeth my way when sorrows like sea billows roll"
+    const SECOND = "whatever my lot thou hast taught me to say it is well with my soul"
+
+    it("is only sustained once it has been heard twice, eight seconds apart", () => {
+        const d = new SongDetector(index)
+        expect(d.push(FIRST, 0)?.sustained).toBe(false)
+        expect(d.push(SECOND, 4000)?.sustained).toBe(false)
+        expect(d.push("it is well it is well with my soul", 9000)?.sustained).toBe(true)
+    })
+
+    it("starts over after a long break", () => {
+        const d = new SongDetector(index)
+        d.push(FIRST, 0)
+        expect(d.push(SECOND, 40_000)?.sustained).toBe(false)
+    })
+})
+
 describe("bestSlide", () => {
     const slides = ["Amazing grace how sweet the sound that saved a wretch like me", "I once was lost but now am found was blind but now I see", "Twas grace that taught my heart to fear"]
 
@@ -90,6 +108,10 @@ describe("bestSlide", () => {
         const song = ["Chorus it is well with my soul", "Verse when peace like a river", "Chorus it is well with my soul"]
         expect(bestSlide(song, "it is well with my soul", 1)).toBe(2)
         expect(bestSlide(song, "it is well with my soul", 0)).toBe(0)
+    })
+
+    it("goes with the words heard last", () => {
+        expect(bestSlide(slides, "how sweet the sound that saved i once was lost but now am")).toBe(1)
     })
 
     it("returns null when nothing matches", () => {

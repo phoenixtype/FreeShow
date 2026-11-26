@@ -51,6 +51,7 @@ vi.mock("../stt/stt", () => ({ resolveSttEngine: () => "nemotron", spokenLanguag
 
 import { get } from "svelte/store"
 import { ai, aiSmartAction, aiSuggestions } from "../../stores"
+import { presentSong, songDetector } from "../songs/librarySongs"
 import { BibleCacheManager } from "../scripture/BibleCacheManager"
 import { detectBibleEvents } from "../scripture/bibleEvents"
 import { AiManager } from "./AiManager"
@@ -70,6 +71,8 @@ beforeEach(() => {
     manager.shown = []
     manager.undone = null
     manager.pendingContent = ""
+    manager.lastScripture = 0
+    vi.mocked(presentSong).mockClear()
 })
 
 describe("a whole utterance (B1)", () => {
@@ -138,5 +141,32 @@ describe("showing again (B15)", () => {
         expect(screen.present).not.toHaveBeenCalled()
         expect(get(aiSuggestions)).toMatchObject([{ content: "Matthew 14:22-33", action: "present" }])
         ai.set({ enabled: true, scripture: { confidence: "high" }, lyrics: { confidence: "high" } } as any)
+    })
+})
+
+describe("a few lyric words over a reading (B14)", () => {
+    const sing = (sustained: boolean) => vi.mocked(songDetector).mockReturnValueOnce({ push: () => ({ id: "amazing", name: "Amazing Grace", confidence: 90, sustained }) } as any)
+
+    it("offers the song while scripture was just up, and shows it once it is really being sung", async () => {
+        await AiManager.showReference("John 3:16")
+        aiSuggestions.set([])
+        sing(false)
+        await manager.songDetection("amazing grace how sweet the sound")
+        await settle()
+        expect(presentSong).not.toHaveBeenCalled()
+        expect(get(aiSuggestions)).toMatchObject([{ content: "Amazing Grace", confidence: 74, action: "present_song" }])
+
+        aiSuggestions.set([])
+        sing(true)
+        await manager.songDetection("amazing grace how sweet the sound")
+        await settle()
+        expect(presentSong).toHaveBeenCalledTimes(1)
+    })
+
+    it("shows it as before when no scripture has been up", async () => {
+        sing(false)
+        await manager.songDetection("amazing grace how sweet the sound")
+        await settle()
+        expect(presentSong).toHaveBeenCalledTimes(1)
     })
 })
