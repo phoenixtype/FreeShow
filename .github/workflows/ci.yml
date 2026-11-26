@@ -1,7 +1,10 @@
 name: CI
 
-# Manual activation for now (run from the Actions tab); can be wired to pull_request later.
 on:
+    push:
+        branches: ["**"]
+        tags-ignore: ["**"]
+    pull_request:
     workflow_dispatch:
 
 jobs:
@@ -34,6 +37,9 @@ jobs:
             - name: Type-check (svelte)
               run: npm run test:svelte
               continue-on-error: true
+
+            - name: Unit tests
+              run: npm run test:unit
 
             # Blocking gate: a broken build fails this run.
             - name: Build

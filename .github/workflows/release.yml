@@ -1,12 +1,45 @@
 name: Release
+# A release is a version tag (npm version patch && git push --follow-tags), never a push to main.
 on:
   push:
-    branches:
-      - "main"
+    tags:
+      - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  verify:
+    name: "Verify version and tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v5
+
+      - name: Install Node.js and NPM
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Tag matches package.json
+        if: github.ref_type == 'tag'
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json $version. Run npm version, then push the tag it makes."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test:unit
+
   publish_windows:
+    needs: verify
     name: "Publish Windows"
     runs-on: windows-2022
 
@@ -25,12 +58,10 @@ jobs:
       - name: Build and release app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: npm run release
 
   publish_linux:
+    needs: verify
     name: "Publish Linux x64"
     runs-on: ubuntu-latest
 
@@ -60,6 +91,7 @@ jobs:
   # This needs it's own build
   # https://github.com/ChurchApps/FreeShow/issues/562
   publish_linux_arm:
+    needs: verify
     name: "Publish Linux arm64"
     runs-on: ubuntu-24.04-arm
 
@@ -99,6 +131,7 @@ jobs:
         run: npm run release
 
   publish_mac:
+    needs: verify
     name: "Publish MacOS"
     runs-on: macos-latest
 
@@ -154,3 +187,18 @@ jobs:
             export APPLE_API_ISSUER="$SECRET_APPLE_API_ISSUER"
           fi
           npm run release
+
+  publish_release:
+    name: "Publish the draft"
+    needs: [publish_windows, publish_linux, publish_linux_arm, publish_mac]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v5
+
+      # electron-builder uploads every installer to a draft; it goes public only when all four uploaded
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "v$(node -p "require('./package.json').version")" --draft=false --latest
