@@ -2,6 +2,7 @@
     import Center from "../common/components/Center.svelte"
     import Error from "../common/components/Error.svelte"
     import Auth from "./components/Auth.svelte"
+    import Copilot from "./components/Copilot.svelte"
     import Main from "./components/Main.svelte"
     import { translate } from "./util/helpers"
     import { initSocket } from "./util/socket"
@@ -16,7 +17,8 @@
 <Error errors={$errors} />
 
 {#if $isConnected}
-    <Main />
+    <Copilot />
+    <div class="main"><Main /></div>
 {:else if $password.required}
     <Auth />
 {:else}
@@ -24,6 +26,13 @@
         {translate("remote.loading", $dictionary)}
     </Center>
 {/if}
+
+<style>
+    .main {
+        flex: 1;
+        min-height: 0;
+    }
+</style>
 
 <svelte:head>
     <style>

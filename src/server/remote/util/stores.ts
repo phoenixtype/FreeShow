@@ -118,9 +118,21 @@ export let mixer: Writable<any> = writable(null)
 export let audioRouting: Writable<AudioRoutingConfig | null> = writable(null)
 export let audioChannelsData: Writable<{ [key: string]: AudioChannelData }> = writable({})
 
+/** the Live Copilot as the computer reports it */
+export type CopilotState = {
+    on: boolean
+    name?: string
+    listening?: boolean
+    locked?: boolean
+    holder?: "operator" | "matthias" | "held"
+    suggestion?: { id: string; content: string; onScreen: boolean } | null
+}
+export let copilot: Writable<CopilotState | null> = writable(null)
+
 /////
 
 export const _ = {
+    copilot,
     dictionary,
     errors,
     password,

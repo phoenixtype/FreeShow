@@ -67,11 +67,14 @@ import {
 } from "../stores"
 import { hasNewerUpdate } from "./common"
 import { driveConnect } from "./drive"
+import { watchCopilotForRemote } from "./remoteCopilot"
 import { convertBackgrounds, getFilteredAudioChannels } from "./remoteTalk"
 import { send } from "./request"
 import { arrayToObject, eachConnection, filterObjectArray, sendData, timedout } from "./sendData"
 
 export function storeSubscriber() {
+    watchCopilotForRemote()
+
     shows.subscribe(async (data) => {
         if (await hasNewerUpdate("LISTENER_SHOWS", 800)) return
 

@@ -32,6 +32,7 @@ const FILES = [
     "frontend/components/main/popups/Import.svelte",
     "frontend/components/main/Splash.svelte",
     "server/controller/App.svelte",
+    "server/remote/components/Copilot.svelte",
     "server/remote/components/pages/Show.svelte",
     "server/remote/components/show/Clear.svelte"
 ]
