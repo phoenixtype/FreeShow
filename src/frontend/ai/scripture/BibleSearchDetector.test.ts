@@ -23,6 +23,12 @@ describe("a number is not a verse cue (B2)", () => {
         expect(match?.confidence).toBe(85)
     })
 
+    it("does not follow the number when that is switched off", async () => {
+        const match = await (await testBible()).search("except God be with him. three Jesus answered and said", "John 3:2", undefined, "en", false)
+        expect(match?.content).not.toBe("John 3:3")
+        expect(await (await testBible()).search("and it came to pass. three", "Genesis 1:2", undefined, "en", false)).toBeNull()
+    })
+
     it("only offers a bare number when the Bible has no words to check", async () => {
         const match = await search("and it came to pass. three", "Genesis 1:2")
         expect(match).toMatchObject({ content: "Genesis 1:3", confidence: 70 })

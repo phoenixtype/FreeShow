@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const screen = vi.hoisted(() => ({
     present: vi.fn(async (_reference: string, _id?: string) => true),
@@ -259,5 +259,44 @@ describe("what was shown (F9)", () => {
         AiManager.newMatch({ type: "scripture", content: "John 3:17", confidence: 98 })
         await settle()
         expect(get(aiSuggestions)[0]).toMatchObject({ content: "John 3:17", action: "present" })
+    })
+})
+
+describe("each way of catching things can be switched off", () => {
+    const on = { enabled: true, scripture: { confidence: "high" }, lyrics: { confidence: "high" } }
+    const canon = (search = vi.fn(async (..._args: any[]) => null)) => {
+        vi.mocked(BibleCacheManager.getCanon).mockResolvedValue({ search } as any)
+        return search
+    }
+    const chunk = (words: string) => AiManager.processSTTChunk({ chunkWithOverlap: words, newWordsCount: words.split(" ").length })
+    const off = (setting: string) => ai.set({ ...on, scripture: { confidence: "high", [setting]: false } } as any)
+    afterEach(() => ai.set(on as any))
+
+    it("leaves a mentioned Bible story alone", async () => {
+        canon()
+        off("events")
+        vi.mocked(detectBibleEvents).mockReturnValueOnce([{ reference: "Matthew 14:22-33", confidence: 0.9 }] as any)
+        await chunk("when Jesus walked on water")
+        expect(get(aiSuggestions)).toEqual([])
+        vi.mocked(detectBibleEvents).mockReset()
+        vi.mocked(detectBibleEvents).mockReturnValue([])
+    })
+
+    it("does not obey screen commands", async () => {
+        canon()
+        off("commands")
+        expect(await AiManager.processUtterance("Back.")).toBe(false)
+        await chunk("let us go to the next verse")
+        await settle()
+        expect(screen.present).not.toHaveBeenCalled()
+        expect(get(aiSuggestions)).toEqual([])
+    })
+
+    it("tells the search whether to follow a verse number that is read out", async () => {
+        const search = canon()
+        await chunk("three Jesus answered and said")
+        off("verseCue")
+        await chunk("four Nicodemus saith unto him")
+        expect(search.mock.calls.map((call) => call[4])).toEqual([true, false])
     })
 })

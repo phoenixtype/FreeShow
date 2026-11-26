@@ -586,8 +586,9 @@ export class BibleSearchDetector {
     }
 
     private readonly DEBUG_MODE = false
-    /** language: what is being spoken, for its number words ("any" when it could be several) */
-    public async search(transcript: string, currentlyOutputted: string, isCancelled?: () => boolean, language = "en"): Promise<MatchResult | null> {
+    /** language: what is being spoken, for its number words ("any" when it could be several).
+     * verseCue: whether a verse number read out moves on to that verse */
+    public async search(transcript: string, currentlyOutputted: string, isCancelled?: () => boolean, language = "en", verseCue = true): Promise<MatchResult | null> {
         if (this.DEBUG_MODE) console.log("[DETECTION] Starting search with transcript:", transcript)
         if (isCancelled?.()) return null
 
@@ -601,7 +602,7 @@ export class BibleSearchDetector {
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings corrected:", mishearingsCorrected)
         if (this.DEBUG_MODE) console.log("[DETECTION] Mishearings normalized:", mishearingsNormalized)
 
-        let refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted, true)
+        let refMatch = this.findReferenceMatch(mishearingsNormalized) || this.findReferenceMatch(rawNormalized) || this.findStandaloneVerseMatch(mishearingsNormalized, currentlyOutputted) || this.findStandaloneVerseMatch(rawNormalized, currentlyOutputted, verseCue)
 
         // the book without the number, offered rather than certain
         const aside = withoutOrdinalAside(mishearingsCorrected)

@@ -60,7 +60,7 @@ export class AiManager {
 
         // a spoken command ("next verse") moves the screen and is not searched for
         const newWords = chunk.chunkWithOverlap.split(/\s+/).slice(-chunk.newWordsCount).join(" ")
-        const command = parseCopilotCommand(newWords, false)
+        const command = this.catches("commands") ? parseCopilotCommand(newWords, false) : null
         // a command that moved nothing (no passage on screen) is searched like any other words
         if (command && (await this.navigate(command))) return
 
@@ -113,12 +113,18 @@ export class AiManager {
         }
     }
 
+    // each way of catching things is on unless switched off
+    private static catches(way: "verseCue" | "events" | "commands"): boolean {
+        return get(ai).scripture?.[way] !== false
+    }
+
     private static numberLanguage(): string {
         return spokenLanguage(get(ai).stt?.engineOptions?.[resolveSttEngine()]?.language) || "any"
     }
 
     /** everything said between two pauses: only here do the one-word commands count. True when it moved the screen */
     static async processUtterance(text: string): Promise<boolean> {
+        if (!this.catches("commands")) return false
         // phrases that count mid-sentence were acted on as they were heard
         if (parseCopilotCommand(text, false)) return false
         const command = parseCopilotCommand(text, true)
@@ -182,6 +188,7 @@ export class AiManager {
     // famous events and parables said in passing: "when Jesus walked on water".
     // Only ever offered: nobody asked for the passage
     private static eventDetection(textChunk: string): MatchResult | null {
+        if (!this.catches("events")) return null
         const event = detectBibleEvents(textChunk)[0]
         if (!event) return null
         return { type: "scripture", content: event.reference, confidence: event.confidence >= 0.88 ? 74 : 65 }
@@ -256,7 +263,7 @@ export class AiManager {
                 if (!this.scriptureAlerted) newToast("Listening for references. Download a Bible to also catch verses as they are quoted.")
                 this.scriptureAlerted = true
             }
-            return (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
+            return (await BibleCacheManager.getCanon()).search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage(), this.catches("verseCue"))
         }
 
         const match = await this.bibleDetection(readId, textChunk, isCancelled)
@@ -294,7 +301,7 @@ export class AiManager {
         const bibleCache = await BibleCacheManager.getCache(id)
         if (!bibleCache || isCancelled?.()) return null
 
-        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage())
+        const match = await bibleCache.search(textChunk, AiManager.liveContent, isCancelled, this.numberLanguage(), this.catches("verseCue"))
         if (!match) return null
 
         match.scriptureTranslation = id
