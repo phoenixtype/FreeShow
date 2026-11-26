@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { openLiveCopilot } from "../../ai/liveCopilot"
-    import { activePopup, activeProject, ai, popupData, projects, projectView, quickSearchActive, scriptures, shows, showRecentlyUsedProjects, special, version } from "../../stores"
+    import { activePopup, activeProject, ai, outputs, popupData, projects, projectView, quickSearchActive, scriptures, shows, showRecentlyUsedProjects, special, version } from "../../stores"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
@@ -40,7 +40,7 @@
         return finalText.replaceAll("\n", "<br>").replace(/\s+/g, " ").trim()
     }
 
-    // GET READY: the four things a church does once, each ticked off from what
+    // GET READY: the five things a church does once, each ticked off from what
     // the app already holds; the list steps aside when all are done or hidden
     const HIDE_KEY = "home-get-ready-hidden"
     let hidden = localStorage.getItem(HIDE_KEY) === "1"
@@ -53,6 +53,15 @@
             open: () => {
                 popupData.set({ importType: "scriptural" })
                 activePopup.set("import_scripture")
+            }
+        },
+        {
+            label: "Choose the screen",
+            hint: "Pick the projector or TV the congregation sees",
+            done: Object.values($outputs).some((a) => a.screen && !a.stageOutput),
+            open: () => {
+                popupData.set({ activateOutput: true })
+                activePopup.set("choose_screen")
             }
         },
         { label: "Plan the service", hint: "A project holds the songs, scripture and media in order", done: Object.entries($projects).some(([id, p]) => id !== "default" && p?.shows?.length), open: createProject },
