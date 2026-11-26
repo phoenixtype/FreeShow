@@ -8,7 +8,8 @@ export default async function checkForUpdates() {
     if (!isProd) return
 
     try {
-        await autoUpdater.checkForUpdatesAndNotify()
+        autoUpdater.autoInstallOnAppQuit = true
+        await autoUpdater.checkForUpdatesAndNotify({ title: "Scriptural Project", body: "Version {version} is ready. It installs when you close the app." })
     } catch (err) {
         console.error("Auto-update error:", err)
     }
