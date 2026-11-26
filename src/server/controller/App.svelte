@@ -8,7 +8,14 @@
 
     let outputId: string = ""
 
+    // assume connected until the first failure, so the banner does not flash on opening
+    let connected = true
+    socket.on("disconnect", () => (connected = false))
+    socket.on("connect_error", () => (connected = false))
+
     socket.on("connect", () => {
+        connected = true
+        frameReceived = true
         // id = socket.id
         socket.emit("CONTROLLER", { channel: "GET_OUTPUT_ID" })
     })
@@ -45,6 +52,7 @@
     }
 
     function sendAction(id: string) {
+        if (!connected) return
         socket.emit("CONTROLLER", { channel: "ACTION", data: { id } })
 
         if (justCleared) {
@@ -118,8 +126,12 @@
 
 <svelte:window bind:innerHeight={windowHeight} on:keydown={keydown} on:mouseup={mouseup} on:touchend={mouseup} on:mousemove={mousemove} on:touchmove={mousemove} />
 
+{#if !connected}
+    <p class="banner" role="alert">Not connected to the computer. Trying again…</p>
+{/if}
+
 {#if draw}
-    <div class="draw">
+    <div class="draw" class:offline={!connected}>
         <select name="tools" value={tool} on:change={changeTool}>
             {#each tools as toolKey}
                 <option value={toolKey}>{toolKey}</option>
@@ -143,7 +155,7 @@
         {/if}
     </div>
 {:else}
-    <div class="controller">
+    <div class="controller" class:offline={!connected}>
         <button class="quart" on:click={() => sendAction("previous")}>
             <Icon id="previous" size={4} />
             <span>Previous</span>
@@ -287,6 +299,22 @@
     .toggles .noright {
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
+    }
+
+    .banner {
+        position: fixed;
+        inset-block-start: 0;
+        inset-inline: 0;
+        z-index: 20;
+        padding: 10px 16px;
+        text-align: center;
+        font-size: 0.7em;
+        background-color: var(--primary-darkest);
+        border-bottom: 2px solid #ff9800;
+    }
+    .offline {
+        opacity: 0.4;
+        pointer-events: none;
     }
 
     /* pad */
