@@ -162,7 +162,7 @@ function getDefaultEffects() {
             { type: "spotlight", x: 0.2, y: 0, length: 2000, baseWidth: 1000, color: "rgba(255, 255, 200, 0.6)", swayAmplitude: 1, swaySpeed: 1.8 },
             { type: "spotlight", x: 0.4, y: 0, length: 2000, baseWidth: 1000, color: "rgba(255, 200, 207, 0.6)", swayAmplitude: 1.2, swaySpeed: 2 },
             { type: "spotlight", x: 0.6, y: 0, length: 2000, baseWidth: 1000, color: "rgba(200, 208, 255, 0.6)", swayAmplitude: 1.2, swaySpeed: 2.1 },
-            { type: "spotlight", x: 0.8, y: 0, length: 2000, baseWidth: 1000, color: "rgba(234, 140, 255, 0.6)", swayAmplitude: 1, swaySpeed: 1.9 }
+            { type: "spotlight", x: 0.8, y: 0, length: 2000, baseWidth: 1000, color: "rgba(140, 200, 255, 0.6)", swayAmplitude: 1, swaySpeed: 1.9 }
         ] as any[]
     }
 

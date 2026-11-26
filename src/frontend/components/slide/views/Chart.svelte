@@ -52,7 +52,7 @@
 
     // SVG Chart Data
     $: data = (() => {
-        const fallbackColors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#f43f5e", "#06b6d4", "#14b8a6"]
+        const fallbackColors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#64748b", "#f43f5e", "#06b6d4", "#14b8a6"]
         if (evaluatedGrid && evaluatedGrid.length > 0) {
             const hasHeader = evaluatedGrid[0] && evaluatedGrid[0][0] === "Label" && isNaN(parseFloat(evaluatedGrid[0][1]))
             const dataRows = hasHeader ? evaluatedGrid.slice(1) : evaluatedGrid
@@ -116,7 +116,7 @@
     $: centerY = usablePieHeight / 2
     $: pieSegments = (() => {
         let currentAngle = -90 // Start at top (12 o'clock)
-        const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#f43f5e", "#06b6d4", "#14b8a6"]
+        const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#64748b", "#f43f5e", "#06b6d4", "#14b8a6"]
         return data.map((item, idx) => {
             const val = allZero ? 1 : item.value
             const segmentTotal = allZero ? data.length : total

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getVersionBgColor, getVersionColor } from "../../../common/util/versionColors"
     import type { Bible } from "../../../../types/Bible"
     import Loading from "../../../common/components/Loading.svelte"
     import { onDestroy, tick } from "svelte"
@@ -253,31 +254,13 @@
     // Color codes
     const colorCodesFull = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8]
     const colorCodesNT = [5, 5, 5, 5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8]
-    const colors = ["", "#f17d46", "#ffd17c", "#8cdfff", "#8888ff", "#ff97f2", "#ffdce7", "#88ffa9", "#ffd3b6"]
+    const colors = ["", "#f17d46", "#ffd17c", "#8cdfff", "#6ea8ff", "#5eead4", "#c9ced6", "#88ffa9", "#ffd3b6"]
 
     export function getColorCode(books: any[], bookId: number | string) {
         let bookIndex = typeof bookId === "number" ? bookId : books.findIndex((a) => a.id === bookId)
         if (books.length === colorCodesFull.length) return colors[colorCodesFull[bookIndex]]
         else if (books.length === colorCodesNT.length) return colors[colorCodesNT[bookIndex]]
         return ""
-    }
-
-    // Generate dynamic colors for Bible versions that match FreeShow's theme
-    // Uses HSL to create evenly distributed, vibrant colors on dark background
-    const GOLDEN_ANGLE = 137.508
-    const BASE_HUE = 330 // FreeShow's pink
-
-    function getVersionHue(index: number): number {
-        return (BASE_HUE + index * GOLDEN_ANGLE) % 360
-    }
-
-    function getVersionColor(index: number): string {
-        return `hsl(${getVersionHue(index)}, 75%, 65%)`
-    }
-
-    // Generate a subtle background color (same hue but very transparent)
-    function getVersionBgColor(index: number): string {
-        return `hsla(${getVersionHue(index)}, 70%, 50%, 0.12)`
     }
 
     // NAMES - matching ScriptureContent.svelte
