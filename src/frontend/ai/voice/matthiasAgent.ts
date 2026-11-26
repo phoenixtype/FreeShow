@@ -451,6 +451,7 @@ export class Matthias {
         const answer = await runAgentChat(typed ? history : [...history, { role: "user", content: words }], {
             ask: (prompt, struggling) => llm.request({ systemPrompt, jsonSchema: CHAT_RESPONSE_SCHEMA, prompt, struggling, signal: turn.signal }),
             context: context(!typed),
+            spoken: !typed,
             stopped: () => stopped() || turn.signal.aborted,
             refuse: (tool) => (changesScreen(tool) && get(handMoves) !== movesBefore ? "The operator has just moved the screen by hand. Leave the screen to them." : ""),
             run: async (tool, args) => {
