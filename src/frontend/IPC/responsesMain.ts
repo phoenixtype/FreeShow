@@ -164,7 +164,7 @@ export const mainResponses: MainResponses = {
 
     // MAIN
     [ToMain.MENU]: (a) => menuClick(a),
-    [ToMain.AGENT]: async (a) => (a.method === "list" ? listAgentTools() : await runAgentTool(a.name || "", a.args)),
+    [ToMain.AGENT]: async (a) => (a.method === "list" ? listAgentTools() : await runAgentTool(a.name || "", a.args, true)),
     [ToMain.API]: async (a) => await API_ACTIONS[a.action]?.(a.data),
     [Main.DATA_PATH]: (a) => dataPath.set(a),
     [ToMain.ALERT]: (a) => {

@@ -369,12 +369,13 @@ export const agentTools: AgentTool[] = [
     },
     {
         name: "control_screen",
-        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. screen_on and screen_off switch the projector window. lock stops anything changing the screen.",
-        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "restore", "screen_on", "screen_off", "lock", "unlock"] } }, required: ["command"] },
+        description: "Move or clear what is on screen. next and previous work for songs and scripture alike. restore brings back what clear_all took off. screen_on and screen_off switch the projector window. lock stops anything changing the screen; only the operator can unlock it.",
+        inputSchema: { type: "object", properties: { command: { type: "string", enum: ["next", "previous", "clear_words", "clear_background", "clear_overlays", "clear_all", "restore", "screen_on", "screen_off", "lock"] } }, required: ["command"] },
         screen: true,
         run: async ({ command }) => {
-            if (command === "lock" || command === "unlock") {
-                outLocked.set(command === "lock")
+            // an agent may lock the screen, never unlock it: a lock is the operator's word
+            if (command === "lock") {
+                outLocked.set(true)
                 return liveState()
             }
             requireUnlocked()
@@ -580,9 +581,10 @@ export const listAgentTools = () => agentTools.filter((tool) => !tool.internal).
 
 export const changesScreen = (name: string) => !!agentTools.find((tool) => tool.name === name)?.screen
 
-/** runs a tool; an answer is always { ok, ... } so a caller never has to catch */
-export async function runAgentTool(name: string, args: any): Promise<{ ok: boolean; result?: unknown; error?: string }> {
-    const tool = agentTools.find((t) => t.name === name)
+/** runs a tool; an answer is always { ok, ... } so a caller never has to catch.
+ * Internal tools are for the app's own MCP server only (allowInternal), never a model's pick. */
+export async function runAgentTool(name: string, args: any, allowInternal = false): Promise<{ ok: boolean; result?: unknown; error?: string }> {
+    const tool = agentTools.find((t) => t.name === name && (allowInternal || !t.internal))
     if (!tool) return { ok: false, error: `There is no tool called "${name}".` }
     const given = args && typeof args === "object" && !Array.isArray(args) ? args : {}
     for (const key of tool.inputSchema.required || []) {
