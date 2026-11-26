@@ -14,7 +14,7 @@ import { startExport } from "./data/export"
 import { cleanupProtectedCache, registerProtectedProtocol } from "./data/protected"
 import { config, setupStores } from "./data/store"
 import { receiveMain, sendMain, sendToMain } from "./IPC/main"
-import { autoErrorReport, createLog, logError } from "./IPC/responsesMain"
+import { createLog, logError, openURL } from "./IPC/responsesMain"
 import { receiveNDI } from "./ndi/talk"
 import { receiveOMT } from "./omt/talk"
 import { OutputHelper } from "./output/OutputHelper"
@@ -23,13 +23,22 @@ import { RtmpBridge } from "./streaming/RtmpBridge"
 import { callClose, exitApp, saveAndClose } from "./utils/close"
 import { applyCommandLineSwitches } from "./utils/commandLineSwitches"
 import { applyGraphicsDeviceSelection, scheduleGpuHealthCheck } from "./utils/gpu"
+import { captureConsole, keepLine } from "./utils/diagnostics"
 import { recoverWindow } from "./utils/recovery"
+import { guardContents } from "./utils/safeNavigation"
+import { holdSingleInstance } from "./utils/singleInstance"
 import { isDraggableAreaVisible, isWithinDisplayBounds, mainWindowInitialize, openDevTools, parseCommandLineArgs } from "./utils/init"
 import { template } from "./utils/menuTemplate"
 import { spellcheck } from "./utils/spellcheck"
 import { loadingOptions, mainOptions } from "./utils/windowOptions"
 
 // ----- STARTUP -----
+
+// the last log lines are kept for Help > Copy diagnostics
+captureConsole()
+
+// before anything reads or writes the app's files
+holdSingleInstance(app, () => mainWindow)
 
 // enlarge the libuv thread pool before any worker inherits the env: capture readbacks and NDI sends
 // run as async work on this pool, and the default of 4 threads serializes concurrent 4K outputs
@@ -83,9 +92,6 @@ if (!isProd) console.info("Building app! (This may take 5-40 seconds)")
 
 // set application menu
 setGlobalMenu()
-
-// error reporting
-autoErrorReport()
 
 // hardware acceleration: startup snapshot of the actual runtime decision. Capture/convert paths must
 // gate on this, not the live config value — a not-yet-applied toggle would otherwise mismatch the real
@@ -381,6 +387,13 @@ app.on("web-contents-created", (_e, contents) => {
         console.error(message)
         logError(createLog(new Error(message)), "main")
     })
+
+    // warnings and errors from the app's windows go with the diagnostics too
+    contents.on("console-message", ({ level, message }) => {
+        if (level === "warning" || level === "error") keepLine(`window ${level}`, [message])
+    })
+
+    guardContents(contents, { appPath: app.getAppPath(), isProd, open: openURL })
 
     contents.on("will-attach-webview", (_event, webPreferences) => {
         // remove unused preload scripts

@@ -4,6 +4,7 @@
 // is read fresh from Stripe and written as it is now. Running an event twice is
 // harmless; stripe_events records it once the write has landed.
 import Stripe from "npm:stripe@23"
+import { isLive, secondSubscription } from "../_shared/billing.ts"
 import { admin, failure, json } from "../_shared/church.ts"
 
 const PLAN_BY_LOOKUP: Record<string, string> = {
@@ -39,14 +40,24 @@ Deno.serve(async (req) => {
             const sub = await stripe.subscriptions.retrieve(snapshot.id)
             const ended = ["canceled", "incomplete_expired", "unpaid"].includes(sub.status)
 
-            // a church has one plan: an ended second subscription must not end the live one
+            // a church has one plan: a second subscription never replaces the live one
             const { data: stored, error: storedError } = await db.from("church_subscriptions").select("stripe_subscription_id, status").eq("church_id", churchId).maybeSingle()
             if (storedError) throw storedError
-            const otherLive = stored?.stripe_subscription_id && stored.stripe_subscription_id !== sub.id && ["active", "trialing", "past_due"].includes(stored.status)
-            if (otherLive && ended) {
+            let other: Stripe.Subscription | null = null
+            if (stored?.stripe_subscription_id && stored.stripe_subscription_id !== sub.id && isLive(stored.status)) {
+                // as Stripe has it now, not as we last wrote it
+                other = await stripe.subscriptions.retrieve(stored.stripe_subscription_id).catch((error) => {
+                    if (error?.code === "resource_missing") return null
+                    throw error
+                })
+            }
+            const outcome = secondSubscription(sub, other)
+            if (outcome === "ignore" || outcome === "cancel_incoming") {
+                if (outcome === "cancel_incoming") await cancelSecond(stripe, sub.id, churchId)
                 await markSeen(db, event)
                 return json({ received: true, ignored: true })
             }
+            if (outcome === "cancel_stored") await cancelSecond(stripe, other!.id, churchId)
 
             const lookup = sub.items.data[0]?.price?.lookup_key || ""
             const { error } = await db.from("church_subscriptions").upsert({
@@ -67,6 +78,12 @@ Deno.serve(async (req) => {
         return failure(error)
     }
 })
+
+/** Paid twice: stop the second one billing. Its first payment is refunded by hand in Stripe. */
+async function cancelSecond(stripe: Stripe, subscriptionId: string, churchId: string) {
+    await stripe.subscriptions.cancel(subscriptionId)
+    console.error(`Church ${churchId} had two subscriptions: cancelled ${subscriptionId}. Refund it in Stripe.`)
+}
 
 async function markSeen(db: ReturnType<typeof admin>, event: Stripe.Event) {
     const { error } = await db.from("stripe_events").insert({ id: event.id, type: event.type })

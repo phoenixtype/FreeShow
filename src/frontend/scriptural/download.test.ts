@@ -6,7 +6,36 @@ vi.mock("../converters/bebliaBible", () => ({
     defaultBibleBookNames: { 1: "Genesis", 19: "Psalm", 43: "John", 66: "Revelation" }
 }))
 
-const { bookNumber, toBible } = await import("./download")
+const invoke = vi.fn()
+vi.mock("./connection", () => ({ churchLibrary: { getSession: () => ({}), invoke }, restGet: vi.fn(), ScripturalError: class extends Error {} }))
+
+const { bookNumber, licensedRows, toBible } = await import("./download")
+
+describe("a licensed version", () => {
+    const version = { code: "NIV", name: "New International Version", language: "English", licensed: true }
+    const rows = [{ book: "John", chapter: 3, verse: 16, text: "For God so loved the world" }]
+
+    it("is read from the short-lived link the server hands back", async () => {
+        vi.stubGlobal("localStorage", { getItem: () => "church-id" })
+        const fetched = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rows }) })
+        vi.stubGlobal("fetch", fetched)
+        invoke.mockResolvedValue({ ok: true, data: { url: "https://example.supabase.co/signed" } })
+
+        expect(await licensedRows(version)).toEqual(rows)
+        expect(invoke.mock.calls[0][1]).toEqual({ churchId: "church-id", version: "NIV", format: "url" })
+        expect(fetched.mock.calls[0][0]).toBe("https://example.supabase.co/signed")
+        vi.unstubAllGlobals()
+    })
+
+    it("says so when the link cannot be read", async () => {
+        vi.stubGlobal("localStorage", { getItem: () => "church-id" })
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }))
+        invoke.mockResolvedValue({ ok: true, data: { url: "https://example.supabase.co/signed" } })
+
+        await expect(licensedRows(version)).rejects.toThrow("could not be downloaded")
+        vi.unstubAllGlobals()
+    })
+})
 
 describe("toBible", () => {
     it("maps Scriptural's book names to canonical numbers, Psalms included", () => {

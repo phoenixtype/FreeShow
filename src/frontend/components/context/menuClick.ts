@@ -9,7 +9,7 @@ import { AudioPlayer } from "../../audio/audioPlayer"
 import { duplicateEffectInStack, removeEffectFromStack } from "../../audio/effects/audioEffectsHelpers"
 import { ShowObj } from "../../classes/Show"
 import { markItemsAsPlayed } from "../../converters/project"
-import { sendMain } from "../../IPC/main"
+import { requestMain, sendMain } from "../../IPC/main"
 import { cameraManager } from "../../media/cameraManager"
 import { changeSlideGroups, mergeSlides, mergeTextboxes, splitItemInTwo, VIRTUAL_BREAK_CHAR } from "../../show/slides"
 import {
@@ -250,6 +250,9 @@ const clickActions = {
     about: () => activePopup.set("about"),
     quick_search: () => quickSearchActive.set(true),
     quick_start_guide: () => guideActive.set(true),
+    copy_diagnostics: async () => {
+        if (await requestMain(Main.COPY_DIAGNOSTICS)) newToast("Copied. Paste it into your email to support.")
+    },
 
     // main
     custom_text: () => activePopup.set("custom_text"),

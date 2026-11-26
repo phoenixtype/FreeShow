@@ -222,4 +222,34 @@ describe("backup.ts", () => {
             expect(sendToMain).toHaveBeenCalledWith(ToMain.RESTORE2, { finished: true })
         })
     })
+
+    describe("the agent token", () => {
+        const settings = (password?: string) => ({ theme: "dark", serverData: { agents: { enabled: true, ...(password ? { password } : {}) } } })
+
+        it("is never written into a backup", async () => {
+            vi.mocked(readFolder).mockReturnValue([])
+            ;(_store.SETTINGS as any).store = settings("secret-token")
+
+            await startBackup()
+
+            const [entries] = vi.mocked(compressToZip).mock.calls[0]
+            const entry = entries.find((a) => a.name === "SETTINGS.json")!
+            expect(entry.filePath).toBeUndefined()
+            expect(JSON.parse(entry.content as string)).toEqual(settings())
+            // the app's own settings keep it
+            expect((_store.SETTINGS as any).store).toEqual(settings("secret-token"))
+            ;(_store.SETTINGS as any).store = {}
+        })
+
+        it("stays this computer's own when a backup is restored", async () => {
+            ;(_store.SETTINGS as any).store = settings("mine")
+            vi.mocked(selectFilesDialog).mockResolvedValue(["/mock/SETTINGS.json"])
+            vi.mocked(readFile).mockReturnValue(JSON.stringify(settings("from-an-old-backup")))
+
+            await restoreFiles()
+
+            expect(setStore).toHaveBeenCalledWith(_store.SETTINGS, settings("mine"))
+            ;(_store.SETTINGS as any).store = {}
+        })
+    })
 })

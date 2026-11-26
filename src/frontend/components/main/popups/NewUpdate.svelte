@@ -9,7 +9,7 @@
 
     registerPopupSubmit(download)
 
-    let changelog = ($popupData.changelog || "").replaceAll("\r\n", "<br>").replaceAll("-", "•")
+    let changelog = ($popupData.changelog || "").replaceAll("\r\n", "\n").replaceAll("-", "•")
 
     function download() {
         sendMain(Main.URL, "https://project.scriptural.online")
@@ -33,13 +33,17 @@
 
 <div class="changelog">
     <h3 style="color: var(--text);text-decoration: underline solid var(--secondary);"><T id="about.changes" /></h3>
-    {@html changelog}
+    <div class="notes">{changelog}</div>
 </div>
 
 <style>
     .auto_update {
         max-width: 650px;
         font-size: 0.9em;
+    }
+
+    .notes {
+        white-space: pre-line;
     }
 
     .changelog {
