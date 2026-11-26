@@ -1,10 +1,12 @@
 // Starts a Stripe Checkout for a church's plan. Owners and admins only.
 // POST { churchId, price: "church_monthly" | "church_yearly" | "multi_campus_monthly" | "multi_campus_yearly" }
 import Stripe from "npm:stripe@23"
+import { isLive } from "../_shared/billing.ts"
 import { admin, callerRole, cors, failure, json } from "../_shared/church.ts"
 
 const PRICES = new Set(["church_monthly", "church_yearly", "multi_campus_monthly", "multi_campus_yearly"])
 const SITE = "https://project.scriptural.online"
+const SUBSCRIBED = { error: "already_subscribed", message: "This church already has a plan. Use Manage billing to change it." }
 
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors })
@@ -28,8 +30,23 @@ Deno.serve(async (req) => {
         const { data: existing, error } = await db.from("church_subscriptions").select("stripe_customer_id, plan, status").eq("church_id", churchId).maybeSingle()
         if (error) throw error
         // a second checkout would bill the church twice: changes go through the billing portal
-        if (existing && existing.plan !== "free" && ["active", "trialing", "past_due"].includes(existing.status)) {
-            return json({ error: "already_subscribed", message: "This church already has a plan. Use Manage billing to change it." }, 409)
+        if (existing && existing.plan !== "free" && isLive(existing.status)) return json(SUBSCRIBED, 409)
+
+        // our record only changes when the webhook lands: ask Stripe too. The id is a uuid (callerRole checked it).
+        const found = await stripe.subscriptions.search({ query: `metadata['church_id']:'${churchId}' AND metadata['app']:'scriptural-project'`, limit: 20 })
+        if (found.data.some((sub) => isLive(sub.status))) return json(SUBSCRIBED, 409)
+
+        // one checkout page at a time: close the last one before opening another
+        const { data: open, error: openError } = await db.from("church_checkouts").select("session_id").eq("church_id", churchId).maybeSingle()
+        if (openError) throw openError
+        if (open) {
+            const last = await stripe.checkout.sessions.retrieve(open.session_id)
+            // just paid there, and neither search nor the webhook has caught up
+            if (last.status === "complete" && last.subscription) {
+                const paid = await stripe.subscriptions.retrieve(typeof last.subscription === "string" ? last.subscription : last.subscription.id)
+                if (isLive(paid.status)) return json(SUBSCRIBED, 409)
+            }
+            if (last.status === "open") await stripe.checkout.sessions.expire(last.id)
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -46,6 +63,8 @@ Deno.serve(async (req) => {
             success_url: `${SITE}/thanks`,
             cancel_url: `${SITE}/pricing`
         })
+        const { error: keepError } = await db.from("church_checkouts").upsert({ church_id: churchId, session_id: session.id, created_at: new Date().toISOString() })
+        if (keepError) throw keepError
         return json({ url: session.url })
     } catch (error) {
         return failure(error)
